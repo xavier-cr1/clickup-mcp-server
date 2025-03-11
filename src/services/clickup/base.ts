@@ -295,16 +295,6 @@ export class BaseClickUpService {
    * @param details - Details about the operation
    */
   protected logOperation(operation: string, details: any): void {
-    // This could be enhanced to use a proper logging framework
-    console.log(`[ClickUpService] ${operation}:`, details);
-  }
-
-  /**
-   * Protected helper method to check if cache is available
-   * @param cacheService Optional cache service instance
-   * @returns True if caching is available and enabled
-   */
-  protected isCacheEnabled(cacheService?: any): boolean {
-    return !!cacheService && typeof cacheService.isEnabled === 'function' && cacheService.isEnabled();
+    console.log(`[${new Date().toISOString()}] ${operation}:`, details);
   }
 } 

@@ -127,7 +127,7 @@ export class WorkspaceService extends BaseClickUpService {
    */
   async getWorkspaceHierarchy(forceRefresh = false): Promise<WorkspaceTree> {
     try {
-      // If we have a cached result and not forcing refresh, return it
+      // If we have the hierarchy in memory and not forcing refresh, return it
       if (this.workspaceHierarchy && !forceRefresh) {
         return this.workspaceHierarchy;
       }
@@ -201,9 +201,9 @@ export class WorkspaceService extends BaseClickUpService {
   }
 
   /**
-   * Invalidate the workspace hierarchy cache
+   * Clear the stored workspace hierarchy, forcing a fresh fetch on next request
    */
-  invalidateWorkspaceCache(): void {
+  clearWorkspaceHierarchy(): void {
     this.workspaceHierarchy = null;
   }
 
