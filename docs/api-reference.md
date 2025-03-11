@@ -20,8 +20,11 @@ This document provides detailed information about all available tools, their par
 | create_task | Create a new task | `name` and either `listId` or `listName` | description, status, priority (1-4), dueDate |
 | create_bulk_tasks | Create multiple tasks | `tasks[]` | `listId` or `listName` |
 | update_task | Modify task properties | Either `taskId` or `taskName` | name, description, status, priority, dueDate |
+| update_bulk_tasks | Modify multiple tasks | `tasks[]` with task identifiers | Each task can have: name, description, status, priority, etc. |
 | delete_task | Remove a task | `taskId` | `taskName`, `listName` |
+| delete_bulk_tasks | Remove multiple tasks | `tasks[]` with task identifiers | None |
 | move_task | Move task to another list | Either `taskId` or `taskName`, and either `listId` or `listName` | `sourceListName` |
+| move_bulk_tasks | Move multiple tasks | `tasks[]` with task identifiers, and target list | None |
 | duplicate_task | Copy task to another list | Either `taskId` or `taskName`, and either `listId` or `listName` | `sourceListName` |
 
 ### Task Parameters
@@ -109,6 +112,87 @@ Create these tasks in the "Sprint Backlog" list:
     {
       "name": "Update documentation",
       "priority": 4
+    }
+  ]
+}
+```
+
+#### Bulk Updating Tasks
+**User Prompt:**
+```
+Update all the following tasks to high priority:
+1. "Implement login screen"
+2. "Create database schema"
+3. "Set up CI pipeline"
+```
+
+**System Response:**
+```json
+{
+  "tasks": [
+    {
+      "taskName": "Implement login screen",
+      "listName": "Development Tasks",
+      "priority": 2
+    },
+    {
+      "taskName": "Create database schema",
+      "listName": "Development Tasks",
+      "priority": 2
+    },
+    {
+      "taskName": "Set up CI pipeline",
+      "listName": "Development Tasks",
+      "priority": 2
+    }
+  ]
+}
+```
+
+#### Bulk Moving Tasks
+**User Prompt:**
+```
+Move all the completed tasks from "In Progress" list to "Done" list:
+1. "Backend API implementation"
+2. "Frontend form validation"
+```
+
+**System Response:**
+```json
+{
+  "tasks": [
+    {
+      "taskName": "Backend API implementation",
+      "listName": "In Progress"
+    },
+    {
+      "taskName": "Frontend form validation",
+      "listName": "In Progress"
+    }
+  ],
+  "targetListName": "Done"
+}
+```
+
+#### Bulk Deleting Tasks
+**User Prompt:**
+```
+Delete all these tasks from the "Archived" list:
+1. "Outdated feature"
+2. "Duplicate bug report"
+```
+
+**System Response:**
+```json
+{
+  "tasks": [
+    {
+      "taskName": "Outdated feature",
+      "listName": "Archived"
+    },
+    {
+      "taskName": "Duplicate bug report",
+      "listName": "Archived"
     }
   ]
 }

@@ -107,8 +107,13 @@ export const createTaskTool = {
       markdown_description,
       status,
       priority: priority as TaskPriority,
-      due_date: dueDate ? parseInt(dueDate) : undefined
+      due_date: dueDate ? parseDueDate(dueDate) : undefined
     };
+
+    // Add due_date_time flag if due date is set
+    if (dueDate && taskData.due_date) {
+      taskData.due_date_time = true;
+    }
 
     // Create the task
     const createdTask = await taskService.createTask(targetListId, taskData);
@@ -172,11 +177,15 @@ export const updateTaskTool = {
         type: ["number", "null"],
         enum: [1, 2, 3, 4, null],
         description: "New priority: 1 (urgent) to 4 (low). Set null to clear priority."
+      },
+      dueDate: {
+        type: "string",
+        description: "New due date (Unix timestamp in milliseconds)"
       }
     },
     required: []
   },
-  async handler({ taskId, taskName, listName, name, description, markdown_description, status, priority }: {
+  async handler({ taskId, taskName, listName, name, description, markdown_description, status, priority, dueDate }: {
     taskId?: string;
     taskName?: string;
     listName?: string;
@@ -185,6 +194,7 @@ export const updateTaskTool = {
     markdown_description?: string;
     status?: string;
     priority?: number | null;
+    dueDate?: string;
   }) {
     let targetTaskId = taskId;
     
@@ -225,6 +235,12 @@ export const updateTaskTool = {
     if (status !== undefined) updateData.status = status;
     if (priority !== undefined) {
       updateData.priority = priority === null ? null : (priority as TaskPriority);
+    }
+    if (dueDate !== undefined) {
+      updateData.due_date = dueDate ? parseDueDate(dueDate) : null;
+      if (dueDate && updateData.due_date) {
+        updateData.due_date_time = true;
+      }
     }
     
     // Update the task
@@ -392,36 +408,41 @@ export const duplicateTaskTool = {
     listName?: string;
   }) {
     let targetTaskId = taskId;
-    let targetListId = listId;
+    let sourceListId: string | undefined;
+    
+    // If sourceListName is provided, find the source list ID
+    if (sourceListName) {
+      const hierarchy = await workspaceService.getWorkspaceHierarchy();
+      const listInfo = workspaceService.findIDByNameInHierarchy(hierarchy, sourceListName, 'list');
+      
+      if (!listInfo) {
+        throw new Error(`Source list "${sourceListName}" not found`);
+      }
+      sourceListId = listInfo.id;
+    }
     
     // If no taskId but taskName is provided, look up the task ID
     if (!targetTaskId && taskName) {
-      // First find the source list ID if sourceListName is provided
-      let sourceListId: string | undefined;
-      
-      if (sourceListName) {
-        const hierarchy = await workspaceService.getWorkspaceHierarchy();
-        const listInfo = workspaceService.findIDByNameInHierarchy(hierarchy, sourceListName, 'list');
+      // Find the task in the source list if specified, otherwise search all tasks
+      if (sourceListId) {
+        const tasks = await taskService.getTasks(sourceListId);
+        const foundTask = tasks.find(t => t.name.toLowerCase() === taskName.toLowerCase());
         
-        if (!listInfo) {
-          throw new Error(`Source list "${sourceListName}" not found`);
+        if (!foundTask) {
+          throw new Error(`Task "${taskName}" not found in list "${sourceListName}"`);
         }
-        sourceListId = listInfo.id;
+        targetTaskId = foundTask.id;
+      } else {
+        // Without a source list, we need to search more broadly
+        throw new Error("When using taskName, sourceListName must be provided to find the task");
       }
-      
-      // Now find the task
-      const tasks = await taskService.getTasks(sourceListId || '');
-      const foundTask = tasks.find(t => t.name.toLowerCase() === taskName.toLowerCase());
-      
-      if (!foundTask) {
-        throw new Error(`Task "${taskName}" not found in list "${sourceListName}"`);
-      }
-      targetTaskId = foundTask.id;
     }
     
     if (!targetTaskId) {
-      throw new Error("Either taskId or taskName must be provided");
+      throw new Error("Either taskId or taskName (with sourceListName) must be provided");
     }
+    
+    let targetListId = listId;
     
     // If no listId but listName is provided, look up the list ID
     if (!targetListId && listName) {
@@ -429,25 +450,26 @@ export const duplicateTaskTool = {
       const listInfo = workspaceService.findIDByNameInHierarchy(hierarchy, listName, 'list');
       
       if (!listInfo) {
-        throw new Error(`List "${listName}" not found`);
+        throw new Error(`Target list "${listName}" not found`);
       }
       targetListId = listInfo.id;
     }
     
     // Duplicate the task
-    const duplicatedTask = await taskService.duplicateTask(targetTaskId, targetListId);
-    
+    const task = await taskService.duplicateTask(targetTaskId, targetListId);
+
     // Format response
     return {
       content: [{
         type: "text",
         text: JSON.stringify({
-          id: duplicatedTask.id,
-          name: duplicatedTask.name,
-          url: duplicatedTask.url,
-          status: duplicatedTask.status?.status || "Unknown",
-          list: duplicatedTask.list.name,
-          duplicated: true
+          id: task.id,
+          name: task.name,
+          url: task.url,
+          duplicated: true,
+          list: task.list.name,
+          space: task.space.name,
+          folder: task.folder?.name
         }, null, 2)
       }]
     };
@@ -654,7 +676,7 @@ export const getTasksTool = {
  */
 export const deleteTaskTool = {
   name: "delete_task",
-  description: "⚠️ PERMANENTLY DELETE a task. This action cannot be undone. Valid parameter combinations:\n1. Use taskId alone (preferred and safest)\n2. Use taskName + optional listName (use with caution)",
+  description: "\u26a0\ufe0f PERMANENTLY DELETE a task. This action cannot be undone. Valid parameter combinations:\n1. Use taskId alone (preferred and safest)\n2. Use taskName + optional listName (use with caution)",
   inputSchema: {
     type: "object",
     properties: {
@@ -670,70 +692,42 @@ export const deleteTaskTool = {
         type: "string",
         description: "Name of list containing the task. Helps ensure correct task deletion when using taskName."
       }
-    },
-    required: []
-  },
-  async handler({ taskId, taskName, listName }: {
-    taskId?: string;
-    taskName?: string;
-    listName?: string;
-  }) {
-    let targetTaskId = taskId;
-    
-    // If no taskId but taskName is provided, look up the task ID
-    if (!targetTaskId && taskName) {
-      // First find the list ID if listName is provided
-      let listId: string | undefined;
-      
-      if (listName) {
-        const hierarchy = await workspaceService.getWorkspaceHierarchy();
-        const listInfo = workspaceService.findIDByNameInHierarchy(hierarchy, listName, 'list');
-        
-        if (!listInfo) {
-          throw new Error(`List "${listName}" not found`);
+    }
+  }
+};
+
+/**
+ * Tool definition for deleting multiple tasks
+ */
+export const deleteBulkTasksTool = {
+  name: "delete_bulk_tasks",
+  description: "\u26a0\ufe0f PERMANENTLY DELETE multiple tasks. This action cannot be undone. For each task, you MUST provide either:\n1. taskId alone (preferred and safest)\n2. taskName + listName (use with caution)",
+  inputSchema: {
+    type: "object",
+    properties: {
+      tasks: {
+        type: "array",
+        description: "Array of tasks to delete",
+        items: {
+          type: "object",
+          properties: {
+            taskId: {
+              type: "string",
+              description: "Task ID (preferred). Use instead of taskName if available."
+            },
+            taskName: {
+              type: "string",
+              description: "Task name. Requires listName when used."
+            },
+            listName: {
+              type: "string",
+              description: "REQUIRED with taskName: List containing the task."
+            }
+          }
         }
-        listId = listInfo.id;
       }
-      
-      // Now find the task
-      const tasks = await taskService.getTasks(listId || '');
-      const foundTask = tasks.find(t => t.name.toLowerCase() === taskName.toLowerCase());
-      
-      if (!foundTask) {
-        throw new Error(`Task "${taskName}" not found${listName ? ` in list "${listName}"` : ""}`);
-      }
-      targetTaskId = foundTask.id;
-    }
-    
-    if (!targetTaskId) {
-      throw new Error("Either taskId or taskName must be provided");
-    }
-
-    // Get task info before deleting (for the response)
-    let taskInfo;
-    try {
-      taskInfo = await taskService.getTask(targetTaskId);
-    } catch (error) {
-      // If we can't get the task info, we'll continue with deletion anyway
-      console.error("Error fetching task before deletion:", error);
-    }
-
-    // Delete the task
-    await taskService.deleteTask(targetTaskId);
-
-    // Format response
-    return {
-      content: [{
-        type: "text",
-        text: JSON.stringify({
-          id: targetTaskId,
-          name: taskInfo?.name || "Unknown",
-          deleted: true,
-          list: taskInfo?.list?.name || "Unknown",
-          space: taskInfo?.space?.name || "Unknown"
-        }, null, 2)
-      }]
-    };
+    },
+    required: ["tasks"]
   }
 };
 
@@ -862,6 +856,10 @@ export const updateBulkTasksTool = {
               type: ["number", "null"],
               enum: [1, 2, 3, 4, null],
               description: "New priority (1-4 or null)"
+            },
+            dueDate: {
+              type: "string",
+              description: "New due date (Unix timestamp in milliseconds)"
             }
           }
         }
@@ -960,7 +958,8 @@ export async function handleUpdateBulkTasks({ tasks }: { tasks: any[] }) {
         description: task.description,
         markdown_description: task.markdown_description,
         status: task.status,
-        priority: task.priority as TaskPriority
+        priority: task.priority as TaskPriority,
+        due_date: task.dueDate ? parseDueDate(task.dueDate) : undefined
       });
 
       results.successful++;
@@ -1014,9 +1013,28 @@ export async function handleCreateBulkTasks(parameters: any) {
     failures: [] as any[]
   };
 
+  // Map tasks to ClickUp format
+  const clickupTasks = tasks.map((task: any) => {
+    const taskData: CreateTaskData = {
+      name: task.name,
+      description: task.description,
+      markdown_description: task.markdown_description,
+      status: task.status,
+      priority: task.priority as TaskPriority,
+      due_date: task.dueDate ? parseDueDate(task.dueDate) : undefined
+    };
+    
+    // Add due_date_time flag if due date is set
+    if (task.dueDate && taskData.due_date) {
+      taskData.due_date_time = true;
+    }
+    
+    return taskData;
+  });
+
   // Create tasks in bulk using the task service
   try {
-    const bulkResult = await taskService.createBulkTasks(targetListId, { tasks });
+    const bulkResult = await taskService.createBulkTasks(targetListId, { tasks: clickupTasks });
     
     // Update results based on bulk operation outcome
     results.successful = bulkResult.successfulItems.length;
@@ -1078,8 +1096,13 @@ export async function handleCreateTask(parameters: any) {
     markdown_description,
     status,
     priority: priority as TaskPriority,
-    due_date: dueDate ? parseInt(dueDate) : undefined
+    due_date: dueDate ? parseDueDate(dueDate) : undefined
   };
+
+  // Add due_date_time flag if due date is set
+  if (dueDate && taskData.due_date) {
+    taskData.due_date_time = true;
+  }
 
   // Create the task
   const task = await taskService.createTask(targetListId, taskData);
@@ -1105,7 +1128,7 @@ export async function handleCreateTask(parameters: any) {
  * Handler for the update_task tool
  */
 export async function handleUpdateTask(parameters: any) {
-  const { taskId, taskName, listName, name, description, markdown_description, status, priority } = parameters;
+  const { taskId, taskName, listName, name, description, markdown_description, status, priority, dueDate } = parameters;
   
   let targetTaskId = taskId;
   
@@ -1146,6 +1169,12 @@ export async function handleUpdateTask(parameters: any) {
   if (status !== undefined) updateData.status = status;
   if (priority !== undefined) {
     updateData.priority = priority === null ? null : (priority as TaskPriority);
+  }
+  if (dueDate !== undefined) {
+    updateData.due_date = dueDate ? parseDueDate(dueDate) : null;
+    if (dueDate && updateData.due_date) {
+      updateData.due_date_time = true;
+    }
   }
 
   // Update the task
@@ -1491,6 +1520,116 @@ export async function handleDeleteTask(parameters: any) {
         list: taskInfo?.list?.name || "Unknown",
         space: taskInfo?.space?.name || "Unknown"
       }, null, 2)
+    }]
+  };
+}
+
+/**
+ * Handler for the delete_bulk_tasks tool
+ */
+export async function handleDeleteBulkTasks({ tasks }: { tasks: any[] }) {
+  if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
+    throw new Error('You must provide a non-empty array of tasks to delete');
+  }
+
+  const results = {
+    total: tasks.length,
+    successful: 0,
+    failed: 0,
+    failures: [] as any[],
+    deleted: [] as any[]
+  };
+
+  // Collect all task IDs for deletion
+  const taskIdsToDelete: string[] = [];
+  const taskMap = new Map<string, any>();
+
+  // First, resolve all task IDs
+  for (const task of tasks) {
+    try {
+      let taskId = task.taskId;
+      
+      if (!taskId && task.taskName) {
+        if (!task.listName) {
+          throw new Error(`List name is required when using task name for task "${task.taskName}"`);
+        }
+        
+        const listInfo = await findListIDByName(workspaceService, task.listName);
+        if (!listInfo) {
+          throw new Error(`List "${task.listName}" not found`);
+        }
+        const taskList = await taskService.getTasks(listInfo.id);
+        const foundTask = taskList.find(t => t.name.toLowerCase() === task.taskName.toLowerCase());
+        
+        if (!foundTask) {
+          throw new Error(`Task "${task.taskName}" not found in list "${task.listName}"`);
+        }
+        taskId = foundTask.id;
+        
+        // Store original task info for the response
+        taskMap.set(taskId, { id: taskId, name: foundTask.name, originalTask: task });
+      } else if (taskId) {
+        // Store task ID with basic info for the response
+        taskMap.set(taskId, { id: taskId, name: task.taskName || "Unknown", originalTask: task });
+      } else {
+        throw new Error("Either taskId or taskName must be provided for each task");
+      }
+      
+      taskIdsToDelete.push(taskId);
+    } catch (error: any) {
+      results.failed++;
+      results.failures.push({
+        task: task.taskId || task.taskName,
+        error: error.message
+      });
+    }
+  }
+
+  // Perform the bulk delete operation if we have tasks to delete
+  if (taskIdsToDelete.length > 0) {
+    try {
+      const bulkResult = await taskService.deleteBulkTasks(taskIdsToDelete);
+      
+      // Process successful deletions
+      for (const deletedId of bulkResult.successfulItems) {
+        results.successful++;
+        const taskInfo = taskMap.get(deletedId);
+        results.deleted.push({
+          id: deletedId,
+          name: taskInfo?.name || "Unknown",
+          deleted: true
+        });
+      }
+      
+      // Process failed deletions
+      for (const failure of bulkResult.failedItems) {
+        results.failed++;
+        const taskInfo = taskMap.get(failure.item);
+        results.failures.push({
+          task: taskInfo?.name || failure.item,
+          error: failure.error.message
+        });
+      }
+    } catch (error: any) {
+      // If the bulk delete fails entirely, mark all remaining tasks as failed
+      for (const taskId of taskIdsToDelete) {
+        const taskInfo = taskMap.get(taskId);
+        if (taskInfo && !results.deleted.some(t => t.id === taskId) && 
+            !results.failures.some(f => f.task === taskId || f.task === taskInfo.name)) {
+          results.failed++;
+          results.failures.push({
+            task: taskInfo.name || taskId,
+            error: error.message
+          });
+        }
+      }
+    }
+  }
+
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify(results, null, 2)
     }]
   };
 }

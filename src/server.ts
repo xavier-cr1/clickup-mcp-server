@@ -18,7 +18,8 @@ import {
   deleteTaskTool, handleDeleteTask,
   createBulkTasksTool, handleCreateBulkTasks,
   updateBulkTasksTool, handleUpdateBulkTasks,
-  moveBulkTasksTool, handleMoveBulkTasks
+  moveBulkTasksTool, handleMoveBulkTasks,
+  deleteBulkTasksTool, handleDeleteBulkTasks
 } from "./tools/task.js";
 import {
   createListTool, handleCreateList,
@@ -49,7 +50,7 @@ const { workspace } = services;
 export const server = new Server(
   {
     name: "clickup-mcp-server",
-    version: "0.4.50",
+    version: "0.4.61",
   },
   {
     capabilities: {
@@ -77,6 +78,7 @@ export function configureServer() {
         createBulkTasksTool,
         updateBulkTasksTool,
         moveBulkTasksTool,
+        deleteBulkTasksTool,
         createListTool,
         createListInFolderTool,
         getListTool,
@@ -117,6 +119,8 @@ export function configureServer() {
         return handleUpdateBulkTasks(params as { tasks: any[] });
       case "move_bulk_tasks":
         return handleMoveBulkTasks(params as { tasks: any[], targetListId?: string, targetListName?: string });
+      case "delete_bulk_tasks":
+        return handleDeleteBulkTasks(params as { tasks: any[] });
       case "create_list":
         return handleCreateList(params);
       case "create_list_in_folder":

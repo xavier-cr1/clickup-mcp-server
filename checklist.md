@@ -233,6 +233,28 @@ Next step: Begin testing the delete_task tool to clean up our test tasks.
     - Priority handling across all task operations working correctly when using appropriate tools ✅
     - Next step: Clean up test tasks and document any remaining issues 
 
+### Due Date Handling Improvements ✅
+- [x] Enhanced due date parsing functionality
+  - [x] Added support for relative time expressions
+    - Created new function `getRelativeTimestamp()` to calculate dates relative to current time
+    - Enhanced `parseDueDate()` function to support expressions like "2 hours from now"
+    - Added support for various time units: hours, days, weeks, and months
+  - [x] Fixed issues with displaying due times in ClickUp
+    - Added `due_date_time: true` flag when setting due dates
+    - Ensured time component shows in ClickUp interface instead of just "Today"
+    - Updated all task creation and update functions to use this flag
+  - [x] Testing:
+    - Successfully created tasks with due dates like "2 hours from now"
+    - Confirmed due dates correctly appear with time in ClickUp
+    - Verified using both create_task and update_task tools
+  - Issue Solved:
+    - Previous implementation only showed the day (e.g., "Today") without time
+    - Now shows full date and time (e.g., "Today at 10:56 PM")
+  - Implementation details:
+    - Enhanced task.ts to set `due_date_time: true` when due date is present
+    - Using `parseDueDate()` instead of `parseInt()` for all due date processing
+    - Added new regex patterns to support various relative time expressions
+
 ## User Scenario Testing
 
 ### Project Management Scenarios

@@ -2,9 +2,11 @@
 
 # MCP Server
 
+> 🚧 **Status Update:** The code refactoring has been completed. Enhanced due date functionality now supports relative time expressions like "2 hours from now" with proper time display in ClickUp!
+
 A Model Context Protocol (MCP) server for integrating ClickUp tasks with AI applications. This server allows AI agents to interact with ClickUp tasks, spaces, lists, and folders through a standardized protocol.
 
-## Quick Start
+## npx Quick Start
 
 Directions for use with Cursor Composer Agent:
 
@@ -22,7 +24,10 @@ npx -y @taazkareem/clickup-mcp-server \
 5. Use Natural Language to interact with your ClickUp Workspace!
 
 ## Smithery
+
 [![smithery badge](https://smithery.ai/badge/@TaazKareem/clickup-mcp-server)](https://smithery.ai/server/@TaazKareem/clickup-mcp-server)
+
+The server is also hosted on Smithery. There, you can preview the available tools or copy the commands to run on various clients.
 
 ## Features
 
@@ -31,13 +36,13 @@ npx -y @taazkareem/clickup-mcp-server \
   - Move and duplicate tasks between lists, spaces, and folders
   - Create multiple tasks in bulk
   - View and modify task details and properties
+  - Set due dates using natural language and relative time expressions
 
 - 📂 **Workspace Organization**
   - Complete workspace hierarchy (spaces, folders, lists)
   - Tree structure with clear relationships
   - Full CRUD operations for workspace components
   - Efficient path-based navigation
-
 
 - 🔄 **Integration Features**
   - Name or ID-based item lookup
@@ -59,10 +64,13 @@ npx -y @taazkareem/clickup-mcp-server \
 | [create_task](docs/api-reference.md#task-management) | Create a task | `name`, (`listId`/`listName`) |
 | [create_bulk_tasks](docs/api-reference.md#task-management) | Create multiple tasks | `tasks[]` |
 | [update_task](docs/api-reference.md#task-management) | Modify task | `taskId`/`taskName` |
+| [update_bulk_tasks](docs/api-reference.md#task-management) | Update multiple tasks | `tasks[]` with IDs or names |
 | [get_tasks](docs/api-reference.md#task-retrieval) | Get tasks from list | `listId`/`listName` |
 | [get_task](docs/api-reference.md#task-retrieval) | Get task details | `taskId`/`taskName` |
 | [delete_task](docs/api-reference.md#task-management) | Remove task | `taskId`/`taskName` |
+| [delete_bulk_tasks](docs/api-reference.md#task-management) | Remove multiple tasks | `tasks[]` with IDs or names |
 | [move_task](docs/api-reference.md#task-management) | Move task | `taskId`/`taskName`, `listId`/`listName` |
+| [move_bulk_tasks](docs/api-reference.md#task-management) | Move multiple tasks | `tasks[]` with IDs or names, target list |
 | [duplicate_task](docs/api-reference.md#task-management) | Copy task | `taskId`/`taskName`, `listId`/`listName` |
 | [create_list](docs/api-reference.md#list-management) | Create list in space | `name`, `spaceId`/`spaceName` |
 | [create_folder](docs/api-reference.md#folder-management) | Create folder | `name`, `spaceId`/`spaceName` |
