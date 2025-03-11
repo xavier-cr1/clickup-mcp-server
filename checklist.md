@@ -243,17 +243,29 @@ Next step: Begin testing the delete_task tool to clean up our test tasks.
     - Added `due_date_time: true` flag when setting due dates
     - Ensured time component shows in ClickUp interface instead of just "Today"
     - Updated all task creation and update functions to use this flag
+  - [x] Added human-readable date formatting
+    - Created new `formatDueDate()` function to convert timestamps to user-friendly dates
+    - Updated all task responses to use human-readable format (e.g., "March 10, 2025, 10:56 PM")
+    - Kept raw timestamps available as `due_date_raw` for reference
+    - Applied formatting to all task-related tools (get_task, get_tasks, create_task, update_task, etc.)
+  - [x] Enhanced regex support for complex date expressions
+    - Added support for "tomorrow at 9am" type format
+    - Added support for "next week at noon" type format
+    - Added support for "X days from now at Y:ZZ pm" type format
   - [x] Testing:
     - Successfully created tasks with due dates like "2 hours from now"
+    - Updated tasks with dates like "tomorrow at 9am" and "next week at noon" 
     - Confirmed due dates correctly appear with time in ClickUp
-    - Verified using both create_task and update_task tools
+    - Verified that all task responses include human-readable dates
   - Issue Solved:
     - Previous implementation only showed the day (e.g., "Today") without time
-    - Now shows full date and time (e.g., "Today at 10:56 PM")
+    - Raw timestamps were difficult to interpret without conversion
+    - Now shows full date and time in human-readable format (e.g., "March 10, 2025, 10:56 PM")
   - Implementation details:
     - Enhanced task.ts to set `due_date_time: true` when due date is present
     - Using `parseDueDate()` instead of `parseInt()` for all due date processing
     - Added new regex patterns to support various relative time expressions
+    - Added `formatDueDate()` function to format timestamps in user-friendly way
 
 ## User Scenario Testing
 

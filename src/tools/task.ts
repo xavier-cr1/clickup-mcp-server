@@ -17,7 +17,8 @@ import {
 import { createClickUpServices } from '../services/clickup/index.js';
 import config from '../config.js';
 import { findListIDByName } from './list.js';
-import { parseDueDate } from './utils.js';
+import { parseDueDate, formatDueDate } from './utils.js';
+import { WorkspaceService } from '../services/clickup/workspace.js';
 
 // Initialize ClickUp services using the factory function
 const services = createClickUpServices({
@@ -127,6 +128,7 @@ export const createTaskTool = {
           name: createdTask.name,
           url: createdTask.url,
           status: createdTask.status?.status || "New",
+          due_date: createdTask.due_date ? formatDueDate(Number(createdTask.due_date)) : undefined,
           list: createdTask.list.name,
           space: createdTask.space.name,
           folder: createdTask.folder?.name
@@ -255,7 +257,10 @@ export const updateTaskTool = {
           name: updatedTask.name,
           url: updatedTask.url,
           status: updatedTask.status?.status || "Unknown",
-          updated: true
+          updated: true,
+          due_date: updatedTask.due_date ? formatDueDate(Number(updatedTask.due_date)) : undefined,
+          list: updatedTask.list.name,
+          folder: updatedTask.folder?.name
         }, null, 2)
       }]
     };
@@ -360,6 +365,7 @@ export const moveTaskTool = {
           name: movedTask.name,
           url: movedTask.url,
           status: movedTask.status?.status || "Unknown",
+          due_date: movedTask.due_date ? formatDueDate(Number(movedTask.due_date)) : undefined,
           list: movedTask.list.name,
           moved: true
         }, null, 2)
@@ -467,6 +473,7 @@ export const duplicateTaskTool = {
           name: task.name,
           url: task.url,
           duplicated: true,
+          due_date: task.due_date ? formatDueDate(Number(task.due_date)) : undefined,
           list: task.list.name,
           space: task.space.name,
           folder: task.folder?.name
@@ -548,7 +555,8 @@ export const getTaskTool = {
           description: task.description,
           status: task.status?.status || "Unknown",
           priority: task.priority,
-          due_date: task.due_date,
+          due_date: task.due_date ? formatDueDate(Number(task.due_date)) : undefined,
+          due_date_raw: task.due_date, // Keep raw timestamp for reference if needed
           url: task.url,
           list: task.list.name,
           space: task.space.name,
@@ -650,21 +658,25 @@ export const getTasksTool = {
     // Get tasks with filters
     const tasks = await taskService.getTasks(targetListId, filters);
     
+    // Format the tasks data to be more API friendly
+    const formattedTasks = tasks.map(task => ({
+      id: task.id,
+      name: task.name,
+      status: task.status?.status || 'Unknown',
+      url: task.url,
+      due_date: task.due_date ? formatDueDate(Number(task.due_date)) : undefined,
+      due_date_raw: task.due_date,
+      priority: task.priority?.priority,
+      assignees: task.assignees?.map(a => a.username) || []
+    }));
+    
     // Format response
     return {
       content: [{
         type: "text",
         text: JSON.stringify({
-          list_id: targetListId,
-          task_count: tasks.length,
-          tasks: tasks.map((task: ClickUpTask) => ({
-            id: task.id,
-            name: task.name,
-            status: task.status?.status || "Unknown",
-            priority: task.priority,
-            due_date: task.due_date,
-            url: task.url
-          }))
+          total: tasks.length,
+          tasks: formattedTasks
         }, null, 2)
       }]
     };
@@ -1116,6 +1128,7 @@ export async function handleCreateTask(parameters: any) {
         name: task.name,
         url: task.url,
         status: task.status?.status || "New",
+        due_date: task.due_date ? formatDueDate(Number(task.due_date)) : undefined,
         list: task.list.name,
         space: task.space.name,
         folder: task.folder?.name
@@ -1190,8 +1203,8 @@ export async function handleUpdateTask(parameters: any) {
         url: task.url,
         status: task.status?.status || "Unknown",
         updated: true,
+        due_date: task.due_date ? formatDueDate(Number(task.due_date)) : undefined,
         list: task.list.name,
-        space: task.space.name,
         folder: task.folder?.name
       }, null, 2)
     }]
@@ -1269,6 +1282,7 @@ export async function handleMoveTask(parameters: any) {
         name: task.name,
         url: task.url,
         moved: true,
+        due_date: task.due_date ? formatDueDate(Number(task.due_date)) : undefined,
         list: task.list.name,
         space: task.space.name,
         folder: task.folder?.name
@@ -1343,6 +1357,7 @@ export async function handleDuplicateTask(parameters: any) {
         name: task.name,
         url: task.url,
         duplicated: true,
+        due_date: task.due_date ? formatDueDate(Number(task.due_date)) : undefined,
         list: task.list.name,
         space: task.space.name,
         folder: task.folder?.name
@@ -1391,21 +1406,25 @@ export async function handleGetTasks(parameters: any) {
   // Get tasks with filters
   const tasks = await taskService.getTasks(targetListId, filters);
 
+  // Format the tasks data to be more API friendly
+  const formattedTasks = tasks.map(task => ({
+    id: task.id,
+    name: task.name,
+    status: task.status?.status || 'Unknown',
+    url: task.url,
+    due_date: task.due_date ? formatDueDate(Number(task.due_date)) : undefined,
+    due_date_raw: task.due_date,
+    priority: task.priority?.priority,
+    assignees: task.assignees?.map(a => a.username) || []
+  }));
+  
   // Format response
   return {
     content: [{
       type: "text",
       text: JSON.stringify({
-        list_id: targetListId,
-        task_count: tasks.length,
-        tasks: tasks.map((task: ClickUpTask) => ({
-          id: task.id,
-          name: task.name,
-          status: task.status?.status || "Unknown",
-          priority: task.priority,
-          due_date: task.due_date,
-          url: task.url
-        }))
+        total: tasks.length,
+        tasks: formattedTasks
       }, null, 2)
     }]
   };
@@ -1455,7 +1474,24 @@ export async function handleGetTask(parameters: any) {
   return {
     content: [{
       type: "text",
-      text: JSON.stringify(task, null, 2)
+      text: JSON.stringify({
+        id: task.id,
+        name: task.name,
+        description: task.description,
+        status: task.status?.status || "Unknown",
+        priority: task.priority,
+        due_date: task.due_date ? formatDueDate(Number(task.due_date)) : undefined,
+        due_date_raw: task.due_date, // Keep raw timestamp for reference if needed
+        url: task.url,
+        list: task.list.name,
+        space: task.space.name,
+        folder: task.folder?.name,
+        creator: task.creator,
+        assignees: task.assignees,
+        tags: task.tags,
+        time_estimate: task.time_estimate,
+        time_spent: task.time_spent,
+      }, null, 2)
     }]
   };
 }

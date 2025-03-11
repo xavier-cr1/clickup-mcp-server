@@ -43,28 +43,51 @@ export function parseDueDate(dateString: string): number | undefined {
       return today.getTime();
     }
     
-    if (lowerDate === 'tomorrow') {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      tomorrow.setHours(23, 59, 59, 999);
-      return tomorrow.getTime();
-    }
+    // Handle relative dates with specific times
+    const relativeTimeRegex = /(?:(\d+)\s*(days?|weeks?|months?)\s*from\s*now|tomorrow|next\s+(?:week|month))\s*(?:at\s+(\d+)(?::(\d+))?\s*(am|pm)?)?/i;
+    const match = lowerDate.match(relativeTimeRegex);
     
-    if (lowerDate.includes('next week')) {
-      const nextWeek = new Date();
-      nextWeek.setDate(nextWeek.getDate() + 7);
-      nextWeek.setHours(23, 59, 59, 999);
-      return nextWeek.getTime();
-    }
-    
-    if (lowerDate.includes('next month')) {
-      const nextMonth = new Date();
-      nextMonth.setMonth(nextMonth.getMonth() + 1);
-      nextMonth.setHours(23, 59, 59, 999);
-      return nextMonth.getTime();
-    }
+    if (match) {
+      const date = new Date();
+      const [_, amount, unit, hours, minutes, meridian] = match;
+      
+      // Calculate the future date
+      if (amount && unit) {
+        const value = parseInt(amount);
+        if (unit.startsWith('day')) {
+          date.setDate(date.getDate() + value);
+        } else if (unit.startsWith('week')) {
+          date.setDate(date.getDate() + (value * 7));
+        } else if (unit.startsWith('month')) {
+          date.setMonth(date.getMonth() + value);
+        }
+      } else if (lowerDate.startsWith('tomorrow')) {
+        date.setDate(date.getDate() + 1);
+      } else if (lowerDate.includes('next week')) {
+        date.setDate(date.getDate() + 7);
+      } else if (lowerDate.includes('next month')) {
+        date.setMonth(date.getMonth() + 1);
+      }
 
-    // Handle hours/days/weeks/months from now
+      // Set the time if specified
+      if (hours) {
+        let parsedHours = parseInt(hours);
+        const parsedMinutes = minutes ? parseInt(minutes) : 0;
+        
+        // Convert to 24-hour format if meridian is specified
+        if (meridian?.toLowerCase() === 'pm' && parsedHours < 12) parsedHours += 12;
+        if (meridian?.toLowerCase() === 'am' && parsedHours === 12) parsedHours = 0;
+        
+        date.setHours(parsedHours, parsedMinutes, 0, 0);
+      } else {
+        // Default to end of day if no time specified
+        date.setHours(23, 59, 59, 999);
+      }
+      
+      return date.getTime();
+    }
+    
+    // Handle hours from now
     const hoursRegex = /(\d+)\s*hours?\s*from\s*now/i;
     const daysRegex = /(\d+)\s*days?\s*from\s*now/i;
     const weeksRegex = /(\d+)\s*weeks?\s*from\s*now/i;
@@ -100,6 +123,35 @@ export function parseDueDate(dateString: string): number | undefined {
     return undefined;
   } catch (error) {
     console.warn(`Failed to parse due date: ${dateString}`, error);
+    return undefined;
+  }
+}
+
+/**
+ * Format a due date timestamp into a human-readable string
+ * 
+ * @param timestamp Unix timestamp in milliseconds
+ * @returns Formatted date string or undefined if timestamp is invalid
+ */
+export function formatDueDate(timestamp: number | null | undefined): string | undefined {
+  if (!timestamp) return undefined;
+  
+  try {
+    const date = new Date(timestamp);
+    
+    if (isNaN(date.getTime())) return undefined;
+    
+    // Format: "March 10, 2025 at 10:56 PM"
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    }).replace(' at', ',');
+  } catch (error) {
+    console.warn(`Failed to format due date: ${timestamp}`, error);
     return undefined;
   }
 } 
