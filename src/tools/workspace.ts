@@ -57,78 +57,44 @@ export async function handleGetWorkspaceHierarchy() {
  */
 function formatHierarchyResponse(hierarchy: WorkspaceTree): any {
   try {
-    // Helper function to format nodes by type
-    const formatNodesByType = (nodes: WorkspaceNode[] = []) => {
-      const result: any = {
-        spaces: [],
-        folders: [],
-        lists: []
-      };
+    // Helper function to format a node and its children as a tree
+    const formatNodeAsTree = (node: WorkspaceNode | WorkspaceTree['root'], level: number = 0, isLast: boolean = true, parentPrefix: string = ''): string[] => {
+      const lines: string[] = [];
       
-      for (const node of nodes) {
-        if (node.type === 'space') {
-          const spaceResult = {
-            id: node.id,
-            name: node.name,
-            type: node.type,
-            lists: [],
-            folders: []
-          };
-          
-          // Process children of space
-          if (node.children && node.children.length > 0) {
-            const childrenByType = formatNodesByType(node.children);
-            spaceResult.lists = childrenByType.lists;
-            spaceResult.folders = childrenByType.folders;
-          }
-          
-          result.spaces.push(spaceResult);
-        } else if (node.type === 'folder') {
-          const folderResult = {
-            id: node.id,
-            name: node.name,
-            type: node.type,
-            lists: []
-          };
-          
-          // Process children of folder (only lists)
-          if (node.children && node.children.length > 0) {
-            folderResult.lists = node.children
-              .filter(child => child.type === 'list')
-              .map(list => ({
-                id: list.id,
-                name: list.name,
-                type: list.type
-              }));
-          }
-          
-          result.folders.push(folderResult);
-        } else if (node.type === 'list') {
-          result.lists.push({
-            id: node.id,
-            name: node.name,
-            type: node.type
-          });
-        }
-      }
+      // Calculate the current line's prefix
+      const currentPrefix = level === 0 ? '' : parentPrefix + (isLast ? '└── ' : '├── ');
       
-      return result;
+      // Format current node with descriptive ID type
+      const idType = 'type' in node ? `${node.type.charAt(0).toUpperCase() + node.type.slice(1)} ID` : 'Workspace ID';
+      lines.push(`${currentPrefix}${node.name} (${idType}: ${node.id})`);
+      
+      // Calculate the prefix for children
+      const childPrefix = level === 0 ? '' : parentPrefix + (isLast ? '    ' : '│   ');
+      
+      // Process children
+      const children = node.children || [];
+      children.forEach((child, index) => {
+        const childLines = formatNodeAsTree(
+          child,
+          level + 1,
+          index === children.length - 1,
+          childPrefix
+        );
+        lines.push(...childLines);
+      });
+      
+      return lines;
     };
-    
-    // Convert the workspace hierarchy to a simplified format
-    const rootChildren = formatNodesByType(hierarchy.root.children);
-    
-    const formattedHierarchy = {
-      workspaceId: hierarchy.root.id,
-      workspaceName: hierarchy.root.name,
-      spaces: rootChildren.spaces
-    };
+
+    // Generate tree representation
+    const treeLines = formatNodeAsTree(hierarchy.root);
+    const treeOutput = treeLines.join('\n');
 
     return {
       content: [
         {
           type: "text",
-          text: JSON.stringify(formattedHierarchy, null, 2)
+          text: treeOutput
         }
       ]
     };
