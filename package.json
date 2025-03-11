@@ -28,7 +28,21 @@
     "project-management",
     "model-context-protocol",
     "clickup-server",
-    "clickup-mcp-server"
+    "clickup-mcp-server",
+    "task-management",
+    "productivity",
+    "automation",
+    "workflow",
+    "team-collaboration",
+    "artificial-intelligence",
+    "project-tracking",
+    "task-tracking",
+    "project-planning",
+    "clickup-integration",
+    "clickup-api",
+    "clickup-automation",
+    "task-organization",
+    "project-organization"
   ],
   "author": "Talib Kareem",
   "license": "MIT",
@@ -42,8 +56,6 @@
   "homepage": "https://github.com/taazkareem/clickup-mcp-server#readme",
   "dependencies": {
     "@modelcontextprotocol/sdk": "0.6.0",
-    "@modelcontextprotocol/server-github": "^2025.1.23",
-    "@taazkareem/clickup-mcp-server": "^0.4.60",
     "axios": "^1.6.7",
     "dotenv": "^16.4.1"
   },
