@@ -5,10 +5,6 @@ A Model Context Protocol (MCP) server for integrating ClickUp tasks with AI appl
 
 > 🚧 **Status Update:** The code refactoring has been completed. Enhanced due date functionality now supports relative time expressions like "2 hours from now" with proper time display in ClickUp!
 
-<a href="https://glama.ai/mcp/servers/iwjvs2zy63">
-  <img width="380" height="200" src="https://glama.ai/mcp/servers/iwjvs2zy63/badge" alt="ClickUp Server MCP server" />
-</a>
-
 ## npx Quick Start
 
 Directions for use with Cursor Composer Agent:
