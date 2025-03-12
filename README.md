@@ -120,3 +120,11 @@ Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md)
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+## Disclaimer
+
+Disclaimer: This software makes use of third-party APIs and may reference trademarks
+or brands owned by third parties. The use of such APIs or references does not imply 
+any affiliation with or endorsement by the respective companies. All trademarks and 
+brand names are the property of their respective owners. This project is an independent
+work and is not officially associated with or sponsored by any third-party company mentioned.
+
