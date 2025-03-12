@@ -1,10 +1,13 @@
 <img src="https://clickup.com/assets/brand/logo-v3-clickup-dark.svg" alt="ClickUp" height="40" style="vertical-align: middle; margin-top: -4px;">
 
 # MCP Server
+A Model Context Protocol (MCP) server for integrating ClickUp tasks with AI applications. This server allows AI agents to interact with ClickUp tasks, spaces, lists, and folders through a standardized protocol.
 
 > 🚧 **Status Update:** The code refactoring has been completed. Enhanced due date functionality now supports relative time expressions like "2 hours from now" with proper time display in ClickUp!
 
-A Model Context Protocol (MCP) server for integrating ClickUp tasks with AI applications. This server allows AI agents to interact with ClickUp tasks, spaces, lists, and folders through a standardized protocol.
+<a href="https://glama.ai/mcp/servers/iwjvs2zy63">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/iwjvs2zy63/badge" alt="ClickUp Server MCP server" />
+</a>
 
 ## npx Quick Start
 
@@ -22,6 +25,7 @@ npx -y @taazkareem/clickup-mcp-server \
 ```
 4. Replace the credentials and click Save
 5. Use Natural Language to interact with your ClickUp Workspace!
+
 
 ## Smithery
 
