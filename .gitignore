@@ -32,6 +32,7 @@ Thumbs.db
 # Cursor specific
 .cursorrules
 .cursorignore
+.specstory
 
 # Temporary files
 .tmp/

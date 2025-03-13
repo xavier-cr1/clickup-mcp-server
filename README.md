@@ -34,7 +34,7 @@ The server is also hosted on Smithery. There, you can preview the available tool
 - 🎯 **Task Management**
   - Create, update, and delete individual tasks
   - Move and duplicate tasks between lists, spaces, and folders
-  - Create multiple tasks in bulk
+  - Create, update, move,and delete multiple tasks in bulk
   - View and modify task details and properties
   - Set due dates using natural language and relative time expressions
 
@@ -49,12 +49,6 @@ The server is also hosted on Smithery. There, you can preview the available tool
   - Case-insensitive name matching
   - Markdown formatting support
   - Built-in API rate limiting
-
-- 🤖 **AI-Powered Analysis**
-  - Task status summaries and overviews
-  - Priority analysis and recommendations
-  - Structured description generation
-  - Task relationship mapping
 
 ## Available Tools
 
@@ -85,6 +79,7 @@ The server is also hosted on Smithery. There, you can preview the available tool
 See [full documentation](docs/api-reference.md) for optional parameters and advanced usage.
 
 ## Available Prompts
+Not yet implemented (or needed. For now, you can send a follow up prompt after tool result.)
 
 | Prompt | Purpose | Features |
 |--------|---------|----------|
