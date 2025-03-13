@@ -3,16 +3,20 @@
 # MCP Server
 A Model Context Protocol (MCP) server for integrating ClickUp tasks with AI applications. This server allows AI agents to interact with ClickUp tasks, spaces, lists, and folders through a standardized protocol.
 
-> 🚧 **Status Update:** The code refactoring has been completed. Enhanced due date functionality now supports relative time expressions like "2 hours from now" with proper time display in ClickUp!
+> 🚧 **Status Update:** -The code refactoring has been completed. -Enhanced due date functionality now supports relative time expressions like "2 hours from now" with proper time display in ClickUp. -Server has been listed on Smithery, Glama, and MCP Pulse
 
-## npx Quick Start
+<a href="https://glama.ai/mcp/servers/iwjvs2zy63">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/iwjvs2zy63/badge" alt="ClickUp Server MCP server" />
+</a>
+
+## Quick Start
 
 Directions for use with Cursor Composer Agent:
 
 1. Get your credentials:
    - ClickUp API key from [ClickUp Settings](https://app.clickup.com/settings/apps)
    - Team ID from your ClickUp workspace URL
-2. Go to Features in settings
+2. Go to Features in settings (or MCP Servers depending on version)
 3. Add under MCP Servers:
 ```bash
 npx -y @taazkareem/clickup-mcp-server \
@@ -23,11 +27,11 @@ npx -y @taazkareem/clickup-mcp-server \
 5. Use Natural Language to interact with your ClickUp Workspace!
 
 
-## Smithery
+## Smithery Installation (recommended)
 
 [![smithery badge](https://smithery.ai/badge/@TaazKareem/clickup-mcp-server)](https://smithery.ai/server/@TaazKareem/clickup-mcp-server)
 
-The server is also hosted on Smithery. There, you can preview the available tools or copy the commands to run on various clients.
+The server is hosted on Smithery. There, you can preview the available tools or copy the commands to run on various clients.
 
 ## Features
 
@@ -110,4 +114,12 @@ Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md)
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Disclaimer
+
+Disclaimer: This software makes use of third-party APIs and may reference trademarks
+or brands owned by third parties. The use of such APIs or references does not imply 
+any affiliation with or endorsement by the respective companies. All trademarks and 
+brand names are the property of their respective owners. This project is an independent
+work and is not officially associated with or sponsored by any third-party company mentioned.
 
