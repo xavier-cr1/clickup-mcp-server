@@ -30,6 +30,7 @@ yarn-error.log*
 Thumbs.db
 
 # Cursor specific
+.cursor
 .cursorrules
 .cursorignore
 .specstory
