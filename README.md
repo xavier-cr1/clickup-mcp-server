@@ -3,7 +3,7 @@
 # MCP Server
 A Model Context Protocol (MCP) server for integrating ClickUp tasks with AI applications. This server allows AI agents to interact with ClickUp tasks, spaces, lists, and folders through a standardized protocol.
 
-> 🚧 **Status Update:** -The code refactoring has been completed. -Enhanced due date functionality now supports relative time expressions like "2 hours from now" with proper time display in ClickUp. -Server has been listed on Smithery, Glama, and Pulse MCP
+> 🚧 **Status Update:** -The code refactoring has been completed. -Enhanced due date functionality now supports relative time expressions like "2 hours from now" with proper time display in ClickUp.  -npx command updated to use @latest which should automatically update the server when a new version is released. -Server has been listed on Smithery, Glama, and Pulse MCP.
 
 <a href="https://glama.ai/mcp/servers/iwjvs2zy63">
   <img width="380" height="200" src="https://glama.ai/mcp/servers/iwjvs2zy63/badge" alt="ClickUp Server MCP server" />
@@ -27,11 +27,11 @@ npx -y @taazkareem/clickup-mcp-server@latest \
 5. Use Natural Language to interact with your ClickUp Workspace!
 
 
-## Smithery Installation (recommended)
+## Smithery Installation
 
 [![smithery badge](https://smithery.ai/badge/@TaazKareem/clickup-mcp-server)](https://smithery.ai/server/@TaazKareem/clickup-mcp-server)
 
-The server is hosted on Smithery. There, you can preview the available tools or copy the commands to run on various clients.
+The server is also hosted on Smithery. There, you can preview the available tools or copy the commands to run on your specific client app.
 
 ## Features
 
@@ -83,7 +83,7 @@ The server is hosted on Smithery. There, you can preview the available tools or 
 See [full documentation](docs/api-reference.md) for optional parameters and advanced usage.
 
 ## Available Prompts
-Not yet implemented (or needed. For now, you can send a follow up prompt after tool result.)
+Not yet implemented (or needed) For now, you can send a follow up prompt after the tool result.
 
 | Prompt | Purpose | Features |
 |--------|---------|----------|
