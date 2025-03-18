@@ -27,6 +27,7 @@ import { WorkspaceService } from './workspace.js';
 import { TaskService } from './task.js';
 import { ListService } from './list.js';
 import { FolderService } from './folder.js';
+import { Logger } from '../../logger.js';
 
 /**
  * Configuration options for ClickUp services
@@ -47,6 +48,9 @@ export interface ClickUpServices {
   folder: FolderService;
 }
 
+// Singleton logger for ClickUp services
+const logger = new Logger('ClickUpServices');
+
 /**
  * Factory function to create instances of all ClickUp services
  * @param config Configuration for the services
@@ -55,13 +59,38 @@ export interface ClickUpServices {
 export function createClickUpServices(config: ClickUpServiceConfig): ClickUpServices {
   const { apiKey, teamId, baseUrl } = config;
 
-  // Create the workspace service
+  // Log start of overall initialization
+  logger.info('Starting ClickUp services initialization', { 
+    teamId, 
+    baseUrl: baseUrl || 'https://api.clickup.com/api/v2' 
+  });
+
+  // Create workspace service first since others depend on it
+  logger.info('Initializing ClickUp Workspace service');
   const workspaceService = new WorkspaceService(apiKey, teamId, baseUrl);
 
-  return {
+  // Initialize remaining services with workspace dependency
+  logger.info('Initializing ClickUp Task service');
+  const taskService = new TaskService(apiKey, teamId, baseUrl, workspaceService);
+  
+  logger.info('Initializing ClickUp List service');
+  const listService = new ListService(apiKey, teamId, baseUrl, workspaceService);
+  
+  logger.info('Initializing ClickUp Folder service');
+  const folderService = new FolderService(apiKey, teamId, baseUrl, workspaceService);
+
+  const services = {
     workspace: workspaceService,
-    task: new TaskService(apiKey, teamId, baseUrl, workspaceService),
-    list: new ListService(apiKey, teamId, baseUrl, workspaceService),
-    folder: new FolderService(apiKey, teamId, baseUrl, workspaceService)
+    task: taskService,
+    list: listService,
+    folder: folderService
   };
+
+  // Log successful completion
+  logger.info('All ClickUp services initialized successfully', {
+    services: Object.keys(services),
+    baseUrl: baseUrl || 'https://api.clickup.com/api/v2'
+  });
+  
+  return services;
 } 

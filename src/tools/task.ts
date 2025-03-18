@@ -14,20 +14,14 @@ import {
   TaskFilters,
   TasksResponse
 } from '../services/clickup/types.js';
-import { createClickUpServices } from '../services/clickup/index.js';
+import { clickUpServices } from '../services/shared.js';
 import config from '../config.js';
 import { findListIDByName } from './list.js';
 import { parseDueDate, formatDueDate } from './utils.js';
 import { WorkspaceService } from '../services/clickup/workspace.js';
 
-// Initialize ClickUp services using the factory function
-const services = createClickUpServices({
-  apiKey: config.clickupApiKey,
-  teamId: config.clickupTeamId
-});
-
-// Extract the services we need for task operations
-const { task: taskService, workspace: workspaceService } = services;
+// Use shared services instance
+const { task: taskService, workspace: workspaceService } = clickUpServices;
 
 /**
  * Tool definition for creating a single task
