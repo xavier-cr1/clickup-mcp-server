@@ -138,7 +138,7 @@ export const createTaskTool = {
  */
 export const updateTaskTool = {
   name: "update_task",
-  description: "Modify an existing task's properties. Valid parameter combinations:\n1. Use taskId alone (preferred if you have it)\n2. Use taskName + optional listName (to disambiguate if multiple tasks have the same name)\n\nAt least one update field (name, description, status, priority) must be provided. Only specified fields will be updated.",
+  description: "Modify an existing task's properties. Valid parameter combinations:\n1. Use taskId alone (preferred if you have it)\n2. Use taskName + listName (listName is REQUIRED when using taskName, not optional)\n\nAt least one update field (name, description, status, priority) must be provided. Only specified fields will be updated.",
   inputSchema: {
     type: "object",
     properties: {
@@ -148,11 +148,11 @@ export const updateTaskTool = {
       },
       taskName: {
         type: "string",
-        description: "Name of the task to update. Only use this if you don't have taskId. Warning: Task names may not be unique."
+        description: "Name of the task to update. Only use this if you don't have taskId. When using this parameter, you MUST also provide listName."
       },
       listName: {
         type: "string",
-        description: "Name of the list containing the task. Required when using taskName if multiple tasks have the same name."
+        description: "Name of the list containing the task. REQUIRED when using taskName."
       },
       name: {
         type: "string",
@@ -266,7 +266,7 @@ export const updateTaskTool = {
  */
 export const moveTaskTool = {
   name: "move_task",
-  description: "Move a task to a different list. Valid parameter combinations:\n1. Use taskId + (listId or listName) - preferred\n2. Use taskName + sourceListName + (listId or listName)\n\nWARNING: Task statuses may reset if destination list has different status options.",
+  description: "Move a task to a different list. Valid parameter combinations:\n1. Use taskId + (listId or listName) - preferred\n2. Use taskName + sourceListName + (listId or listName)\n\nWARNING: When using taskName, sourceListName is ABSOLUTELY REQUIRED - the system cannot find a task by name without knowing which list to search in. Task statuses may reset if destination list has different status options.",
   inputSchema: {
     type: "object",
     properties: {
@@ -372,7 +372,7 @@ export const moveTaskTool = {
  */
 export const duplicateTaskTool = {
   name: "duplicate_task",
-  description: "Create a copy of a task in the same or different list. Valid parameter combinations:\n1. Use taskId + optional (listId or listName) - preferred\n2. Use taskName + sourceListName + optional (listId or listName)\n\nThe duplicate preserves the original task's properties.",
+  description: "Create a copy of a task in the same or different list. Valid parameter combinations:\n1. Use taskId + optional (listId or listName) - preferred\n2. Use taskName + sourceListName + optional (listId or listName)\n\nWARNING: When using taskName, sourceListName is ABSOLUTELY REQUIRED - the system cannot find a task by name without knowing which list to search in. The duplicate preserves the original task's properties.",
   inputSchema: {
     type: "object",
     properties: {
@@ -481,7 +481,7 @@ export const duplicateTaskTool = {
  */
 export const getTaskTool = {
   name: "get_task",
-  description: "Retrieve detailed information about a specific task. Valid parameter combinations:\n1. Use taskId alone (preferred)\n2. Use taskName + optional listName (to disambiguate if multiple tasks have the same name)",
+  description: "Retrieve detailed information about a specific task. Valid parameter combinations:\n1. Use taskId alone (preferred)\n2. Use taskName + listName (listName is REQUIRED when using taskName). Task names are only unique within a list, so the system needs to know which list to search in.",
   inputSchema: {
     type: "object",
     properties: {
@@ -491,11 +491,11 @@ export const getTaskTool = {
       },
       taskName: {
         type: "string",
-        description: "Name of task to retrieve. Warning: Task names may not be unique."
+        description: "Name of task to retrieve. When using this parameter, you MUST also provide listName."
       },
       listName: {
         type: "string",
-        description: "Name of list containing the task. Helps find the right task when using taskName."
+        description: "Name of list containing the task. REQUIRED when using taskName."
       }
     },
     required: []
