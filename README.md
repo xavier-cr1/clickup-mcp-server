@@ -3,7 +3,7 @@
 # MCP Server
 A Model Context Protocol (MCP) server for integrating ClickUp tasks with AI applications. This server allows AI agents to interact with ClickUp tasks, spaces, lists, and folders through a standardized protocol.
 
-> 🚧 **Status Update:** -The code refactoring has been completed. -Enhanced due date functionality now supports relative time expressions like "2 hours from now" with proper time display in ClickUp.  -npx command updated to use @latest which should automatically update the server when a new version is released. -Server has been listed on Smithery, Glama, and Pulse MCP.
+> 🚧 **Status Update:** -Fixing a bug in the workspace_hierarchy tool
 
 <a href="https://glama.ai/mcp/servers/iwjvs2zy63">
   <img width="380" height="200" src="https://glama.ai/mcp/servers/iwjvs2zy63/badge" alt="ClickUp Server MCP server" />
