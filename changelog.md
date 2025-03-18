@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.4.69 (2023-08-03)
+## v0.4.69 (2025-03-17)
 
 ### Improvements
 - Enhanced task name matching with improved flexibility:
