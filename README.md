@@ -63,8 +63,9 @@ The server is also hosted on Smithery. There, you can preview the available tool
 | [create_bulk_tasks](docs/api-reference.md#task-management) | Create multiple tasks | `tasks[]` |
 | [update_task](docs/api-reference.md#task-management) | Modify task | `taskId`/`taskName` |
 | [update_bulk_tasks](docs/api-reference.md#task-management) | Update multiple tasks | `tasks[]` with IDs or names |
-| [get_tasks](docs/api-reference.md#task-retrieval) | Get tasks from list | `listId`/`listName` |
-| [get_task](docs/api-reference.md#task-retrieval) | Get task details | `taskId`/`taskName` |
+| [get_tasks](docs/api-reference.md#task-management) | Get tasks from list | `listId`/`listName` |
+| [get_task](docs/api-reference.md#task-management) | Get task details | `taskId`/`taskName` |
+| [get_task_comments](docs/api-reference.md#task-management) | Get comments on a task | `taskId`/`taskName` |
 | [delete_task](docs/api-reference.md#task-management) | Remove task | `taskId`/`taskName` |
 | [delete_bulk_tasks](docs/api-reference.md#task-management) | Remove multiple tasks | `tasks[]` with IDs or names |
 | [move_task](docs/api-reference.md#task-management) | Move task | `taskId`/`taskName`, `listId`/`listName` |
