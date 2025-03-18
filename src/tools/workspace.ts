@@ -7,6 +7,10 @@
 
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { WorkspaceTree, WorkspaceNode } from '../services/clickup/types.js';
+import { Logger } from '../logger.js';
+
+// Create a logger for workspace tools
+const logger = new Logger('WorkspaceTool');
 
 // Use the workspace service imported from the server
 // This is defined when server.ts imports this module
@@ -28,7 +32,17 @@ export const workspaceHierarchyTool: Tool = {
  * Initialize the tool with services
  */
 export function initializeWorkspaceTool(services: any) {
+  logger.info('Initializing workspace tool');
+  
+  if (!services || !services.workspace) {
+    logger.error('Failed to initialize workspace tool: services not provided');
+    throw new Error('Workspace service not available');
+  }
+  
   workspaceService = services.workspace;
+  logger.info('Workspace tool initialized successfully', {
+    serviceType: workspaceService.constructor.name
+  });
 }
 
 /**

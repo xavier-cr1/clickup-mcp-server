@@ -9,17 +9,11 @@ import {
   CreateFolderData, 
   ClickUpFolder
 } from '../services/clickup/types.js';
-import { createClickUpServices } from '../services/clickup/index.js';
+import { clickUpServices } from '../services/shared.js';
 import config from '../config.js';
 
-// Initialize ClickUp services using the factory function
-const services = createClickUpServices({
-  apiKey: config.clickupApiKey,
-  teamId: config.clickupTeamId
-});
-
-// Extract the services we need for folder operations
-const { folder: folderService, workspace: workspaceService } = services;
+// Use shared services instance
+const { folder: folderService, workspace: workspaceService } = clickUpServices;
 
 /**
  * Tool definition for creating a folder

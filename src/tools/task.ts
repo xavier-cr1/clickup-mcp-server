@@ -12,22 +12,17 @@ import {
   TaskPriority,
   ClickUpTask,
   TaskFilters,
-  TasksResponse
+  TasksResponse,
+  ClickUpComment
 } from '../services/clickup/types.js';
-import { createClickUpServices } from '../services/clickup/index.js';
+import { clickUpServices } from '../services/shared.js';
 import config from '../config.js';
 import { findListIDByName } from './list.js';
 import { parseDueDate, formatDueDate } from './utils.js';
 import { WorkspaceService } from '../services/clickup/workspace.js';
 
-// Initialize ClickUp services using the factory function
-const services = createClickUpServices({
-  apiKey: config.clickupApiKey,
-  teamId: config.clickupTeamId
-});
-
-// Extract the services we need for task operations
-const { task: taskService, workspace: workspaceService } = services;
+// Use shared services instance
+const { task: taskService, workspace: workspaceService } = clickUpServices;
 
 /**
  * Tool definition for creating a single task
@@ -215,9 +210,8 @@ export const updateTaskTool = {
         listId = listInfo.id;
       }
       
-      // Now find the task
-      const tasks = await taskService.getTasks(listId || '');
-      const foundTask = tasks.find(t => t.name.toLowerCase() === taskName.toLowerCase());
+      // Use the improved findTaskByName method
+      const foundTask = await taskService.findTaskByName(listId || '', taskName);
       
       if (!foundTask) {
         throw new Error(`Task "${taskName}" not found${listName ? ` in list "${listName}"` : ""}`);
@@ -324,9 +318,8 @@ export const moveTaskTool = {
         sourceListId = listInfo.id;
       }
       
-      // Now find the task
-      const tasks = await taskService.getTasks(sourceListId || '');
-      const foundTask = tasks.find(t => t.name.toLowerCase() === taskName.toLowerCase());
+      // Use the improved findTaskByName method
+      const foundTask = await taskService.findTaskByName(sourceListId || '', taskName);
       
       if (!foundTask) {
         throw new Error(`Task "${taskName}" not found${sourceListName ? ` in list "${sourceListName}"` : ""}`);
@@ -431,8 +424,8 @@ export const duplicateTaskTool = {
     if (!targetTaskId && taskName) {
       // Find the task in the source list if specified, otherwise search all tasks
       if (sourceListId) {
-        const tasks = await taskService.getTasks(sourceListId);
-        const foundTask = tasks.find(t => t.name.toLowerCase() === taskName.toLowerCase());
+        // Use the improved findTaskByName method
+        const foundTask = await taskService.findTaskByName(sourceListId, taskName);
         
         if (!foundTask) {
           throw new Error(`Task "${taskName}" not found in list "${sourceListName}"`);
@@ -528,9 +521,8 @@ export const getTaskTool = {
         listId = listInfo.id;
       }
       
-      // Now find the task
-      const tasks = await taskService.getTasks(listId || '');
-      const foundTask = tasks.find(t => t.name.toLowerCase() === taskName.toLowerCase());
+      // Use the improved findTaskByName method
+      const foundTask = await taskService.findTaskByName(listId || '', taskName);
       
       if (!foundTask) {
         throw new Error(`Task "${taskName}" not found${listName ? ` in list "${listName}"` : ""}`);
@@ -925,6 +917,129 @@ export const moveBulkTasksTool = {
 };
 
 /**
+ * Tool definition for getting task comments
+ */
+export const getTaskCommentsTool = {
+  name: "get_task_comments",
+  description: "Retrieve comments for a ClickUp task. You can identify the task by either taskId or taskName. If using taskName, you can optionally provide listName to help locate the correct task if multiple tasks have the same name.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      taskId: {
+        type: "string",
+        description: "ID of task to retrieve comments for (preferred). Use this instead of taskName if you have it."
+      },
+      taskName: {
+        type: "string",
+        description: "Name of task to retrieve comments for. Warning: Task names may not be unique."
+      },
+      listName: {
+        type: "string",
+        description: "Name of list containing the task. Helps find the right task when using taskName."
+      },
+      start: {
+        type: "number",
+        description: "Timestamp (in milliseconds) to start retrieving comments from. Used for pagination."
+      },
+      startId: {
+        type: "string",
+        description: "Comment ID to start from. Used together with start for pagination."
+      }
+    }
+  },
+  async handler({ taskId, taskName, listName, start, startId }: {
+    taskId?: string;
+    taskName?: string;
+    listName?: string;
+    start?: number;
+    startId?: string;
+  }) {
+    let targetTaskId = taskId;
+    
+    // If no taskId but taskName is provided, look up the task ID
+    if (!targetTaskId && taskName) {
+      // First, we need to find the list if list name is provided
+      let listId;
+      if (listName) {
+        // Use workspace service to find list by name
+        const hierarchy = await workspaceService.getWorkspaceHierarchy();
+        const listInfo = workspaceService.findIDByNameInHierarchy(hierarchy, listName, 'list');
+        
+        if (!listInfo) {
+          throw new Error(`List "${listName}" not found`);
+        }
+        listId = listInfo.id;
+      }
+      
+      // Find task by name in the specific list or across workspace
+      if (listId) {
+        const task = await taskService.findTaskByName(listId, taskName);
+        if (!task) {
+          throw new Error(`Task "${taskName}" not found in list "${listName}"`);
+        }
+        targetTaskId = task.id;
+      } else {
+        // Search across all accessible tasks (slower, less reliable)
+        const hierarchy = await workspaceService.getWorkspaceHierarchy();
+        
+        // Collect all lists from all spaces and folders
+        const lists: { id: string; name: string }[] = [];
+        
+        // Recursively extract lists from hierarchy nodes
+        const extractLists = (node: any) => {
+          if (node.type === 'list') {
+            lists.push({ id: node.id, name: node.name });
+          }
+          if (node.children && Array.isArray(node.children)) {
+            node.children.forEach(extractLists);
+          }
+        };
+        
+        // Start extraction from root's children (spaces)
+        if (hierarchy.root && hierarchy.root.children) {
+          hierarchy.root.children.forEach(extractLists);
+        }
+        
+        // Try to find the task in each list
+        for (const list of lists) {
+          try {
+            const task = await taskService.findTaskByName(list.id, taskName);
+            if (task) {
+              targetTaskId = task.id;
+              break;
+            }
+          } catch (error) {
+            // Continue searching in other lists
+          }
+        }
+        
+        if (!targetTaskId) {
+          throw new Error(`Task "${taskName}" not found in any list`);
+        }
+      }
+    }
+    
+    if (!targetTaskId) {
+      throw new Error("Either taskId or taskName must be provided");
+    }
+    
+    // Retrieve comments for the task
+    const comments = await taskService.getTaskComments(targetTaskId, start, startId);
+    
+    return {
+      taskId: targetTaskId,
+      comments: comments,
+      totalComments: comments.length,
+      pagination: {
+        hasMore: comments.length === 25, // API returns max 25 comments at a time
+        nextStart: comments.length > 0 ? new Date(comments[comments.length - 1].date).getTime() : undefined,
+        nextStartId: comments.length > 0 ? comments[comments.length - 1].id : undefined
+      }
+    };
+  }
+};
+
+/**
  * Handler for bulk task updates
  */
 export async function handleUpdateBulkTasks({ tasks }: { tasks: any[] }) {
@@ -1160,9 +1275,8 @@ export async function handleUpdateTask(parameters: any) {
       listId = listInfo.id;
     }
     
-    // Now find the task
-    const tasks = await taskService.getTasks(listId || '');
-    const foundTask = tasks.find(t => t.name.toLowerCase() === taskName.toLowerCase());
+    // Use the improved findTaskByName method
+    const foundTask = await taskService.findTaskByName(listId || '', taskName);
     
     if (!foundTask) {
       throw new Error(`Task "${taskName}" not found${listName ? ` in list "${listName}"` : ""}`);
@@ -1235,8 +1349,8 @@ export async function handleMoveTask(parameters: any) {
   if (!targetTaskId && taskName) {
     // Find the task in the source list if specified, otherwise search all tasks
     if (sourceListId) {
-      const tasks = await taskService.getTasks(sourceListId);
-      const foundTask = tasks.find(t => t.name.toLowerCase() === taskName.toLowerCase());
+      // Use the improved findTaskByName method
+      const foundTask = await taskService.findTaskByName(sourceListId, taskName);
       
       if (!foundTask) {
         throw new Error(`Task "${taskName}" not found in list "${sourceListName}"`);
@@ -1244,7 +1358,6 @@ export async function handleMoveTask(parameters: any) {
       targetTaskId = foundTask.id;
     } else {
       // Without a source list, we need to search more broadly
-      // This is less efficient but necessary if source list is unknown
       throw new Error("When using taskName, sourceListName must be provided to find the task");
     }
   }
@@ -1266,10 +1379,6 @@ export async function handleMoveTask(parameters: any) {
     targetListId = listInfo.id;
   }
   
-  if (!targetListId) {
-    throw new Error("Either listId or listName must be provided for the target list");
-  }
-
   // Move the task
   const task = await taskService.moveTask(targetTaskId, targetListId);
 
@@ -1315,8 +1424,8 @@ export async function handleDuplicateTask(parameters: any) {
   if (!targetTaskId && taskName) {
     // Find the task in the source list if specified, otherwise search all tasks
     if (sourceListId) {
-      const tasks = await taskService.getTasks(sourceListId);
-      const foundTask = tasks.find(t => t.name.toLowerCase() === taskName.toLowerCase());
+      // Use the improved findTaskByName method
+      const foundTask = await taskService.findTaskByName(sourceListId, taskName);
       
       if (!foundTask) {
         throw new Error(`Task "${taskName}" not found in list "${sourceListName}"`);
@@ -1431,72 +1540,6 @@ export async function handleGetTasks(parameters: any) {
 }
 
 /**
- * Handler for the get_task tool
- */
-export async function handleGetTask(parameters: any) {
-  const { taskId, taskName, listName } = parameters;
-  
-  let targetTaskId = taskId;
-  
-  // If no taskId but taskName is provided, look up the task ID
-  if (!targetTaskId && taskName) {
-    let listId: string | undefined;
-    
-    // If listName is provided, find the list ID first
-    if (listName) {
-      const hierarchy = await workspaceService.getWorkspaceHierarchy();
-      const listInfo = workspaceService.findIDByNameInHierarchy(hierarchy, listName, 'list');
-      
-      if (!listInfo) {
-        throw new Error(`List "${listName}" not found`);
-      }
-      listId = listInfo.id;
-    }
-    
-    // Now find the task
-    const tasks = await taskService.getTasks(listId || '');
-    const foundTask = tasks.find(t => t.name.toLowerCase() === taskName.toLowerCase());
-    
-    if (!foundTask) {
-      throw new Error(`Task "${taskName}" not found${listName ? ` in list "${listName}"` : ""}`);
-    }
-    targetTaskId = foundTask.id;
-  }
-  
-  if (!targetTaskId) {
-    throw new Error("Either taskId or taskName must be provided");
-  }
-
-  // Get the task
-  const task = await taskService.getTask(targetTaskId);
-
-  // Format response
-  return {
-    content: [{
-      type: "text",
-      text: JSON.stringify({
-        id: task.id,
-        name: task.name,
-        description: task.description,
-        status: task.status?.status || "Unknown",
-        priority: task.priority,
-        due_date: task.due_date ? formatDueDate(Number(task.due_date)) : undefined,
-        due_date_raw: task.due_date, // Keep raw timestamp for reference if needed
-        url: task.url,
-        list: task.list.name,
-        space: task.space.name,
-        folder: task.folder?.name,
-        creator: task.creator,
-        assignees: task.assignees,
-        tags: task.tags,
-        time_estimate: task.time_estimate,
-        time_spent: task.time_spent,
-      }, null, 2)
-    }]
-  };
-}
-
-/**
  * Handler for the delete_task tool
  */
 export async function handleDeleteTask(parameters: any) {
@@ -1594,8 +1637,9 @@ export async function handleDeleteBulkTasks({ tasks }: { tasks: any[] }) {
         if (!listInfo) {
           throw new Error(`List "${task.listName}" not found`);
         }
-        const taskList = await taskService.getTasks(listInfo.id);
-        const foundTask = taskList.find(t => t.name.toLowerCase() === task.taskName.toLowerCase());
+        
+        // Use the improved findTaskByName method
+        const foundTask = await taskService.findTaskByName(listInfo.id, task.taskName);
         
         if (!foundTask) {
           throw new Error(`Task "${task.taskName}" not found in list "${task.listName}"`);
@@ -1745,4 +1789,44 @@ export async function handleMoveBulkTasks(parameters: any) {
       text: JSON.stringify(results, null, 2)
     }]
   };
+}
+
+/**
+ * Handler for getting task comments
+ */
+export async function handleGetTaskComments(parameters: any) {
+  const { taskId, taskName, listName, start, startId } = parameters;
+  
+  try {
+    // Call the handler with validation
+    const result = await getTaskCommentsTool.handler({
+      taskId,
+      taskName,
+      listName,
+      start: start ? Number(start) : undefined,
+      startId
+    });
+
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify(result, null, 2)
+      }]
+    };
+  } catch (error) {
+    // Handle and format error response with proper content array
+    console.error('Error getting task comments:', error);
+    
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          error: error.message || 'Failed to get task comments',
+          taskId: taskId || null,
+          taskName: taskName || null,
+          listName: listName || null
+        }, null, 2)
+      }]
+    };
+  }
 } 

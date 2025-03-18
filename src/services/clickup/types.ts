@@ -303,4 +303,72 @@ export interface WorkspaceTree {
  */
 export interface BulkCreateTasksData {
   tasks: CreateTaskData[];
+}
+
+/**
+ * Comment object as returned by the ClickUp API
+ */
+export interface ClickUpComment {
+  id: string;
+  comment: string; // The comment text
+  comment_text: string; // The comment text without formatting
+  user: {
+    id: number;
+    username: string;
+    email: string;
+    color: string;
+    profilePicture?: string;
+  };
+  resolved: boolean;
+  assigned_by?: {
+    id: number;
+    username: string;
+    email: string;
+    color: string;
+    profilePicture?: string;
+  };
+  assigned?: {
+    id: number;
+    username: string;
+    email: string;
+    color: string;
+    profilePicture?: string;
+  };
+  date: string; // ISO date string
+  reactions?: {
+    [key: string]: {
+      count: number;
+      users: Array<{
+        id: number;
+        username: string;
+        email: string;
+        color: string;
+        profilePicture: string | null;
+      }>;
+    };
+  };
+  attachments?: ClickUpCommentAttachment[];
+}
+
+/**
+ * Comment attachment object as returned by the ClickUp API
+ */
+export interface ClickUpCommentAttachment {
+  id: string;
+  date: string;
+  title: string;
+  type: string;
+  source: string;
+  thumbnail_small?: string;
+  thumbnail_medium?: string;
+  thumbnail_large?: string;
+  url: string;
+  url_viewer?: string;
+}
+
+/**
+ * Comments response object returned by the ClickUp API
+ */
+export interface CommentsResponse {
+  comments: ClickUpComment[];
 } 

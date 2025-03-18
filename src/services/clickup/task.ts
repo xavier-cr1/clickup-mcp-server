@@ -17,7 +17,9 @@ import {
   UpdateTaskData, 
   TaskFilters, 
   TasksResponse,
-  BulkCreateTasksData
+  BulkCreateTasksData,
+  ClickUpComment,
+  CommentsResponse
 } from './types.js';
 import { BulkProcessor, BulkOperationOptions, BulkOperationResult, ProgressInfo } from './bulk.js';
 import { ListService } from './list.js';
@@ -194,7 +196,7 @@ export class TaskService extends BaseClickUpService {
   }
 
   /**
-   * Find a task by its name in a specific list
+   * Find a task by name within a list
    * @param listId The list ID to search within
    * @param taskName The name of the task to find
    * @returns The task if found, otherwise null
@@ -204,9 +206,35 @@ export class TaskService extends BaseClickUpService {
     
     try {
       const tasks = await this.getTasks(listId);
-      const matchingTask = tasks.find(task => 
-        task.name.toLowerCase() === taskName.toLowerCase()
+      
+      // Normalize the search term
+      const normalizedSearchTerm = taskName.toLowerCase().trim();
+      
+      // First try exact match
+      let matchingTask = tasks.find(task => 
+        task.name.toLowerCase().trim() === normalizedSearchTerm
       );
+      
+      // If no exact match, try substring match
+      if (!matchingTask) {
+        matchingTask = tasks.find(task => 
+          task.name.toLowerCase().trim().includes(normalizedSearchTerm) ||
+          normalizedSearchTerm.includes(task.name.toLowerCase().trim())
+        );
+      }
+      
+      // If still no match and there are emoji characters, try matching without emoji
+      if (!matchingTask && /[\p{Emoji}]/u.test(normalizedSearchTerm)) {
+        // Remove emoji and try again (simple approximation)
+        const withoutEmoji = normalizedSearchTerm.replace(/[\p{Emoji}]/gu, '').trim();
+        
+        matchingTask = tasks.find(task => {
+          const taskNameWithoutEmoji = task.name.toLowerCase().replace(/[\p{Emoji}]/gu, '').trim();
+          return taskNameWithoutEmoji === withoutEmoji ||
+            taskNameWithoutEmoji.includes(withoutEmoji) ||
+            withoutEmoji.includes(taskNameWithoutEmoji);
+        });
+      }
       
       return matchingTask || null;
     } catch (error) {
@@ -618,6 +646,36 @@ export class TaskService extends BaseClickUpService {
         ErrorCode.UNKNOWN,
         error
       );
+    }
+  }
+
+  /**
+   * Get comments for a specific task
+   * @param taskId The ID of the task to retrieve comments for
+   * @param start Optional parameter for pagination, timestamp from which to start fetching comments
+   * @param startId Optional parameter for pagination, comment ID from which to start fetching
+   * @returns Array of task comments
+   */
+  async getTaskComments(taskId: string, start?: number, startId?: string): Promise<ClickUpComment[]> {
+    this.logOperation('getTaskComments', { taskId, start, startId });
+    
+    try {
+      return await this.makeRequest(async () => {
+        const params = new URLSearchParams();
+        
+        // Add pagination parameters if provided
+        if (start) params.append('start', String(start));
+        if (startId) params.append('start_id', startId);
+        
+        const response = await this.client.get<CommentsResponse>(
+          `/task/${taskId}/comment`,
+          { params }
+        );
+        
+        return response.data.comments;
+      });
+    } catch (error) {
+      throw this.handleError(error, `Failed to retrieve comments for task ${taskId}`);
     }
   }
 } 
