@@ -180,7 +180,10 @@ export class WorkspaceService extends BaseClickUpService {
 
         // Get lists directly in the space (not in any folder)
         const listsInSpace = await this.getListsInSpace(space.id);
+        this.logger.debug(`Adding ${listsInSpace.length} lists directly to space ${space.name} (${space.id})`);
+        
         for (const list of listsInSpace) {
+          this.logger.debug(`Adding list directly to space: ${list.name} (${list.id})`);
           spaceNode.children?.push({
             id: list.id,
             name: list.name,
@@ -269,11 +272,11 @@ export class WorkspaceService extends BaseClickUpService {
   }
 
   /**
-   * Get lists from the API (using the appropriate endpoint based on context)
+   * Get folderless lists from the API (lists that are directly in a space)
    * @param spaceId - The ID of the space
    * @returns - Promise resolving to array of lists
    */
-  private async getLists(spaceId: string): Promise<any[]> {
+  private async getFolderlessLists(spaceId: string): Promise<any[]> {
     try {
       const response = await this.makeRequest(async () => {
         const result = await this.client.get(`/space/${spaceId}/list`);
@@ -281,7 +284,26 @@ export class WorkspaceService extends BaseClickUpService {
       });
       return response.lists || [];
     } catch (error) {
-      throw this.handleError(error, `Failed to get lists for space ${spaceId}`);
+      throw this.handleError(error, `Failed to get folderless lists for space ${spaceId}`);
+    }
+  }
+
+  /**
+   * Get lists in a space (not in any folder)
+   * @param spaceId - The ID of the space
+   * @returns - Promise resolving to array of lists
+   */
+  async getListsInSpace(spaceId: string): Promise<ClickUpList[]> {
+    try {
+      // The /space/{space_id}/list endpoint already returns folderless lists only
+      const lists = await this.getFolderlessLists(spaceId);
+      
+      this.logger.debug(`Found ${lists.length} folderless lists in space ${spaceId}`);
+      
+      // Return all lists without filtering since the API already returns folderless lists
+      return lists;
+    } catch (error) {
+      throw this.handleError(error, `Failed to get lists in space ${spaceId}`);
     }
   }
 
@@ -315,20 +337,6 @@ export class WorkspaceService extends BaseClickUpService {
       });
     } catch (error) {
       throw this.handleError(error, `Failed to get folder with ID ${folderId}`);
-    }
-  }
-
-  /**
-   * Get lists in a space (not in any folder)
-   * @param spaceId - The ID of the space
-   * @returns - Promise resolving to array of lists
-   */
-  async getListsInSpace(spaceId: string): Promise<ClickUpList[]> {
-    try {
-      const lists = await this.getLists(spaceId);
-      return lists.filter((list) => !list.folder); // Filter lists not in a folder
-    } catch (error) {
-      throw this.handleError(error, `Failed to get lists in space ${spaceId}`);
     }
   }
 

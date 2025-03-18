@@ -13,13 +13,14 @@ import {
   updateTaskTool, handleUpdateTask,
   moveTaskTool, handleMoveTask,
   duplicateTaskTool, handleDuplicateTask,
-  getTaskTool, handleGetTask,
+  getTaskTool,
   getTasksTool, handleGetTasks,
   deleteTaskTool, handleDeleteTask,
   createBulkTasksTool, handleCreateBulkTasks,
   updateBulkTasksTool, handleUpdateBulkTasks,
   moveBulkTasksTool, handleMoveBulkTasks,
-  deleteBulkTasksTool, handleDeleteBulkTasks
+  deleteBulkTasksTool, handleDeleteBulkTasks,
+  getTaskCommentsTool, handleGetTaskComments
 } from "./tools/task.js";
 import {
   createListTool, handleCreateList,
@@ -82,6 +83,7 @@ export function configureServer() {
         updateBulkTasksTool,
         moveBulkTasksTool,
         deleteBulkTasksTool,
+        getTaskCommentsTool,
         createListTool,
         createListInFolderTool,
         getListTool,
@@ -97,7 +99,7 @@ export function configureServer() {
 
   // Register CallTool handler with proper logging
   logger.info("Registering tool handlers", {
-    toolCount: 21,
+    toolCount: 22,
     categories: ["workspace", "task", "list", "folder"]
   });
   
@@ -123,7 +125,7 @@ export function configureServer() {
         case "duplicate_task":
           return handleDuplicateTask(params);
         case "get_task":
-          return handleGetTask(params);
+          return getTaskTool.handler(params);
         case "get_tasks":
           return handleGetTasks(params);
         case "delete_task":
@@ -136,6 +138,8 @@ export function configureServer() {
           return handleMoveBulkTasks(params as { tasks: any[], targetListId?: string, targetListName?: string });
         case "delete_bulk_tasks":
           return handleDeleteBulkTasks(params as { tasks: any[] });
+        case "get_task_comments":
+          return handleGetTaskComments(params);
         case "create_list":
           return handleCreateList(params);
         case "create_list_in_folder":

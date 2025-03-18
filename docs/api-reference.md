@@ -17,6 +17,7 @@ This document provides detailed information about all available tools, their par
 |------|-------------|-------------------|-------------------|
 | get_tasks | Retrieve tasks from a list | Either `listId` or `listName` | archived, page, order_by, reverse, subtasks, statuses, include_closed, assignees, due_date_gt/lt |
 | get_task | Get single task details | Either `taskId` or `taskName` | `listName` |
+| get_task_comments | Retrieve comments for a task | Either `taskId` or `taskName` | `listName`, `start`, `startId` |
 | create_task | Create a new task | `name` and either `listId` or `listName` | description, status, priority (1-4), dueDate |
 | create_bulk_tasks | Create multiple tasks | `tasks[]` | `listId` or `listName` |
 | update_task | Modify task properties | Either `taskId` or `taskName` | name, description, status, priority, dueDate |
@@ -55,6 +56,51 @@ Add these requirements:
   "markdown_description": "## Requirements\n- OAuth2 support\n- JWT tokens\n- Refresh token flow",
   "priority": 1,
   "dueDate": 1703980800000
+}
+```
+
+#### Getting Task Comments
+**User Prompt:**
+```
+Show me the comments on the "Bug Fix" task.
+```
+
+**System Response:**
+```json
+{
+  "taskName": "Bug Fix",
+  "comments": [
+    {
+      "id": "abcd1234",
+      "comment": "I've identified the root cause. It's related to a race condition in the auth flow.",
+      "comment_text": "I've identified the root cause. It's related to a race condition in the auth flow.",
+      "user": {
+        "id": 1234567,
+        "username": "developer1",
+        "email": "dev1@example.com",
+        "color": "#ff7800"
+      },
+      "resolved": false,
+      "date": "2024-03-15T10:30:45.000Z"
+    },
+    {
+      "id": "efgh5678",
+      "comment": "Great work! Could you submit a PR by tomorrow?",
+      "comment_text": "Great work! Could you submit a PR by tomorrow?",
+      "user": {
+        "id": 7654321,
+        "username": "manager1",
+        "email": "manager@example.com",
+        "color": "#0080ff"
+      },
+      "resolved": false,
+      "date": "2024-03-15T11:15:20.000Z"
+    }
+  ],
+  "totalComments": 2,
+  "pagination": {
+    "hasMore": false
+  }
 }
 ```
 
