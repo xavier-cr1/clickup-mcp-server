@@ -9,29 +9,36 @@ A Model Context Protocol (MCP) server for integrating ClickUp tasks with AI appl
   <img width="380" height="200" src="https://glama.ai/mcp/servers/iwjvs2zy63/badge" alt="ClickUp Server MCP server" />
 </a>
 
-## Quick Start
-
-Directions for use with Cursor Composer Agent:
+## Setup
 
 1. Get your credentials:
    - ClickUp API key from [ClickUp Settings](https://app.clickup.com/settings/apps)
    - Team ID from your ClickUp workspace URL
-2. Go to Features in settings (or MCP Servers depending on version)
-3. Add under MCP Servers:
-```bash
-npx -y @taazkareem/clickup-mcp-server@latest \
-  --env CLICKUP_API_KEY=your_api_key_here \
-  --env CLICKUP_TEAM_ID=your_team_id_here
-```
-4. Replace the credentials and click Save
-5. Use Natural Language to interact with your ClickUp Workspace!
+2. Choose either hosted installation (sends webhooks) or NPX installation (downloads to local path and installs dependencies)
 
 
-## Smithery Installation
+## Smithery Installation (Quick Start)
 
 [![smithery badge](https://smithery.ai/badge/@TaazKareem/clickup-mcp-server)](https://smithery.ai/server/@TaazKareem/clickup-mcp-server)
 
-The server is also hosted on Smithery. There, you can preview the available tools or copy the commands to run on your specific client app.
+The server is hosted on Smithery. There, you can preview the available tools or copy the commands to run on your specific client app. 
+
+
+## NPX Installation
+
+Add this entry to your client's MCP settings JSON file:
+
+    "ClickUp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@taazkareem/clickup-mcp-server@latest",
+        "--env",
+        "CLICKUP_API_KEY=your-api-key",
+        "--env",
+        "CLICKUP_TEAM_ID=your-team-id"
+      ]
+    }
 
 ## Features
 
