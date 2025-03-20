@@ -27,6 +27,7 @@ The server is hosted on Smithery. There, you can preview the available tools or 
 
 Add this entry to your client's MCP settings JSON file:
 
+```json
 {
   "mcpServers": {
     "ClickUp": {
@@ -42,8 +43,9 @@ Add this entry to your client's MCP settings JSON file:
     }
   }
 }
+```
 
--OR- Use this npx command:
+Or use this npx command:
 
 `npx -y @taazkareem/clickup-mcp-server@latest`
 
@@ -116,13 +118,10 @@ The server provides clear error messages for:
 - API errors
 - Rate limiting
 
-## Sponsor Message
-
-When using this server, you may occasionally see a small sponsor message with a link to this repository included in tool responses. I hope you can support the project!
-
 ## Support the Developer
 
-If you find this project useful, please consider supporting
+When using this server, you may occasionally see a small sponsor message with a link to this repository included in tool responses. I hope you can support the project!
+If you find this project useful, please consider supporting:
 
 [![Sponsor TaazKareem](https://img.shields.io/badge/Sponsor-TaazKareem-orange?logo=github)](https://github.com/sponsors/TaazKareem)
 
