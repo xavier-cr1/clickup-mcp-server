@@ -47,15 +47,16 @@ Add this entry to your client's MCP settings JSON file:
 
 Or use this npx command:
 
-`npx -y @taazkareem/clickup-mcp-server@latest`
+`npx -y @taazkareem/clickup-mcp-server@latest --env CLICKUP_API_KEY=your-api-key --env CLICKUP_TEAM_ID=your-team-id`
 
 ## Features
 
 - 🎯 **Task Management**
   - Create, update, and delete individual tasks
   - Move and duplicate tasks between lists, spaces, and folders
-  - Create, update, move,and delete multiple tasks in bulk
+  - Create, update, move, and delete multiple tasks in bulk
   - View and modify task details and properties
+  - Get task comments
   - Set due dates using natural language and relative time expressions
 
 - 📂 **Workspace Organization**
