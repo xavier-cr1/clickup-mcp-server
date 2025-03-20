@@ -4,18 +4,15 @@
  * Re-exports specialized utilities from dedicated modules.
  */
 
+import { Logger } from '../logger.js';
+import { clickUpServices } from '../services/shared.js';
+
 // Re-export date utilities
 export { 
   getRelativeTimestamp,
   parseDueDate,
   formatDueDate
 } from '../utils/date-utils.js';
-
-// Re-export sponsor utilities
-export {
-  getSponsorMessage,
-  enhanceResponseWithSponsor
-} from '../utils/sponsor-utils.js';
 
 // Re-export resolver utilities
 export {

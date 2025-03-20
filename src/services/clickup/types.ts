@@ -12,6 +12,23 @@
  */
 export type TaskPriority = 1 | 2 | 3 | 4 | null;
 
+// Helper function to validate and convert priority values
+export function toTaskPriority(value: unknown): TaskPriority | undefined {
+  if (value === null) return null;
+  if (value === undefined) return undefined;
+  if (value === "null") return null;
+  
+  // Convert string to number if needed
+  const numValue = typeof value === 'string' ? parseInt(value, 10) : value;
+  
+  // Validate it's a valid priority number
+  if (typeof numValue === 'number' && !isNaN(numValue) && [1, 2, 3, 4].includes(numValue)) {
+    return numValue as TaskPriority;
+  }
+  
+  return undefined;
+}
+
 /**
  * Priority object as returned by the ClickUp API
  */

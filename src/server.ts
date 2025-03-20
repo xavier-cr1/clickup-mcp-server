@@ -9,19 +9,31 @@ import { createClickUpServices } from "./services/clickup/index.js";
 import config from "./config.js";
 import { workspaceHierarchyTool, handleGetWorkspaceHierarchy } from "./tools/workspace.js";
 import {
-  createTaskTool, handleCreateTask,
-  updateTaskTool, handleUpdateTask,
-  moveTaskTool, handleMoveTask,
-  duplicateTaskTool, handleDuplicateTask,
+  createTaskTool,
+  updateTaskTool,
+  moveTaskTool,
+  duplicateTaskTool,
   getTaskTool,
-  getTasksTool, handleGetTasks,
-  deleteTaskTool, handleDeleteTask,
-  getTaskCommentsTool, handleGetTaskComments,
-  createBulkTasksTool, handleCreateBulkTasks,
-  updateBulkTasksTool, handleUpdateBulkTasks,
-  moveBulkTasksTool, handleMoveBulkTasks,
-  deleteBulkTasksTool, handleDeleteBulkTasks
-} from "./tools/task.js";
+  getTasksTool,
+  deleteTaskTool,
+  getTaskCommentsTool,
+  createBulkTasksTool,
+  updateBulkTasksTool,
+  moveBulkTasksTool,
+  deleteBulkTasksTool,
+  handleCreateTask,
+  handleUpdateTask,
+  handleMoveTask,
+  handleDuplicateTask,
+  handleGetTasks,
+  handleDeleteTask,
+  handleGetTaskComments,
+  handleCreateBulkTasks,
+  handleUpdateBulkTasks,
+  handleMoveBulkTasks,
+  handleDeleteBulkTasks,
+  handleGetTask
+} from "./tools/task/index.js";
 import {
   createListTool, handleCreateList,
   createListInFolderTool, handleCreateListInFolder,
@@ -50,7 +62,7 @@ const { workspace } = clickUpServices;
 export const server = new Server(
   {
     name: "clickup-mcp-server",
-    version: "0.4.61",
+    version: "0.4.72",
   },
   {
     capabilities: {
@@ -125,7 +137,7 @@ export function configureServer() {
         case "duplicate_task":
           return handleDuplicateTask(params);
         case "get_task":
-          return getTaskTool.handler(params);
+          return handleGetTask(params);
         case "get_tasks":
           return handleGetTasks(params);
         case "delete_task":

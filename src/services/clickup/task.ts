@@ -36,7 +36,6 @@ export class TaskService extends BaseClickUpService {
   ) {
     super(apiKey, teamId, baseUrl);
     
-    // Cache workspace service if provided
     if (workspaceService) {
       this.workspaceService = workspaceService;
       this.logOperation('constructor', { usingSharedWorkspaceService: true });
@@ -66,6 +65,132 @@ export class TaskService extends BaseClickUpService {
     );
   }
 
+  /**
+   * Build URL parameters from task filters
+   * @param filters Task filters to convert to URL parameters
+   * @returns URLSearchParams object
+   */
+  private buildTaskFilterParams(filters: TaskFilters): URLSearchParams {
+    const params = new URLSearchParams();
+    
+    // Add all filters to the query parameters
+    if (filters.include_closed) params.append('include_closed', String(filters.include_closed));
+    if (filters.subtasks) params.append('subtasks', String(filters.subtasks));
+    if (filters.page) params.append('page', String(filters.page));
+    if (filters.order_by) params.append('order_by', filters.order_by);
+    if (filters.reverse) params.append('reverse', String(filters.reverse));
+    
+    // Array parameters
+    if (filters.statuses && filters.statuses.length > 0) {
+      filters.statuses.forEach(status => params.append('statuses[]', status));
+    }
+    if (filters.assignees && filters.assignees.length > 0) {
+      filters.assignees.forEach(assignee => params.append('assignees[]', assignee));
+    }
+    
+    // Date filters
+    if (filters.due_date_gt) params.append('due_date_gt', String(filters.due_date_gt));
+    if (filters.due_date_lt) params.append('due_date_lt', String(filters.due_date_lt));
+    if (filters.date_created_gt) params.append('date_created_gt', String(filters.date_created_gt));
+    if (filters.date_created_lt) params.append('date_created_lt', String(filters.date_created_lt));
+    if (filters.date_updated_gt) params.append('date_updated_gt', String(filters.date_updated_gt));
+    if (filters.date_updated_lt) params.append('date_updated_lt', String(filters.date_updated_lt));
+    
+    // Handle custom fields if present
+    if (filters.custom_fields) {
+      Object.entries(filters.custom_fields).forEach(([key, value]) => {
+        params.append(`custom_fields[${key}]`, String(value));
+      });
+    }
+    
+    return params;
+  }
+  
+  /**
+   * Extract priority value from a task
+   * @param task The task to extract priority from
+   * @returns TaskPriority or null
+   */
+  private extractPriorityValue(task: ClickUpTask): TaskPriority | null {
+    if (!task.priority || !task.priority.id) {
+      return null;
+    }
+    
+    const priorityValue = parseInt(task.priority.id);
+    // Ensure it's in the valid range 1-4
+    if (isNaN(priorityValue) || priorityValue < 1 || priorityValue > 4) {
+      return null;
+    }
+    
+    return priorityValue as TaskPriority;
+  }
+  
+  /**
+   * Extract task data for creation/duplication
+   * @param task The source task
+   * @param nameOverride Optional override for the task name
+   * @returns CreateTaskData object
+   */
+  private extractTaskData(task: ClickUpTask, nameOverride?: string): CreateTaskData {
+    return {
+      name: nameOverride || task.name,
+      description: task.description || '',
+      status: task.status?.status,
+      priority: this.extractPriorityValue(task),
+      due_date: task.due_date ? Number(task.due_date) : undefined,
+      assignees: task.assignees?.map(a => a.id) || []
+    };
+  }
+
+  /**
+   * Find a matching task by name using different matching strategies
+   * @param tasks List of tasks to search
+   * @param taskName Name to search for
+   * @returns Matching task or null
+   */
+  private findMatchingTask(tasks: ClickUpTask[], taskName: string): ClickUpTask | null {
+    // Normalize the search term
+    const normalizedSearchTerm = taskName.toLowerCase().trim();
+    
+    // First try exact match
+    let matchingTask = tasks.find(task => 
+      task.name.toLowerCase().trim() === normalizedSearchTerm
+    );
+    
+    // If no exact match, try substring match
+    if (!matchingTask) {
+      matchingTask = tasks.find(task => 
+        task.name.toLowerCase().trim().includes(normalizedSearchTerm) ||
+        normalizedSearchTerm.includes(task.name.toLowerCase().trim())
+      );
+    }
+    
+    // If still no match and there are emoji characters, try matching without emoji
+    if (!matchingTask && /[\p{Emoji}]/u.test(normalizedSearchTerm)) {
+      matchingTask = this.findMatchingTaskWithoutEmoji(tasks, normalizedSearchTerm);
+    }
+    
+    return matchingTask || null;
+  }
+  
+  /**
+   * Find matching task with emoji characters removed
+   * @param tasks List of tasks to search
+   * @param searchTerm Search term (with emoji)
+   * @returns Matching task or null
+   */
+  private findMatchingTaskWithoutEmoji(tasks: ClickUpTask[], searchTerm: string): ClickUpTask | null {
+    // Remove emoji and try again (simple approximation)
+    const withoutEmoji = searchTerm.replace(/[\p{Emoji}]/gu, '').trim();
+    
+    return tasks.find(task => {
+      const taskNameWithoutEmoji = task.name.toLowerCase().replace(/[\p{Emoji}]/gu, '').trim();
+      return taskNameWithoutEmoji === withoutEmoji ||
+        taskNameWithoutEmoji.includes(withoutEmoji) ||
+        withoutEmoji.includes(taskNameWithoutEmoji);
+    }) || null;
+  }
+  
   /**
    * Create a new task in the specified list
    * @param listId The ID of the list to create the task in
@@ -99,33 +224,7 @@ export class TaskService extends BaseClickUpService {
     
     try {
       return await this.makeRequest(async () => {
-        const params = new URLSearchParams();
-        
-        // Add all filters to the query parameters
-        if (filters.include_closed) params.append('include_closed', String(filters.include_closed));
-        if (filters.subtasks) params.append('subtasks', String(filters.subtasks));
-        if (filters.page) params.append('page', String(filters.page));
-        if (filters.order_by) params.append('order_by', filters.order_by);
-        if (filters.reverse) params.append('reverse', String(filters.reverse));
-        if (filters.statuses && filters.statuses.length > 0) {
-          filters.statuses.forEach(status => params.append('statuses[]', status));
-        }
-        if (filters.assignees && filters.assignees.length > 0) {
-          filters.assignees.forEach(assignee => params.append('assignees[]', assignee));
-        }
-        if (filters.due_date_gt) params.append('due_date_gt', String(filters.due_date_gt));
-        if (filters.due_date_lt) params.append('due_date_lt', String(filters.due_date_lt));
-        if (filters.date_created_gt) params.append('date_created_gt', String(filters.date_created_gt));
-        if (filters.date_created_lt) params.append('date_created_lt', String(filters.date_created_lt));
-        if (filters.date_updated_gt) params.append('date_updated_gt', String(filters.date_updated_gt));
-        if (filters.date_updated_lt) params.append('date_updated_lt', String(filters.date_updated_lt));
-        
-        // Handle custom fields if present
-        if (filters.custom_fields) {
-          Object.entries(filters.custom_fields).forEach(([key, value]) => {
-            params.append(`custom_fields[${key}]`, String(value));
-          });
-        }
+        const params = this.buildTaskFilterParams(filters);
         
         const response = await this.client.get<TasksResponse>(
           `/list/${listId}/task?${params.toString()}`
@@ -211,37 +310,7 @@ export class TaskService extends BaseClickUpService {
     
     try {
       const tasks = await this.getTasks(listId);
-      
-      // Normalize the search term
-      const normalizedSearchTerm = taskName.toLowerCase().trim();
-      
-      // First try exact match
-      let matchingTask = tasks.find(task => 
-        task.name.toLowerCase().trim() === normalizedSearchTerm
-      );
-      
-      // If no exact match, try substring match
-      if (!matchingTask) {
-        matchingTask = tasks.find(task => 
-          task.name.toLowerCase().trim().includes(normalizedSearchTerm) ||
-          normalizedSearchTerm.includes(task.name.toLowerCase().trim())
-        );
-      }
-      
-      // If still no match and there are emoji characters, try matching without emoji
-      if (!matchingTask && /[\p{Emoji}]/u.test(normalizedSearchTerm)) {
-        // Remove emoji and try again (simple approximation)
-        const withoutEmoji = normalizedSearchTerm.replace(/[\p{Emoji}]/gu, '').trim();
-        
-        matchingTask = tasks.find(task => {
-          const taskNameWithoutEmoji = task.name.toLowerCase().replace(/[\p{Emoji}]/gu, '').trim();
-          return taskNameWithoutEmoji === withoutEmoji ||
-            taskNameWithoutEmoji.includes(withoutEmoji) ||
-            withoutEmoji.includes(taskNameWithoutEmoji);
-        });
-      }
-      
-      return matchingTask || null;
+      return this.findMatchingTask(tasks, taskName);
     } catch (error) {
       throw this.handleError(error, `Failed to find task by name: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -271,29 +340,9 @@ export class TaskService extends BaseClickUpService {
         ? currentStatus // Keep the same status if available in destination list
         : destinationList.statuses?.[0]?.status; // Otherwise use the default (first) status
 
-      // Priority mapping: convert string priority to numeric value if needed
-      let priorityValue = null;
-      if (originalTask.priority) {
-        // If priority.id exists and is numeric, use that
-        if (originalTask.priority.id) {
-          priorityValue = parseInt(originalTask.priority.id);
-          // Ensure it's in the valid range 1-4
-          if (isNaN(priorityValue) || priorityValue < 1 || priorityValue > 4) {
-            priorityValue = null;
-          }
-        }
-      }
-
       // Prepare the task data for the new list
-      const taskData: CreateTaskData = {
-        name: originalTask.name,
-        description: originalTask.description,
-        status: newStatus,
-        priority: priorityValue,
-        due_date: originalTask.due_date ? Number(originalTask.due_date) : undefined,
-        assignees: originalTask.assignees?.map(a => a.id) || [],
-        // Add any other relevant fields from the original task
-      };
+      const taskData = this.extractTaskData(originalTask);
+      taskData.status = newStatus;
 
       // Create new task and delete old one in a single makeRequest call
       return await this.makeRequest(async () => {
@@ -333,15 +382,8 @@ export class TaskService extends BaseClickUpService {
       // Get the original task to duplicate
       const originalTask = await this.getTask(taskId);
       
-      // Create a copy of the task data
-      const newTaskData: CreateTaskData = {
-        name: `${originalTask.name} (copy)`,
-        description: originalTask.description || '',
-        status: originalTask.status?.status,
-        priority: originalTask.priority?.id ? parseInt(originalTask.priority.id) as TaskPriority : null,
-        due_date: originalTask.due_date ? new Date(originalTask.due_date).getTime() : undefined,
-        assignees: originalTask.assignees?.map(a => a.id) || []
-      };
+      // Create a copy of the task data with "(copy)" appended to the name
+      const newTaskData = this.extractTaskData(originalTask, `${originalTask.name} (copy)`);
       
       // Create the new task in the specified list or original list
       const targetListId = listId || originalTask.list.id;
