@@ -11,7 +11,7 @@
  * Task Management:
  * - Create, update, move and duplicate tasks with rich description support
  * - Find tasks by name with smart disambiguation
- * - Bulk task creation for efficient workflow setup
+ * - Optimized bulk task operations with concurrent processing
  * - Comprehensive filtering and sorting options
  * 
  * Workspace Organization:

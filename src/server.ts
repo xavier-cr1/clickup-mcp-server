@@ -16,11 +16,11 @@ import {
   getTaskTool,
   getTasksTool, handleGetTasks,
   deleteTaskTool, handleDeleteTask,
+  getTaskCommentsTool, handleGetTaskComments,
   createBulkTasksTool, handleCreateBulkTasks,
   updateBulkTasksTool, handleUpdateBulkTasks,
   moveBulkTasksTool, handleMoveBulkTasks,
-  deleteBulkTasksTool, handleDeleteBulkTasks,
-  getTaskCommentsTool, handleGetTaskComments
+  deleteBulkTasksTool, handleDeleteBulkTasks
 } from "./tools/task.js";
 import {
   createListTool, handleCreateList,
@@ -79,11 +79,11 @@ export function configureServer() {
         moveTaskTool,
         duplicateTaskTool,
         deleteTaskTool,
+        getTaskCommentsTool,
         createBulkTasksTool,
         updateBulkTasksTool,
         moveBulkTasksTool,
         deleteBulkTasksTool,
-        getTaskCommentsTool,
         createListTool,
         createListInFolderTool,
         getListTool,
@@ -130,16 +130,16 @@ export function configureServer() {
           return handleGetTasks(params);
         case "delete_task":
           return handleDeleteTask(params);
+        case "get_task_comments":
+          return handleGetTaskComments(params);
         case "create_bulk_tasks":
           return handleCreateBulkTasks(params);
         case "update_bulk_tasks":
-          return handleUpdateBulkTasks(params as { tasks: any[] });
+          return handleUpdateBulkTasks(params);
         case "move_bulk_tasks":
-          return handleMoveBulkTasks(params as { tasks: any[], targetListId?: string, targetListName?: string });
+          return handleMoveBulkTasks(params);
         case "delete_bulk_tasks":
-          return handleDeleteBulkTasks(params as { tasks: any[] });
-        case "get_task_comments":
-          return handleGetTaskComments(params);
+          return handleDeleteBulkTasks(params);
         case "create_list":
           return handleCreateList(params);
         case "create_list_in_folder":

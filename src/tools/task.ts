@@ -7,22 +7,28 @@
  */
 
 import { 
-  CreateTaskData, 
-  UpdateTaskData,
-  TaskPriority,
+  ClickUpComment,
+  ClickUpList,
+  ClickUpStatus,
   ClickUpTask,
+  CreateTaskData,
   TaskFilters,
-  TasksResponse,
-  ClickUpComment
+  TaskPriority,
+  UpdateTaskData
 } from '../services/clickup/types.js';
 import { clickUpServices } from '../services/shared.js';
 import config from '../config.js';
 import { findListIDByName } from './list.js';
-import { parseDueDate, formatDueDate } from './utils.js';
+import { parseDueDate, formatDueDate, enhanceResponseWithSponsor, resolveListId, resolveTaskId } from './utils.js';
 import { WorkspaceService } from '../services/clickup/workspace.js';
+import { BatchProcessingOptions } from '../utils/concurrency-utils.js';
+import { BulkService } from '../services/clickup/bulk.js';
 
 // Use shared services instance
 const { task: taskService, workspace: workspaceService } = clickUpServices;
+
+// Create a bulk service instance that uses the task service
+const bulkService = new BulkService(taskService);
 
 /**
  * Tool definition for creating a single task
@@ -701,222 +707,6 @@ export const deleteTaskTool = {
 };
 
 /**
- * Tool definition for deleting multiple tasks
- */
-export const deleteBulkTasksTool = {
-  name: "delete_bulk_tasks",
-  description: "\u26a0\ufe0f PERMANENTLY DELETE multiple tasks. This action cannot be undone. For each task, you MUST provide either:\n1. taskId alone (preferred and safest)\n2. taskName + listName (use with caution)",
-  inputSchema: {
-    type: "object",
-    properties: {
-      tasks: {
-        type: "array",
-        description: "Array of tasks to delete",
-        items: {
-          type: "object",
-          properties: {
-            taskId: {
-              type: "string",
-              description: "Task ID (preferred). Use instead of taskName if available."
-            },
-            taskName: {
-              type: "string",
-              description: "Task name. Requires listName when used."
-            },
-            listName: {
-              type: "string",
-              description: "REQUIRED with taskName: List containing the task."
-            }
-          }
-        }
-      }
-    },
-    required: ["tasks"]
-  }
-};
-
-/**
- * Tool definition for creating multiple tasks at once
- */
-export const createBulkTasksTool = {
-  name: "create_bulk_tasks",
-  description: "Create multiple tasks in a list efficiently. You MUST provide:\n1. An array of tasks with required properties\n2. Either listId or listName to specify the target list\n\nOptional: Configure batch size and concurrency for performance.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      listId: {
-        type: "string",
-        description: "ID of list for new tasks (preferred). Use this instead of listName if you have it."
-      },
-      listName: {
-        type: "string",
-        description: "Name of list for new tasks. Only use if you don't have listId."
-      },
-      tasks: {
-        type: "array",
-        description: "Array of tasks to create. Each task must have at least a name.",
-        items: {
-          type: "object",
-          properties: {
-            name: {
-              type: "string",
-              description: "Task name with emoji prefix"
-            },
-            description: {
-              type: "string",
-              description: "Plain text description"
-            },
-            markdown_description: {
-              type: "string",
-              description: "Markdown description (overrides plain text)"
-            },
-            status: {
-              type: "string",
-              description: "Task status (uses list default if omitted)"
-            },
-            priority: {
-              type: "number",
-              description: "Priority 1-4 (1=urgent, 4=low)"
-            },
-            dueDate: {
-              type: "string",
-              description: "Due date (Unix timestamp ms)"
-            }
-          },
-          required: ["name"]
-        }
-      },
-      options: {
-        type: "object",
-        description: "Optional processing settings",
-        properties: {
-          batchSize: {
-            type: "number",
-            description: "Tasks per batch (default: 10)"
-          },
-          concurrency: {
-            type: "number",
-            description: "Parallel operations (default: 1)"
-          },
-          continueOnError: {
-            type: "boolean",
-            description: "Continue if some tasks fail"
-          },
-          retryCount: {
-            type: "number",
-            description: "Retry attempts for failures"
-          }
-        }
-      }
-    },
-    required: ["tasks"]
-  }
-};
-
-/**
- * Tool definition for updating multiple tasks
- */
-export const updateBulkTasksTool = {
-  name: "update_bulk_tasks",
-  description: "Update multiple tasks efficiently. For each task, you MUST provide either:\n1. taskId alone (preferred)\n2. taskName + listName\n\nOnly specified fields will be updated for each task.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      tasks: {
-        type: "array",
-        description: "Array of tasks to update",
-        items: {
-          type: "object",
-          properties: {
-            taskId: {
-              type: "string",
-              description: "Task ID (preferred). Use instead of taskName if available."
-            },
-            taskName: {
-              type: "string",
-              description: "Task name. Requires listName when used."
-            },
-            listName: {
-              type: "string",
-              description: "REQUIRED with taskName: List containing the task."
-            },
-            name: {
-              type: "string",
-              description: "New name with emoji prefix"
-            },
-            description: {
-              type: "string",
-              description: "New plain text description"
-            },
-            markdown_description: {
-              type: "string",
-              description: "New markdown description"
-            },
-            status: {
-              type: "string",
-              description: "New status"
-            },
-            priority: {
-              type: ["number", "null"],
-              enum: [1, 2, 3, 4, null],
-              description: "New priority (1-4 or null)"
-            },
-            dueDate: {
-              type: "string",
-              description: "New due date (Unix timestamp in milliseconds)"
-            }
-          }
-        }
-      }
-    },
-    required: ["tasks"]
-  }
-};
-
-/**
- * Tool definition for moving multiple tasks
- */
-export const moveBulkTasksTool = {
-  name: "move_bulk_tasks",
-  description: "Move multiple tasks to a different list efficiently. For each task, you MUST provide either:\n1. taskId alone (preferred)\n2. taskName + listName\n\nWARNING: Task statuses may reset if target list has different status options.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      tasks: {
-        type: "array",
-        description: "Array of tasks to move",
-        items: {
-          type: "object",
-          properties: {
-            taskId: {
-              type: "string",
-              description: "Task ID (preferred). Use instead of taskName if available."
-            },
-            taskName: {
-              type: "string",
-              description: "Task name. Requires listName when used."
-            },
-            listName: {
-              type: "string",
-              description: "REQUIRED with taskName: List containing the task."
-            }
-          }
-        }
-      },
-      targetListId: {
-        type: "string",
-        description: "ID of destination list (preferred). Use instead of targetListName if available."
-      },
-      targetListName: {
-        type: "string",
-        description: "Name of destination list. Only use if you don't have targetListId."
-      }
-    },
-    required: ["tasks"]
-  }
-};
-
-/**
  * Tool definition for getting task comments
  */
 export const getTaskCommentsTool = {
@@ -1039,157 +829,7 @@ export const getTaskCommentsTool = {
   }
 };
 
-/**
- * Handler for bulk task updates
- */
-export async function handleUpdateBulkTasks({ tasks }: { tasks: any[] }) {
-  if (!tasks || !tasks.length) {
-    throw new Error("No tasks provided for bulk update");
-  }
-
-  const results = {
-    total: tasks.length,
-    successful: 0,
-    failed: 0,
-    failures: [] as any[]
-  };
-
-  for (const task of tasks) {
-    try {
-      let taskId = task.taskId;
-      
-      if (!taskId && task.taskName) {
-        if (!task.listName) {
-          throw new Error(`List name is required when using task name for task "${task.taskName}"`);
-        }
-        
-        const listInfo = await findListIDByName(workspaceService, task.listName);
-        if (!listInfo) {
-          throw new Error(`List "${task.listName}" not found`);
-        }
-        const taskList = await taskService.getTasks(listInfo.id);
-        const foundTask = taskList.find(t => t.name.toLowerCase() === task.taskName.toLowerCase());
-        
-        if (!foundTask) {
-          throw new Error(`Task "${task.taskName}" not found in list "${task.listName}"`);
-        }
-        taskId = foundTask.id;
-      }
-
-      if (!taskId) {
-        throw new Error("Either taskId or taskName must be provided");
-      }
-
-      await taskService.updateTask(taskId, {
-        name: task.name,
-        description: task.description,
-        markdown_description: task.markdown_description,
-        status: task.status,
-        priority: task.priority as TaskPriority,
-        due_date: task.dueDate ? parseDueDate(task.dueDate) : undefined
-      });
-
-      results.successful++;
-    } catch (error: any) {
-      results.failed++;
-      results.failures.push({
-        task: task.taskId || task.taskName,
-        error: error.message
-      });
-    }
-  }
-
-  return {
-    content: [{
-      type: "text",
-      text: JSON.stringify(results, null, 2)
-    }]
-  };
-}
-
-/**
- * Handler for bulk task creation
- */
-export async function handleCreateBulkTasks(parameters: any) {
-  // Validate required parameters
-  const { tasks, listId, listName } = parameters;
-  
-  if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
-    throw new Error('You must provide a non-empty array of tasks to create');
-  }
-
-  let targetListId = listId;
-      
-  // If no listId but listName is provided, look up the list ID
-  if (!targetListId && listName) {
-    const listInfo = await findListIDByName(workspaceService, listName);
-    if (!listInfo) {
-      throw new Error(`List "${listName}" not found`);
-    }
-    targetListId = listInfo.id;
-  }
-  
-  if (!targetListId) {
-    throw new Error("Either listId or listName must be provided");
-  }
-
-  const results = {
-    total: tasks.length,
-    successful: 0,
-    failed: 0,
-    failures: [] as any[]
-  };
-
-  // Map tasks to ClickUp format
-  const clickupTasks = tasks.map((task: any) => {
-    const taskData: CreateTaskData = {
-      name: task.name,
-      description: task.description,
-      markdown_description: task.markdown_description,
-      status: task.status,
-      priority: task.priority as TaskPriority,
-      due_date: task.dueDate ? parseDueDate(task.dueDate) : undefined
-    };
-    
-    // Add due_date_time flag if due date is set
-    if (task.dueDate && taskData.due_date) {
-      taskData.due_date_time = true;
-    }
-    
-    return taskData;
-  });
-
-  // Create tasks in bulk using the task service
-  try {
-    const bulkResult = await taskService.createBulkTasks(targetListId, { tasks: clickupTasks });
-    
-    // Update results based on bulk operation outcome
-    results.successful = bulkResult.successfulItems.length;
-    results.failed = bulkResult.failedItems.length;
-    results.failures = bulkResult.failedItems.map(failure => ({
-      task: failure.item.name,
-      error: failure.error.message
-    }));
-  } catch (error: any) {
-    // If the bulk operation itself fails, mark all tasks as failed
-    results.failed = tasks.length;
-    results.failures = tasks.map(task => ({
-      task: task.name,
-      error: error.message
-    }));
-  }
-
-  return {
-    content: [{
-      type: "text",
-      text: JSON.stringify(results, null, 2)
-    }]
-  };
-}
-
-/**
- * Handler for the create_task tool
- */
+// Export handlers to be used by the server
 export async function handleCreateTask(parameters: any) {
   const { name, description, markdown_description, listId, listName, status, priority, dueDate } = parameters;
   
@@ -1234,8 +874,8 @@ export async function handleCreateTask(parameters: any) {
   // Create the task
   const task = await taskService.createTask(targetListId, taskData);
 
-  // Format response
-  return {
+  // Create response object
+  const response = {
     content: [{
       type: "text",
       text: JSON.stringify({
@@ -1250,11 +890,11 @@ export async function handleCreateTask(parameters: any) {
       }, null, 2)
     }]
   };
+
+  // Add sponsor message to response
+  return enhanceResponseWithSponsor(response);
 }
 
-/**
- * Handler for the update_task tool
- */
 export async function handleUpdateTask(parameters: any) {
   const { taskId, taskName, listName, name, description, markdown_description, status, priority, dueDate } = parameters;
   
@@ -1325,9 +965,6 @@ export async function handleUpdateTask(parameters: any) {
   };
 }
 
-/**
- * Handler for the move_task tool
- */
 export async function handleMoveTask(parameters: any) {
   const { taskId, taskName, sourceListName, listId, listName } = parameters;
   
@@ -1400,9 +1037,6 @@ export async function handleMoveTask(parameters: any) {
   };
 }
 
-/**
- * Handler for the duplicate_task tool
- */
 export async function handleDuplicateTask(parameters: any) {
   const { taskId, taskName, sourceListName, listId, listName } = parameters;
   
@@ -1475,9 +1109,6 @@ export async function handleDuplicateTask(parameters: any) {
   };
 }
 
-/**
- * Handler for the get_tasks tool
- */
 export async function handleGetTasks(parameters: any) {
   const { 
     listId, listName, archived, page, order_by, reverse, 
@@ -1539,9 +1170,6 @@ export async function handleGetTasks(parameters: any) {
   };
 }
 
-/**
- * Handler for the delete_task tool
- */
 export async function handleDeleteTask(parameters: any) {
   const { taskId, taskName, listName } = parameters;
   
@@ -1603,197 +1231,6 @@ export async function handleDeleteTask(parameters: any) {
   };
 }
 
-/**
- * Handler for the delete_bulk_tasks tool
- */
-export async function handleDeleteBulkTasks({ tasks }: { tasks: any[] }) {
-  if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
-    throw new Error('You must provide a non-empty array of tasks to delete');
-  }
-
-  const results = {
-    total: tasks.length,
-    successful: 0,
-    failed: 0,
-    failures: [] as any[],
-    deleted: [] as any[]
-  };
-
-  // Collect all task IDs for deletion
-  const taskIdsToDelete: string[] = [];
-  const taskMap = new Map<string, any>();
-
-  // First, resolve all task IDs
-  for (const task of tasks) {
-    try {
-      let taskId = task.taskId;
-      
-      if (!taskId && task.taskName) {
-        if (!task.listName) {
-          throw new Error(`List name is required when using task name for task "${task.taskName}"`);
-        }
-        
-        const listInfo = await findListIDByName(workspaceService, task.listName);
-        if (!listInfo) {
-          throw new Error(`List "${task.listName}" not found`);
-        }
-        
-        // Use the improved findTaskByName method
-        const foundTask = await taskService.findTaskByName(listInfo.id, task.taskName);
-        
-        if (!foundTask) {
-          throw new Error(`Task "${task.taskName}" not found in list "${task.listName}"`);
-        }
-        taskId = foundTask.id;
-        
-        // Store original task info for the response
-        taskMap.set(taskId, { id: taskId, name: foundTask.name, originalTask: task });
-      } else if (taskId) {
-        // Store task ID with basic info for the response
-        taskMap.set(taskId, { id: taskId, name: task.taskName || "Unknown", originalTask: task });
-      } else {
-        throw new Error("Either taskId or taskName must be provided for each task");
-      }
-      
-      taskIdsToDelete.push(taskId);
-    } catch (error: any) {
-      results.failed++;
-      results.failures.push({
-        task: task.taskId || task.taskName,
-        error: error.message
-      });
-    }
-  }
-
-  // Perform the bulk delete operation if we have tasks to delete
-  if (taskIdsToDelete.length > 0) {
-    try {
-      const bulkResult = await taskService.deleteBulkTasks(taskIdsToDelete);
-      
-      // Process successful deletions
-      for (const deletedId of bulkResult.successfulItems) {
-        results.successful++;
-        const taskInfo = taskMap.get(deletedId);
-        results.deleted.push({
-          id: deletedId,
-          name: taskInfo?.name || "Unknown",
-          deleted: true
-        });
-      }
-      
-      // Process failed deletions
-      for (const failure of bulkResult.failedItems) {
-        results.failed++;
-        const taskInfo = taskMap.get(failure.item);
-        results.failures.push({
-          task: taskInfo?.name || failure.item,
-          error: failure.error.message
-        });
-      }
-    } catch (error: any) {
-      // If the bulk delete fails entirely, mark all remaining tasks as failed
-      for (const taskId of taskIdsToDelete) {
-        const taskInfo = taskMap.get(taskId);
-        if (taskInfo && !results.deleted.some(t => t.id === taskId) && 
-            !results.failures.some(f => f.task === taskId || f.task === taskInfo.name)) {
-          results.failed++;
-          results.failures.push({
-            task: taskInfo.name || taskId,
-            error: error.message
-          });
-        }
-      }
-    }
-  }
-
-  return {
-    content: [{
-      type: "text",
-      text: JSON.stringify(results, null, 2)
-    }]
-  };
-}
-
-/**
- * Handler for bulk task moves
- */
-export async function handleMoveBulkTasks(parameters: any) {
-  const { tasks, targetListId, targetListName } = parameters;
-  
-  if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
-    throw new Error('You must provide a non-empty array of tasks to move');
-  }
-
-  let finalTargetListId = targetListId;
-      
-  // If no targetListId but targetListName is provided, look up the list ID
-  if (!finalTargetListId && targetListName) {
-    const listInfo = await findListIDByName(workspaceService, targetListName);
-    if (!listInfo) {
-      throw new Error(`Target list "${targetListName}" not found`);
-    }
-    finalTargetListId = listInfo.id;
-  }
-  
-  if (!finalTargetListId) {
-    throw new Error("Either targetListId or targetListName must be provided");
-  }
-
-  const results = {
-    total: tasks.length,
-    successful: 0,
-    failed: 0,
-    failures: [] as any[]
-  };
-
-  for (const task of tasks) {
-    try {
-      let taskId = task.taskId;
-      
-      if (!taskId && task.taskName) {
-        if (!task.listName) {
-          throw new Error(`List name is required when using task name for task "${task.taskName}"`);
-        }
-        
-        const listInfo = await findListIDByName(workspaceService, task.listName);
-        if (!listInfo) {
-          throw new Error(`List "${task.listName}" not found`);
-        }
-        const taskList = await taskService.getTasks(listInfo.id);
-        const foundTask = taskList.find(t => t.name.toLowerCase() === task.taskName.toLowerCase());
-        
-        if (!foundTask) {
-          throw new Error(`Task "${task.taskName}" not found in list "${task.listName}"`);
-        }
-        taskId = foundTask.id;
-      }
-
-      if (!taskId) {
-        throw new Error("Either taskId or taskName must be provided");
-      }
-
-      await taskService.moveTask(taskId, finalTargetListId);
-      results.successful++;
-    } catch (error: any) {
-      results.failed++;
-      results.failures.push({
-        task: task.taskId || task.taskName,
-        error: error.message
-      });
-    }
-  }
-
-  return {
-    content: [{
-      type: "text",
-      text: JSON.stringify(results, null, 2)
-    }]
-  };
-}
-
-/**
- * Handler for getting task comments
- */
 export async function handleGetTaskComments(parameters: any) {
   const { taskId, taskName, listName, start, startId } = parameters;
   
@@ -1825,6 +1262,652 @@ export async function handleGetTaskComments(parameters: any) {
           taskId: taskId || null,
           taskName: taskName || null,
           listName: listName || null
+        }, null, 2)
+      }]
+    };
+  }
+}
+
+// Helper function for path extraction
+export function extractPath(node: any): string {
+  if (!node) return '';
+  if (!node.parent) return node.name;
+  return `${extractPath(node.parent)} > ${node.name}`;
+}
+
+// Helper function for path traversal
+export function extractTreePath(root: any, targetId: string): any[] {
+  if (!root) return [];
+  
+  // If this node is the target, return it in an array
+  if (root.id === targetId) {
+    return [root];
+  }
+  
+  // Check children if they exist
+  if (root.children) {
+    for (const child of root.children) {
+      const path = extractTreePath(child, targetId);
+      if (path.length > 0) {
+        return [root, ...path];
+      }
+    }
+  }
+  
+  // Not found in this branch
+  return [];
+}
+
+// After the existing tools, add the bulk tools:
+
+/**
+ * Tool definition for creating multiple tasks at once
+ */
+export const createBulkTasksTool = {
+  name: "create_bulk_tasks",
+  description: "Create multiple tasks in a list efficiently. You MUST provide:\n1. An array of tasks with required properties\n2. Either listId or listName to specify the target list\n\nOptional: Configure batch size and concurrency for performance.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      listId: {
+        type: "string",
+        description: "ID of list for new tasks (preferred). Use this instead of listName if you have it."
+      },
+      listName: {
+        type: "string",
+        description: "Name of list for new tasks. Only use if you don't have listId."
+      },
+      tasks: {
+        type: "array",
+        description: "Array of tasks to create. Each task must have at least a name.",
+        items: {
+          type: "object",
+          properties: {
+            name: {
+              type: "string",
+              description: "Task name with emoji prefix"
+            },
+            description: {
+              type: "string",
+              description: "Plain text description"
+            },
+            markdown_description: {
+              type: "string",
+              description: "Markdown description (overrides plain text)"
+            },
+            status: {
+              type: "string",
+              description: "Task status (uses list default if omitted)"
+            },
+            priority: {
+              type: "number",
+              description: "Priority 1-4 (1=urgent, 4=low)"
+            },
+            dueDate: {
+              type: "string",
+              description: "Due date (Unix timestamp ms)"
+            }
+          },
+          required: ["name"]
+        }
+      },
+      options: {
+        oneOf: [
+          {
+            type: "object",
+            description: "Optional processing settings",
+            properties: {
+              batchSize: {
+                type: "number",
+                description: "Tasks per batch (default: 10)"
+              },
+              concurrency: {
+                type: "number",
+                description: "Parallel operations (default: 3)"
+              },
+              continueOnError: {
+                type: "boolean",
+                description: "Continue if some tasks fail"
+              },
+              retryCount: {
+                type: "number",
+                description: "Retry attempts for failures"
+              }
+            }
+          },
+          {
+            type: "string",
+            description: "JSON string representing options. Will be parsed automatically."
+          }
+        ],
+        description: "Processing options (or JSON string representing options)"
+      }
+    },
+    required: ["tasks"]
+  }
+};
+
+/**
+ * Tool definition for updating multiple tasks
+ */
+export const updateBulkTasksTool = {
+  name: "update_bulk_tasks",
+  description: "Update multiple tasks efficiently. For each task, you MUST provide either:\n1. taskId alone (preferred)\n2. taskName + listName\n\nOnly specified fields will be updated for each task.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      tasks: {
+        type: "array",
+        description: "Array of tasks to update",
+        items: {
+          type: "object",
+          properties: {
+            taskId: {
+              type: "string",
+              description: "Task ID (preferred). Use instead of taskName if available."
+            },
+            taskName: {
+              type: "string",
+              description: "Task name. Requires listName when used."
+            },
+            listName: {
+              type: "string",
+              description: "REQUIRED with taskName: List containing the task."
+            },
+            name: {
+              type: "string",
+              description: "New name with emoji prefix"
+            },
+            description: {
+              type: "string",
+              description: "New plain text description"
+            },
+            markdown_description: {
+              type: "string",
+              description: "New markdown description"
+            },
+            status: {
+              type: "string",
+              description: "New status"
+            },
+            priority: {
+              type: ["number", "null"],
+              enum: [1, 2, 3, 4, null],
+              description: "New priority (1-4 or null)"
+            },
+            dueDate: {
+              type: "string",
+              description: "New due date (Unix timestamp in milliseconds)"
+            }
+          }
+        }
+      },
+      options: {
+        oneOf: [
+          {
+            type: "object",
+            description: "Optional processing settings",
+            properties: {
+              batchSize: {
+                type: "number",
+                description: "Tasks per batch (default: 10)"
+              },
+              concurrency: {
+                type: "number",
+                description: "Parallel operations (default: 3)"
+              },
+              continueOnError: {
+                type: "boolean",
+                description: "Continue if some tasks fail"
+              },
+              retryCount: {
+                type: "number",
+                description: "Retry attempts for failures"
+              }
+            }
+          },
+          {
+            type: "string",
+            description: "JSON string representing options. Will be parsed automatically."
+          }
+        ],
+        description: "Processing options (or JSON string representing options)"
+      }
+    },
+    required: ["tasks"]
+  }
+};
+
+/**
+ * Tool definition for moving multiple tasks
+ */
+export const moveBulkTasksTool = {
+  name: "move_bulk_tasks",
+  description: "Move multiple tasks to a different list efficiently. For each task, you MUST provide either:\n1. taskId alone (preferred)\n2. taskName + listName\n\nWARNING: Task statuses may reset if target list has different status options.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      tasks: {
+        type: "array",
+        description: "Array of tasks to move",
+        items: {
+          type: "object",
+          properties: {
+            taskId: {
+              type: "string",
+              description: "Task ID (preferred). Use instead of taskName if available."
+            },
+            taskName: {
+              type: "string",
+              description: "Task name. Requires listName when used."
+            },
+            listName: {
+              type: "string",
+              description: "REQUIRED with taskName: List containing the task."
+            }
+          }
+        }
+      },
+      targetListId: {
+        type: "string",
+        description: "ID of destination list (preferred). Use instead of targetListName if available."
+      },
+      targetListName: {
+        type: "string",
+        description: "Name of destination list. Only use if you don't have targetListId."
+      },
+      options: {
+        oneOf: [
+          {
+            type: "object",
+            description: "Optional processing settings",
+            properties: {
+              batchSize: {
+                type: "number",
+                description: "Tasks per batch (default: 10)"
+              },
+              concurrency: {
+                type: "number",
+                description: "Parallel operations (default: 3)"
+              },
+              continueOnError: {
+                type: "boolean",
+                description: "Continue if some tasks fail"
+              },
+              retryCount: {
+                type: "number",
+                description: "Retry attempts for failures"
+              }
+            }
+          },
+          {
+            type: "string",
+            description: "JSON string representing options. Will be parsed automatically."
+          }
+        ],
+        description: "Processing options (or JSON string representing options)"
+      }
+    },
+    required: ["tasks"]
+  }
+};
+
+/**
+ * Tool definition for deleting multiple tasks
+ */
+export const deleteBulkTasksTool = {
+  name: "delete_bulk_tasks",
+  description: "⚠️ PERMANENTLY DELETE multiple tasks. This action cannot be undone. For each task, you MUST provide either:\n1. taskId alone (preferred and safest)\n2. taskName + listName (use with caution)",
+  inputSchema: {
+    type: "object",
+    properties: {
+      tasks: {
+        type: "array",
+        description: "Array of tasks to delete",
+        items: {
+          type: "object",
+          properties: {
+            taskId: {
+              type: "string",
+              description: "Task ID (preferred). Use instead of taskName if available."
+            },
+            taskName: {
+              type: "string",
+              description: "Task name. Requires listName when used."
+            },
+            listName: {
+              type: "string",
+              description: "REQUIRED with taskName: List containing the task."
+            }
+          }
+        }
+      },
+      options: {
+        oneOf: [
+          {
+            type: "object",
+            description: "Optional processing settings",
+            properties: {
+              batchSize: {
+                type: "number",
+                description: "Tasks per batch (default: 10)"
+              },
+              concurrency: {
+                type: "number",
+                description: "Parallel operations (default: 3)"
+              },
+              continueOnError: {
+                type: "boolean",
+                description: "Continue if some tasks fail"
+              },
+              retryCount: {
+                type: "number",
+                description: "Retry attempts for failures"
+              }
+            }
+          },
+          {
+            type: "string",
+            description: "JSON string representing options. Will be parsed automatically."
+          }
+        ],
+        description: "Processing options (or JSON string representing options)"
+      }
+    },
+    required: ["tasks"]
+  }
+};
+
+/**
+ * Handler for bulk task creation
+ */
+export async function handleCreateBulkTasks(parameters: any) {
+  const { listId, listName, tasks, options: rawOptions } = parameters;
+  
+  // Handle options parameter - may be a string that needs to be parsed
+  let options = rawOptions;
+  if (typeof rawOptions === 'string') {
+    try {
+      options = JSON.parse(rawOptions);
+    } catch (error) {
+      // Just use default options on parse error
+      options = undefined;
+    }
+  }
+  
+  try {
+    // Validate tasks parameter
+    if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
+      throw new Error('You must provide a non-empty array of tasks to create');
+    }
+    
+    // Resolve list ID
+    const targetListId = await resolveListId(listId, listName);
+    
+    // Format tasks with proper data types
+    const formattedTasks = tasks.map((task: any) => ({
+      name: task.name,
+      description: task.description,
+      markdown_description: task.markdown_description,
+      status: task.status,
+      priority: task.priority as TaskPriority,
+      due_date: task.dueDate ? parseDueDate(task.dueDate) : undefined,
+      due_date_time: task.dueDate ? true : undefined
+    }));
+    
+    // Use bulk service to create tasks
+    const result = await bulkService.createTasks(
+      targetListId, 
+      formattedTasks,
+      options as BatchProcessingOptions
+    );
+    
+    // Format response
+    const response = {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          total: result.totals.total,
+          successful: result.totals.success,
+          failed: result.totals.failure,
+          failures: result.failed.map(failure => ({
+            task: failure.item.name,
+            error: failure.error.message
+          }))
+        }, null, 2)
+      }]
+    };
+    
+    return enhanceResponseWithSponsor(response);
+  } catch (error: any) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          error: error.message || 'Failed to create tasks in bulk',
+          listId,
+          listName
+        }, null, 2)
+      }]
+    };
+  }
+}
+
+/**
+ * Handler for bulk task updates
+ */
+export async function handleUpdateBulkTasks(parameters: any) {
+  const { tasks, options: rawOptions } = parameters;
+  
+  // Handle options parameter - may be a string that needs to be parsed
+  let options = rawOptions;
+  if (typeof rawOptions === 'string') {
+    try {
+      options = JSON.parse(rawOptions);
+    } catch (error) {
+      // Just use default options on parse error
+      options = undefined;
+    }
+  }
+  
+  try {
+    // Validate tasks parameter
+    if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
+      throw new Error('You must provide a non-empty array of tasks to update');
+    }
+    
+    // Process the tasks using TaskResolver
+    const tasksToUpdate = await Promise.all(
+      tasks.map(async (task: any) => {
+        const taskId = await resolveTaskId(task.taskId, task.taskName, undefined, task.listName);
+        
+        // Create update data object
+        const updateData: UpdateTaskData = {};
+        if (task.name !== undefined) updateData.name = task.name;
+        if (task.description !== undefined) updateData.description = task.description;
+        if (task.markdown_description !== undefined) updateData.markdown_description = task.markdown_description;
+        if (task.status !== undefined) updateData.status = task.status;
+        if (task.priority !== undefined) {
+          updateData.priority = task.priority === null ? null : (task.priority as TaskPriority);
+        }
+        if (task.dueDate !== undefined) {
+          updateData.due_date = task.dueDate ? parseDueDate(task.dueDate) : null;
+          if (task.dueDate && updateData.due_date) {
+            updateData.due_date_time = true;
+          }
+        }
+        
+        return { id: taskId, data: updateData };
+      })
+    );
+    
+    // Use bulk service to update tasks
+    const result = await bulkService.updateTasks(
+      tasksToUpdate,
+      options as BatchProcessingOptions
+    );
+    
+    // Format response
+    const response = {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          total: result.totals.total,
+          successful: result.totals.success,
+          failed: result.totals.failure,
+          failures: result.failed.map(failure => ({
+            taskId: failure.item.id,
+            error: failure.error.message
+          }))
+        }, null, 2)
+      }]
+    };
+    
+    return enhanceResponseWithSponsor(response);
+  } catch (error: any) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          error: error.message || 'Failed to update tasks in bulk',
+          taskCount: tasks?.length || 0
+        }, null, 2)
+      }]
+    };
+  }
+}
+
+/**
+ * Handler for bulk task moves
+ */
+export async function handleMoveBulkTasks(parameters: any) {
+  const { tasks, targetListId, targetListName, options: rawOptions } = parameters;
+  
+  // Handle options parameter - may be a string that needs to be parsed
+  let options = rawOptions;
+  if (typeof rawOptions === 'string') {
+    try {
+      options = JSON.parse(rawOptions);
+    } catch (error) {
+      // Just use default options on parse error
+      options = undefined;
+    }
+  }
+  
+  try {
+    // Validate tasks parameter
+    if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
+      throw new Error('You must provide a non-empty array of tasks to move');
+    }
+    
+    // Resolve target list ID
+    const resolvedTargetListId = await resolveListId(targetListId, targetListName);
+    if (!resolvedTargetListId) {
+      throw new Error('Either targetListId or targetListName must be provided');
+    }
+    
+    // Resolve task IDs
+    const taskIds = await Promise.all(
+      tasks.map((task: any) => resolveTaskId(task.taskId, task.taskName, undefined, task.listName))
+    );
+    
+    // Use bulk service to move tasks
+    const result = await bulkService.moveTasks(
+      taskIds,
+      resolvedTargetListId,
+      options as BatchProcessingOptions
+    );
+    
+    // Format response
+    const response = {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          total: result.totals.total,
+          successful: result.totals.success,
+          failed: result.totals.failure,
+          targetList: targetListName || resolvedTargetListId,
+          failures: result.failed.map(failure => ({
+            taskId: failure.item,
+            error: failure.error.message
+          }))
+        }, null, 2)
+      }]
+    };
+    
+    return enhanceResponseWithSponsor(response);
+  } catch (error: any) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          error: error.message || 'Failed to move tasks in bulk',
+          targetListId: targetListId || targetListName,
+          taskCount: tasks?.length || 0
+        }, null, 2)
+      }]
+    };
+  }
+}
+
+/**
+ * Handler for bulk task deletion
+ */
+export async function handleDeleteBulkTasks(parameters: any) {
+  const { tasks, options: rawOptions } = parameters;
+  
+  // Handle options parameter - may be a string that needs to be parsed
+  let options = rawOptions;
+  if (typeof rawOptions === 'string') {
+    try {
+      options = JSON.parse(rawOptions);
+    } catch (error) {
+      // Just use default options on parse error
+      options = undefined;
+    }
+  }
+  
+  try {
+    // Validate tasks parameter
+    if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
+      throw new Error('You must provide a non-empty array of tasks to delete');
+    }
+    
+    // Resolve task IDs
+    const taskIds = await Promise.all(
+      tasks.map((task: any) => resolveTaskId(task.taskId, task.taskName, undefined, task.listName))
+    );
+    
+    // Use bulk service to delete tasks
+    const result = await bulkService.deleteTasks(
+      taskIds,
+      options as BatchProcessingOptions
+    );
+    
+    // Format response
+    const response = {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          total: result.totals.total,
+          successful: result.totals.success,
+          failed: result.totals.failure,
+          failures: result.failed.map(failure => ({
+            taskId: failure.item,
+            error: failure.error.message
+          }))
+        }, null, 2)
+      }]
+    };
+    
+    return enhanceResponseWithSponsor(response);
+  } catch (error: any) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          error: error.message || 'Failed to delete tasks in bulk',
+          taskCount: tasks?.length || 0
         }, null, 2)
       }]
     };

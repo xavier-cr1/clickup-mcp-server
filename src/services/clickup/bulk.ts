@@ -1,168 +1,213 @@
 /**
- * ClickUp Bulk Operations Service – infrastructure for bulk operations with batching, error handling, progress tracking, and configurable concurrency.
+ * ClickUp Bulk Service
+ * 
+ * Enhanced implementation for bulk operations that leverages the existing single-operation methods.
+ * This approach reduces code duplication while offering powerful concurrency management.
  */
 import { ClickUpServiceError, ErrorCode } from './base.js';
-import { AxiosError } from 'axios';
+import { TaskService } from './task.js';
+import { CreateTaskData, ClickUpTask, UpdateTaskData } from './types.js';
+import { BatchProcessingOptions, BatchResult, processBatch } from '../../utils/concurrency-utils.js';
+import { Logger } from '../../logger.js';
 
-export interface BulkOperationOptions {
-  batchSize?: number;      // default 10
-  concurrency?: number;      // default 3
-  continueOnError?: boolean; // default false
-  retryCount?: number;       // default 3
-  retryDelay?: number;       // default 1000
-  exponentialBackoff?: boolean; // default true
-  onProgress?: (completed: number, total: number, success: number, failed: number) => void;
-}
+// Create logger instance
+const logger = new Logger('BulkService');
 
-export interface ProgressInfo {
-  totalItems: number;
-  completedItems: number;
-  failedItems: number;
-  currentBatch: number;
-  totalBatches: number;
-  percentComplete: number;
-  context?: Record<string, any>;
-}
+/**
+ * Service for handling bulk operations in ClickUp
+ */
+export class BulkService {
+  private taskService: TaskService;
 
-export interface BulkOperationResult<T> {
-  success: boolean;
-  successfulItems: T[];
-  failedItems: Array<{ item: any; index: number; error: Error }>;
-  totalItems: number;
-  successCount: number;
-  failureCount: number;
-}
+  constructor(taskService: TaskService) {
+    this.taskService = taskService;
+    logger.info('BulkService initialized');
+  }
 
-export class BulkProcessor {
-  public async processBulk<T, R>(
-    items: T[],
-    processor: (item: T, index: number) => Promise<R>,
-    options?: BulkOperationOptions
-  ): Promise<BulkOperationResult<R>> {
-    const opts: Required<BulkOperationOptions> = {
-      batchSize: options?.batchSize ?? 10,
-      concurrency: options?.concurrency ?? 3,
-      continueOnError: options?.continueOnError ?? false,
-      retryCount: options?.retryCount ?? 3,
-      retryDelay: options?.retryDelay ?? 1000,
-      exponentialBackoff: options?.exponentialBackoff ?? true,
-      onProgress: options?.onProgress ?? (() => {})
-    };
-
-    const result: BulkOperationResult<R> = {
-      success: true,
-      successfulItems: [],
-      failedItems: [],
-      totalItems: items.length,
-      successCount: 0,
-      failureCount: 0
-    };
-
-    if (items.length === 0) return result;
+  /**
+   * Create multiple tasks in a list efficiently
+   * 
+   * @param listId ID of the list to create tasks in
+   * @param tasks Array of task data
+   * @param options Batch processing options
+   * @returns Results containing successful and failed tasks
+   */
+  async createTasks(
+    listId: string,
+    tasks: CreateTaskData[],
+    options?: BatchProcessingOptions
+  ): Promise<BatchResult<ClickUpTask>> {
+    logger.info(`Creating ${tasks.length} tasks in list ${listId}`, {
+      batchSize: options?.batchSize,
+      concurrency: options?.concurrency
+    });
 
     try {
-      const totalBatches = Math.ceil(items.length / opts.batchSize);
-      let processedItems = 0;
-      for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
-        const startIdx = batchIndex * opts.batchSize;
-        const endIdx = Math.min(startIdx + opts.batchSize, items.length);
-        const batch = items.slice(startIdx, endIdx);
-        const batchResults = await this.processBatch(batch, processor, startIdx, opts);
+      // First validate that the list exists - do this once for all tasks
+      await this.taskService.validateListExists(listId);
 
-        result.successfulItems.push(...batchResults.successfulItems);
-        result.failedItems.push(...batchResults.failedItems);
-        result.successCount += batchResults.successCount;
-        result.failureCount += batchResults.failureCount;
-
-        if (batchResults.failureCount > 0 && !opts.continueOnError) {
-          result.success = false;
-          return result;
-        }
-
-        processedItems += batch.length;
-        opts.onProgress(processedItems, items.length, result.successCount, result.failureCount);
-      }
-      result.success = result.failedItems.length === 0;
-      return result;
+      // Process the tasks in batches
+      return await processBatch(
+        tasks,
+        (task, index) => {
+          logger.debug(`Creating task ${index + 1}/${tasks.length}`, {
+            taskName: task.name
+          });
+          
+          // Reuse the single-task creation method
+          return this.taskService.createTask(listId, task);
+        },
+        options
+      );
     } catch (error) {
-      const err = error as Error;
-      console.error('Failed to process bulk operation:', err.message || String(error));
-      result.success = false;
-      return result;
+      logger.error(`Failed to create tasks in bulk`, {
+        listId,
+        taskCount: tasks.length,
+        error: error instanceof Error ? error.message : String(error)
+      });
+
+      throw new ClickUpServiceError(
+        `Failed to create tasks in bulk: ${error instanceof Error ? error.message : String(error)}`,
+        error instanceof ClickUpServiceError ? error.code : ErrorCode.UNKNOWN,
+        { listId, taskCount: tasks.length }
+      );
     }
   }
 
-  private async processBatch<T, R>(
-    batch: T[],
-    processor: (item: T, index: number) => Promise<R>,
-    startIndex: number,
-    opts: Required<BulkOperationOptions>
-  ): Promise<BulkOperationResult<R>> {
-    const result: BulkOperationResult<R> = {
-      success: true,
-      successfulItems: [],
-      failedItems: [],
-      totalItems: batch.length,
-      successCount: 0,
-      failureCount: 0
-    };
+  /**
+   * Update multiple tasks efficiently
+   * 
+   * @param tasks Array of task IDs and update data
+   * @param options Batch processing options
+   * @returns Results containing successful and failed task updates
+   */
+  async updateTasks(
+    tasks: Array<{ id: string; data: UpdateTaskData }>,
+    options?: BatchProcessingOptions
+  ): Promise<BatchResult<ClickUpTask>> {
+    logger.info(`Updating ${tasks.length} tasks`, {
+      batchSize: options?.batchSize,
+      concurrency: options?.concurrency
+    });
 
     try {
-      for (let i = 0; i < batch.length; i += opts.concurrency) {
-        const concurrentBatch = batch.slice(i, Math.min(i + opts.concurrency, batch.length));
-        const promises = concurrentBatch.map((item, idx) => {
-          const index = startIndex + i + idx;
-          return this.processWithRetry(() => processor(item, index), index, item, opts);
-        });
-        const results = await Promise.allSettled(promises);
-        results.forEach((promiseResult, idx) => {
-          const index = startIndex + i + idx;
-          if (promiseResult.status === 'fulfilled') {
-            result.successfulItems.push(promiseResult.value);
-            result.successCount++;
-          } else {
-            const error = promiseResult.reason as Error;
-            result.failedItems.push({ item: batch[i + idx], index, error });
-            result.failureCount++;
-            if (!opts.continueOnError) {
-              result.success = false;
-              throw new Error(`Bulk operation failed at index ${index}: ${error.message || String(error)}`);
-            }
-          }
-        });
-      }
-      return result;
+      return await processBatch(
+        tasks,
+        ({ id, data }, index) => {
+          logger.debug(`Updating task ${index + 1}/${tasks.length}`, {
+            taskId: id
+          });
+          
+          // Reuse the single-task update method
+          return this.taskService.updateTask(id, data);
+        },
+        options
+      );
     } catch (error) {
-      const err = error as Error;
-      console.error(`Bulk operation failed: ${err.message || String(error)}`, error);
-      result.success = false;
-      return result;
+      logger.error(`Failed to update tasks in bulk`, {
+        taskCount: tasks.length,
+        error: error instanceof Error ? error.message : String(error)
+      });
+
+      throw new ClickUpServiceError(
+        `Failed to update tasks in bulk: ${error instanceof Error ? error.message : String(error)}`,
+        error instanceof ClickUpServiceError ? error.code : ErrorCode.UNKNOWN,
+        { taskCount: tasks.length }
+      );
     }
   }
 
-  private async processWithRetry<R>(
-    operation: () => Promise<R>,
-    index: number,
-    item: any,
-    options: Required<BulkOperationOptions>
-  ): Promise<R> {
-    let attempts = 1;
-    let lastError: Error = new Error('Unknown error');
-    while (attempts <= options.retryCount) {
-      try {
-        return await operation();
+  /**
+   * Move multiple tasks to a different list efficiently
+   * 
+   * @param taskIds Array of task IDs to move
+   * @param targetListId ID of the list to move tasks to
+   * @param options Batch processing options
+   * @returns Results containing successful and failed moves
+   */
+  async moveTasks(
+    taskIds: string[],
+    targetListId: string,
+    options?: BatchProcessingOptions
+  ): Promise<BatchResult<ClickUpTask>> {
+    logger.info(`Moving ${taskIds.length} tasks to list ${targetListId}`, {
+      batchSize: options?.batchSize,
+      concurrency: options?.concurrency
+    });
+
+    try {
+      // First validate that the target list exists - do this once for all tasks
+      await this.taskService.validateListExists(targetListId);
+
+      return await processBatch(
+        taskIds,
+        (taskId, index) => {
+          logger.debug(`Moving task ${index + 1}/${taskIds.length}`, {
+            taskId,
+            targetListId
+          });
+          
+          // Reuse the single-task move method
+          return this.taskService.moveTask(taskId, targetListId);
+        },
+        options
+      );
+    } catch (error) {
+      logger.error(`Failed to move tasks in bulk`, {
+        targetListId,
+        taskCount: taskIds.length,
+        error: error instanceof Error ? error.message : String(error)
+      });
+
+      throw new ClickUpServiceError(
+        `Failed to move tasks in bulk: ${error instanceof Error ? error.message : String(error)}`,
+        error instanceof ClickUpServiceError ? error.code : ErrorCode.UNKNOWN,
+        { targetListId, taskCount: taskIds.length }
+      );
+    }
+  }
+
+  /**
+   * Delete multiple tasks efficiently
+   * 
+   * @param taskIds Array of task IDs to delete
+   * @param options Batch processing options
+   * @returns Results containing successful and failed deletions
+   */
+  async deleteTasks(
+    taskIds: string[],
+    options?: BatchProcessingOptions
+  ): Promise<BatchResult<string>> {
+    logger.info(`Deleting ${taskIds.length} tasks`, {
+      batchSize: options?.batchSize,
+      concurrency: options?.concurrency
+    });
+
+    try {
+      return await processBatch(
+        taskIds,
+        async (taskId, index) => {
+          logger.debug(`Deleting task ${index + 1}/${taskIds.length}`, {
+            taskId
+          });
+          
+          // Reuse the single-task delete method
+          await this.taskService.deleteTask(taskId);
+          return taskId; // Return the ID for successful deletions
+        },
+        options
+      );
       } catch (error) {
-        const err = error as Error;
-        console.warn(`Operation failed for item at index ${index}, attempt ${attempts}/${options.retryCount}: ${err.message || String(error)}`);
-        lastError = err;
-        if (attempts >= options.retryCount) break;
-        const delay = options.exponentialBackoff
-          ? options.retryDelay * Math.pow(2, attempts) + Math.random() * 1000
-          : options.retryDelay * Math.pow(1.5, attempts - 1);
-        await new Promise(resolve => setTimeout(resolve, delay));
-        attempts++;
-      }
+      logger.error(`Failed to delete tasks in bulk`, {
+        taskCount: taskIds.length,
+        error: error instanceof Error ? error.message : String(error)
+      });
+
+      throw new ClickUpServiceError(
+        `Failed to delete tasks in bulk: ${error instanceof Error ? error.message : String(error)}`,
+        error instanceof ClickUpServiceError ? error.code : ErrorCode.UNKNOWN,
+        { taskCount: taskIds.length }
+      );
     }
-    throw new Error(`Operation failed after ${attempts} attempts for item at index ${index}: ${lastError?.message || 'Unknown error'}`);
   }
 }

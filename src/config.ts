@@ -22,18 +22,23 @@ for (let i = 0; i < args.length; i++) {
 interface Config {
   clickupApiKey: string;
   clickupTeamId: string;
+  enableSponsorMessage: boolean;
+  sponsorUrl: string;
 }
 
 // Load configuration from command line args or environment variables
 const configuration: Config = {
   clickupApiKey: envArgs.clickupApiKey || process.env.CLICKUP_API_KEY || '',
   clickupTeamId: envArgs.clickupTeamId || process.env.CLICKUP_TEAM_ID || '',
+  enableSponsorMessage: process.env.ENABLE_SPONSOR_MESSAGE === 'true' || false,
+  sponsorUrl: process.env.SPONSOR_URL || 'https://github.com/sponsors/taazkareem'
 };
 
-// Validate all required variables are present
-const missingEnvVars = Object.entries(configuration)
-  .filter(([_, value]) => !value)
-  .map(([key]) => key);
+// Validate only the required variables are present
+const requiredVars = ['clickupApiKey', 'clickupTeamId'];
+const missingEnvVars = requiredVars
+  .filter(key => !configuration[key as keyof Config])
+  .map(key => key);
 
 if (missingEnvVars.length > 0) {
   throw new Error(

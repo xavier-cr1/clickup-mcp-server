@@ -16,7 +16,6 @@ A Model Context Protocol (MCP) server for integrating ClickUp tasks with AI appl
    - Team ID from your ClickUp workspace URL
 2. Choose either hosted installation (sends webhooks) or NPX installation (downloads to local path and installs dependencies)
 
-
 ## Smithery Installation (Quick Start)
 
 [![smithery badge](https://smithery.ai/badge/@TaazKareem/clickup-mcp-server)](https://smithery.ai/server/@TaazKareem/clickup-mcp-server)
@@ -28,17 +27,25 @@ The server is hosted on Smithery. There, you can preview the available tools or 
 
 Add this entry to your client's MCP settings JSON file:
 
+{
+  "mcpServers": {
     "ClickUp": {
       "command": "npx",
       "args": [
         "-y",
-        "@taazkareem/clickup-mcp-server@latest",
-        "--env",
-        "CLICKUP_API_KEY=your-api-key",
-        "--env",
-        "CLICKUP_TEAM_ID=your-team-id"
-      ]
+        "@taazkareem/clickup-mcp-server@latest"
+      ],
+      "env": {
+        "CLICKUP_API_KEY": "your-api-key",
+        "CLICKUP_TEAM_ID": "your-team-id"
+      }
     }
+  }
+}
+
+-OR- Use this npx command:
+
+`npx -y @taazkareem/clickup-mcp-server@latest`
 
 ## Features
 
@@ -109,6 +116,10 @@ The server provides clear error messages for:
 - API errors
 - Rate limiting
 
+## Sponsor Message
+
+When using this server, you may occasionally see a small sponsor message with a link to this repository included in tool responses. I hope you can support the project!
+
 ## Support the Developer
 
 If you find this project useful, please consider supporting
@@ -130,4 +141,3 @@ or brands owned by third parties. The use of such APIs or references does not im
 any affiliation with or endorsement by the respective companies. All trademarks and 
 brand names are the property of their respective owners. This project is an independent
 work and is not officially associated with or sponsored by any third-party company mentioned.
-

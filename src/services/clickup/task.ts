@@ -17,17 +17,14 @@ import {
   UpdateTaskData, 
   TaskFilters, 
   TasksResponse,
-  BulkCreateTasksData,
   ClickUpComment,
-  CommentsResponse
+  ClickUpList,
+  TaskPriority
 } from './types.js';
-import { BulkProcessor, BulkOperationOptions, BulkOperationResult, ProgressInfo } from './bulk.js';
 import { ListService } from './list.js';
 import { WorkspaceService } from './workspace.js';
 
 export class TaskService extends BaseClickUpService {
-  // Bulk processor for handling batch operations
-  private bulkProcessor: BulkProcessor;
   private listService: ListService;
   private workspaceService: WorkspaceService | null = null;
   
@@ -38,9 +35,17 @@ export class TaskService extends BaseClickUpService {
     workspaceService?: WorkspaceService
   ) {
     super(apiKey, teamId, baseUrl);
-    this.bulkProcessor = new BulkProcessor();
-    this.listService = new ListService(apiKey, teamId);
-    this.workspaceService = workspaceService || null;
+    
+    // Cache workspace service if provided
+    if (workspaceService) {
+      this.workspaceService = workspaceService;
+      this.logOperation('constructor', { usingSharedWorkspaceService: true });
+    }
+    
+    // Initialize list service for list lookups
+    this.listService = new ListService(apiKey, teamId, baseUrl, this.workspaceService);
+    
+    this.logOperation('constructor', { initialized: true });
   }
 
   /**
@@ -325,28 +330,15 @@ export class TaskService extends BaseClickUpService {
     this.logOperation('duplicateTask', { taskId, listId });
     
     try {
-      // First, get the original task
+      // Get the original task to duplicate
       const originalTask = await this.getTask(taskId);
       
-      // Priority mapping: convert string priority to numeric value if needed
-      let priorityValue = null;
-      if (originalTask.priority) {
-        // If priority.id exists and is numeric, use that
-        if (originalTask.priority.id) {
-          priorityValue = parseInt(originalTask.priority.id);
-          // Ensure it's in the valid range 1-4
-          if (isNaN(priorityValue) || priorityValue < 1 || priorityValue > 4) {
-            priorityValue = null;
-          }
-        }
-      }
-      
-      // Prepare data for the new task
+      // Create a copy of the task data
       const newTaskData: CreateTaskData = {
-        name: `${originalTask.name} (Copy)`,
-        description: originalTask.description,
+        name: `${originalTask.name} (copy)`,
+        description: originalTask.description || '',
         status: originalTask.status?.status,
-        priority: priorityValue,
+        priority: originalTask.priority?.id ? parseInt(originalTask.priority.id) as TaskPriority : null,
         due_date: originalTask.due_date ? new Date(originalTask.due_date).getTime() : undefined,
         assignees: originalTask.assignees?.map(a => a.id) || []
       };
@@ -360,322 +352,64 @@ export class TaskService extends BaseClickUpService {
   }
 
   /**
-   * Create multiple tasks in a list with advanced batching options
+   * Get all comments for a task
    * 
-   * @param listId The ID of the list to create tasks in
-   * @param data Object containing array of tasks to create
-   * @param options Configuration options for the bulk operation
-   * @param progressCallback Optional callback for tracking progress
-   * @returns Result containing both successful and failed operations
-   */
-  async createBulkTasks(
-    listId: string,
-    data: { tasks: Array<CreateTaskData> }, 
-    options?: BulkOperationOptions,
-    progressCallback?: (progress: ProgressInfo) => void
-  ): Promise<BulkOperationResult<ClickUpTask>> {
-    this.logOperation('createBulkTasks', { 
-      listId, 
-      taskCount: data.tasks.length,
-      batchSize: options?.batchSize,
-      concurrency: options?.concurrency
-    });
-    
-    try {
-      // Validate list exists before proceeding
-      const list = await this.listService.getList(listId).catch(() => null);
-      if (!list) {
-        throw new ClickUpServiceError(
-          `List not found with ID: ${listId}`,
-          ErrorCode.NOT_FOUND
-        );
-      }
-
-      // Set default options for better performance
-      const bulkOptions: BulkOperationOptions = {
-        batchSize: options?.batchSize ?? 5, // Smaller batch size for better rate limit handling
-        concurrency: options?.concurrency ?? 2, // Lower concurrency to avoid rate limits
-        continueOnError: options?.continueOnError ?? true, // Continue on individual task failures
-        retryCount: options?.retryCount ?? 3, // Retry failed operations
-        ...options
-      };
-
-      // Add list validation to progress tracking
-      const wrappedCallback = progressCallback ? 
-        (progress: ProgressInfo) => {
-          progress.context = { listId, listName: list.name };
-          progressCallback(progress);
-        } : undefined;
-
-      return await this.bulkProcessor.processBulk(
-        data.tasks,
-        async (taskData) => {
-          try {
-            // Ensure task data is properly formatted
-            const sanitizedData = {
-              ...taskData,
-              // Remove any accidentally included list IDs in task data
-              list: undefined,
-              // Ensure name has emoji if missing
-              name: taskData.name.match(/^\p{Emoji}/u) ? 
-                taskData.name : 
-                '📋 ' + taskData.name
-            };
-
-            return await this.createTask(listId, sanitizedData);
-          } catch (error) {
-            // Enhance error context for better debugging
-            if (error instanceof ClickUpServiceError) {
-              error.context = {
-                ...error.context,
-                taskName: taskData.name,
-                listId,
-                listName: list.name
-              };
-            }
-            throw error;
-          }
-        },
-        bulkOptions
-      );
-    } catch (error: any) {
-      const errorMessage = error instanceof ClickUpServiceError ?
-        error.message :
-        `Failed to create tasks in bulk: ${error.message}`;
-
-      throw new ClickUpServiceError(
-        errorMessage,
-        error instanceof ClickUpServiceError ? error.code : ErrorCode.UNKNOWN,
-        {
-          listId,
-          taskCount: data.tasks.length,
-          error: error instanceof Error ? error.message : String(error)
-        }
-      );
-    }
-  }
-  
-  /**
-   * Update multiple tasks in bulk with advanced batching options
-   * 
-   * @param tasks Array of task IDs and update data
-   * @param options Configuration options for the bulk operation
-   * @param progressCallback Optional callback for tracking progress
-   * @returns Result containing both successful and failed operations
-   */
-  async updateBulkTasks(
-    tasks: Array<{ id: string, data: UpdateTaskData }>,
-    options?: BulkOperationOptions,
-    progressCallback?: (progress: ProgressInfo) => void
-  ): Promise<BulkOperationResult<ClickUpTask>> {
-    this.logOperation('updateBulkTasks', { 
-      taskCount: tasks.length,
-      batchSize: options?.batchSize,
-      concurrency: options?.concurrency
-    });
-    
-    try {
-      return await this.bulkProcessor.processBulk(
-        tasks,
-        ({ id, data }) => this.updateTask(id, data),
-        options
-      );
-    } catch (error: any) {
-      if (error instanceof ClickUpServiceError) {
-        throw error;
-      }
-      
-      throw new ClickUpServiceError(
-        `Failed to update tasks in bulk: ${error.message}`,
-        ErrorCode.UNKNOWN,
-        error
-      );
-    }
-  }
-  
-  /**
-   * Move multiple tasks to a different list in bulk
-   * 
-   * @param tasks Array of task IDs to move
-   * @param targetListId ID of the list to move tasks to
-   * @param options Configuration options for the bulk operation
-   * @param progressCallback Optional callback for tracking progress
-   * @returns Result containing both successful and failed operations
-   */
-  async moveBulkTasks(
-    tasks: string[],
-    targetListId: string,
-    options?: BulkOperationOptions,
-    progressCallback?: (progress: ProgressInfo) => void
-  ): Promise<BulkOperationResult<ClickUpTask>> {
-    this.logOperation('moveBulkTasks', { 
-      taskCount: tasks.length,
-      targetListId,
-      batchSize: options?.batchSize,
-      concurrency: options?.concurrency
-    });
-    
-    try {
-      // First verify destination list exists
-      const destinationList = await this.listService.getList(targetListId);
-      if (!destinationList) {
-        throw new ClickUpServiceError(
-          `Destination list not found with ID: ${targetListId}`,
-          ErrorCode.NOT_FOUND
-        );
-      }
-
-      // Set default options for better performance
-      const bulkOptions: BulkOperationOptions = {
-        batchSize: options?.batchSize ?? 5, // Smaller batch size for better rate limit handling
-        concurrency: options?.concurrency ?? 2, // Lower concurrency to avoid rate limits
-        continueOnError: options?.continueOnError ?? true, // Continue on individual task failures
-        retryCount: options?.retryCount ?? 3, // Retry failed operations
-        ...options
-      };
-
-      return await this.bulkProcessor.processBulk(
-        tasks,
-        async (taskId) => {
-          try {
-            // Get the original task
-            const originalTask = await this.getTask(taskId);
-            const currentStatus = originalTask.status?.status;
-            const availableStatuses = destinationList.statuses?.map(s => s.status) || [];
-
-            // Determine the appropriate status for the destination list
-            let newStatus = availableStatuses.includes(currentStatus || '')
-              ? currentStatus // Keep the same status if available in destination list
-              : destinationList.statuses?.[0]?.status; // Otherwise use the default (first) status
-
-            // Prepare the task data for the new list
-            const taskData: CreateTaskData = {
-              name: originalTask.name,
-              description: originalTask.description,
-              status: newStatus,
-              priority: originalTask.priority?.priority as any,
-              due_date: originalTask.due_date ? Number(originalTask.due_date) : undefined,
-              assignees: originalTask.assignees?.map(a => a.id) || []
-            };
-
-            // Create new task and delete old one in a single makeRequest call
-            return await this.makeRequest(async () => {
-              // First create the new task
-              const response = await this.client.post<ClickUpTask>(
-                `/list/${targetListId}/task`,
-                taskData
-              );
-
-              // Then delete the original task
-              await this.client.delete(`/task/${taskId}`);
-
-              // Add a property to indicate the task was moved
-              const newTask = {
-                ...response.data,
-                moved: true,
-                originalId: taskId
-              };
-
-              return newTask;
-            });
-          } catch (error) {
-            // Enhance error context for better debugging
-            if (error instanceof ClickUpServiceError) {
-              error.context = {
-                ...error.context,
-                taskId,
-                targetListId,
-                targetListName: destinationList.name
-              };
-            }
-            throw error;
-          }
-        },
-        bulkOptions
-      );
-    } catch (error: any) {
-      const errorMessage = error instanceof ClickUpServiceError ?
-        error.message :
-        `Failed to move tasks in bulk: ${error.message}`;
-
-      throw new ClickUpServiceError(
-        errorMessage,
-        error instanceof ClickUpServiceError ? error.code : ErrorCode.UNKNOWN,
-        {
-          targetListId,
-          taskCount: tasks.length,
-          error: error instanceof Error ? error.message : String(error)
-        }
-      );
-    }
-  }
-
-  /**
-   * Delete multiple tasks in bulk with advanced batching options
-   * 
-   * @param taskIds Array of task IDs to delete
-   * @param options Configuration options for the bulk operation
-   * @returns Result containing both successful and failed operations
-   */
-  async deleteBulkTasks(
-    taskIds: string[],
-    options?: BulkOperationOptions
-  ): Promise<BulkOperationResult<string>> {
-    this.logOperation('deleteBulkTasks', { 
-      taskCount: taskIds.length,
-      batchSize: options?.batchSize,
-      concurrency: options?.concurrency
-    });
-    
-    try {
-      return await this.bulkProcessor.processBulk(
-        taskIds,
-        async (taskId) => {
-          await this.deleteTask(taskId);
-          return taskId;
-        },
-        options
-      );
-    } catch (error: any) {
-      if (error instanceof ClickUpServiceError) {
-        throw error;
-      }
-      
-      throw new ClickUpServiceError(
-        `Failed to delete tasks in bulk: ${error.message}`,
-        ErrorCode.UNKNOWN,
-        error
-      );
-    }
-  }
-
-  /**
-   * Get comments for a specific task
-   * @param taskId The ID of the task to retrieve comments for
-   * @param start Optional parameter for pagination, timestamp from which to start fetching comments
-   * @param startId Optional parameter for pagination, comment ID from which to start fetching
+   * @param taskId ID of the task to get comments for
+   * @param start Optional pagination start
+   * @param startId Optional comment ID to start from
    * @returns Array of task comments
    */
   async getTaskComments(taskId: string, start?: number, startId?: string): Promise<ClickUpComment[]> {
     this.logOperation('getTaskComments', { taskId, start, startId });
     
     try {
-      return await this.makeRequest(async () => {
-        const params = new URLSearchParams();
-        
-        // Add pagination parameters if provided
-        if (start) params.append('start', String(start));
-        if (startId) params.append('start_id', startId);
-        
-        const response = await this.client.get<CommentsResponse>(
-          `/task/${taskId}/comment`,
-          { params }
-        );
-        
-        return response.data.comments;
-      });
+      // Build query parameters for pagination
+      const queryParams = new URLSearchParams();
+      if (start !== undefined) {
+        queryParams.append('start', start.toString());
+      }
+      if (startId) {
+        queryParams.append('start_id', startId);
+      }
+      
+      const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
+      const response = await this.client.get<{ comments: ClickUpComment[] }>(
+        `/task/${taskId}/comment${queryString}`
+      );
+      
+      return response.data.comments || [];
     } catch (error) {
-      throw this.handleError(error, `Failed to retrieve comments for task ${taskId}`);
+      throw this.handleError(error, 'Failed to get task comments');
+    }
+  }
+
+  /**
+   * Validate that a list exists
+   * 
+   * @param listId ID of the list to validate
+   * @throws ClickUpServiceError if the list doesn't exist
+   */
+  async validateListExists(listId: string): Promise<void> {
+    this.logOperation('validateListExists', { listId });
+    
+    try {
+      const list = await this.listService.getList(listId);
+      if (!list) {
+        throw new ClickUpServiceError(
+          `List not found: ${listId}`,
+          ErrorCode.NOT_FOUND,
+          { listId }
+        );
+      }
+    } catch (error) {
+      if (error instanceof ClickUpServiceError) {
+        throw error;
+      }
+      throw new ClickUpServiceError(
+        `Failed to validate list existence: ${error instanceof Error ? error.message : String(error)}`,
+        ErrorCode.UNKNOWN,
+        { listId }
+      );
     }
   }
 } 
