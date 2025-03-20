@@ -69,7 +69,7 @@ export const createTaskTool = {
       },
       dueDate: {
         type: "string",
-        description: "Due date of the task (Unix timestamp in milliseconds). Convert dates to this format before submitting."
+        description: "Due date of the task. Supports both Unix timestamps (in milliseconds) and natural language expressions like '1 hour from now', 'tomorrow', 'next week', or '3 days from now'."
       }
     },
     required: ["name"]
@@ -183,7 +183,7 @@ export const updateTaskTool = {
       },
       dueDate: {
         type: "string",
-        description: "New due date (Unix timestamp in milliseconds)"
+        description: "New due date. Supports both Unix timestamps (in milliseconds) and natural language expressions like '1 hour from now', 'tomorrow', 'next week', or '3 days from now'."
       }
     },
     required: []
@@ -1345,7 +1345,7 @@ export const createBulkTasksTool = {
             },
             dueDate: {
               type: "string",
-              description: "Due date (Unix timestamp ms)"
+              description: "Due date. Supports Unix timestamps (in milliseconds) and natural language expressions like '1 hour from now', 'tomorrow', 'next week', etc."
             }
           },
           required: ["name"]
@@ -1437,7 +1437,7 @@ export const updateBulkTasksTool = {
             },
             dueDate: {
               type: "string",
-              description: "New due date (Unix timestamp in milliseconds)"
+              description: "New due date. Supports Unix timestamps (in milliseconds) and natural language expressions like '1 hour from now', 'tomorrow', etc."
             }
           }
         }
