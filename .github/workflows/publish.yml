@@ -13,6 +13,10 @@ on:
           - patch
           - minor
           - major
+      release_notes:
+        description: 'Release notes for this version'
+        required: false
+        type: string
 
 jobs:
   build-and-publish:
@@ -21,18 +25,70 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # This ensures all history is fetched for proper versioning
+      
       - uses: actions/setup-node@v3
         with:
           node-version: '18'
           registry-url: 'https://registry.npmjs.org'
       
-      - run: npm ci
-      - run: |
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Setup Git
+        run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
-          npm version ${{ github.event.inputs.version_increment }} -m "Bump version to %s [skip ci]"
-          npm run build
-          npm publish
-          git push --follow-tags
+      
+      - name: Get current version
+        id: package_version
+        run: echo "current_version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+      
+      - name: Calculate new version
+        id: new_version
+        run: |
+          if [ "${{ github.event.inputs.version_increment }}" = "patch" ]; then
+            npm --no-git-tag-version version patch
+          elif [ "${{ github.event.inputs.version_increment }}" = "minor" ]; then
+            npm --no-git-tag-version version minor
+          elif [ "${{ github.event.inputs.version_increment }}" = "major" ]; then
+            npm --no-git-tag-version version major
+          fi
+          echo "new_version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+      
+      - name: Update server.ts version
+        run: |
+          sed -i "s/version: \"${{ steps.package_version.outputs.current_version }}\"/version: \"${{ steps.new_version.outputs.new_version }}\"/g" src/server.ts
+      
+      - name: Commit server.ts change
+        run: |
+          git add src/server.ts
+          git commit -m "Update server.ts version to ${{ steps.new_version.outputs.new_version }}"
+      
+      - name: Version and Tag
+        run: |
+          npm version ${{ steps.new_version.outputs.new_version }} --git-tag-version --allow-same-version -m "Bump version to %s [skip ci]"
+      
+      - name: Build
+        run: npm run build
+      
+      - name: Publish to NPM
+        run: npm publish
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} 
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      
+      - name: Push changes
+        run: git push --follow-tags
+      
+      - name: Create GitHub Release
+        if: ${{ github.event.inputs.release_notes != '' }}
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.new_version.outputs.new_version }}
+          release_name: v${{ steps.new_version.outputs.new_version }}
+          body: ${{ github.event.inputs.release_notes }}
+          draft: false
+          prerelease: false 
