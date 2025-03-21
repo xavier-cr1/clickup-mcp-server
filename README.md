@@ -126,6 +126,10 @@ If you find this project useful, please consider supporting:
 
 [![Sponsor TaazKareem](https://img.shields.io/badge/Sponsor-TaazKareem-orange?logo=github)](https://github.com/sponsors/TaazKareem)
 
+## Acknowledgements
+
+Special thanks to [ClickUp](https://clickup.com) for their excellent API and services that make this integration possible.
+
 ## Contributing
 
 Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details.

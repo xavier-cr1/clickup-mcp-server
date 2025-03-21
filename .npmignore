@@ -22,4 +22,14 @@ node_modules/
 # Misc
 .DS_Store
 *.swp
-*.swo 
+*.swo
+
+# Cursor specific
+.cursor
+.cursorrules
+.cursorignore
+.specstory
+
+# Temporary files
+.tmp/
+.temp/
