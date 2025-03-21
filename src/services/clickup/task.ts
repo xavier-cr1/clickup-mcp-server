@@ -256,6 +256,37 @@ export class TaskService extends BaseClickUpService {
   }
 
   /**
+   * Get a specific task by its custom ID
+   * @param customTaskId The custom ID of the task (e.g., "DEV-1234")
+   * @param listId Optional list ID to search within for better performance
+   * @returns The task details
+   */
+  async getTaskByCustomId(customTaskId: string, listId?: string): Promise<ClickUpTask> {
+    this.logOperation('getTaskByCustomId', { customTaskId, listId });
+    
+    try {
+      return await this.makeRequest(async () => {
+        // Build query with custom_task_ids=true
+        const params = new URLSearchParams({ custom_task_ids: 'true' });
+        
+        // Use the ClickUp API endpoint for retrieving tasks by ID
+        // With custom_task_ids=true parameter, it will treat the ID as a custom ID
+        const response = await this.client.get<ClickUpTask>(
+          `/task/${customTaskId}?${params.toString()}`
+        );
+        
+        return response.data;
+      });
+    } catch (error) {
+      // Enhance error message for custom ID lookups
+      if (error?.response?.status === 404) {
+        throw this.handleError(error, `Task with custom ID ${customTaskId} not found`);
+      }
+      throw this.handleError(error, `Failed to get task with custom ID ${customTaskId}`);
+    }
+  }
+
+  /**
    * Update an existing task
    * @param taskId ID of the task to update
    * @param updateData Data to update on the task

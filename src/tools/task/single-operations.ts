@@ -146,7 +146,7 @@ Notes:
     properties: {
       taskId: {
         type: "string",
-        description: "ID of the task to update (preferred). Use this instead of taskName if you have it from a previous response."
+        description: "ID of the task to update (preferred). Works with both regular task IDs (9 characters) and custom IDs with uppercase prefixes (like 'DEV-1234')."
       },
       taskName: {
         type: "string",
@@ -209,7 +209,7 @@ Warning:
     properties: {
       taskId: {
         type: "string",
-        description: "ID of the task to move (preferred). Use this instead of taskName if you have it."
+        description: "ID of the task to move (preferred). Works with both regular task IDs (9 characters) and custom IDs with uppercase prefixes (like 'DEV-1234')."
       },
       taskName: {
         type: "string",
@@ -257,7 +257,7 @@ Warning:
     properties: {
       taskId: {
         type: "string",
-        description: "ID of task to duplicate (preferred). Use this instead of taskName if you have it."
+        description: "ID of task to duplicate (preferred). Works with both regular task IDs (9 characters) and custom IDs with uppercase prefixes (like 'DEV-1234')."
       },
       taskName: {
         type: "string",
@@ -288,20 +288,24 @@ export const getTaskTool = {
   description: `Purpose: Retrieve detailed information about a specific task.
 
 Valid Usage:
-1. Use taskId alone (preferred)
+1. Use taskId alone (preferred) - works with both regular and custom IDs (like "DEV-1234")
 2. Use taskName + listName
+3. Use customTaskId for explicit custom ID lookup
 
 Requirements:
 - When using taskName, listName is REQUIRED
+- When using customTaskId, listName is recommended for faster lookup
 
 Note:
-- Task names are only unique within a list, so the system needs to know which list to search in`,
+- Task names are only unique within a list, so the system needs to know which list to search in
+- Regular task IDs are always 9 characters long (e.g., "86b394eqa")
+- Custom IDs have an uppercase prefix followed by a hyphen and number (e.g., "DEV-1234")`,
   inputSchema: {
     type: "object",
     properties: {
       taskId: {
         type: "string",
-        description: "ID of task to retrieve (preferred). Use this instead of taskName if you have it."
+        description: "ID of task to retrieve (preferred). Works with both regular task IDs (9 characters) and custom IDs with uppercase prefixes (like 'DEV-1234'). The system automatically detects the ID format."
       },
       taskName: {
         type: "string",
@@ -310,6 +314,10 @@ Note:
       listName: {
         type: "string",
         description: "Name of list containing the task. REQUIRED when using taskName."
+      },
+      customTaskId: {
+        type: "string",
+        description: "Custom task ID (e.g., 'DEV-1234'). Only use this if you want to explicitly force custom ID lookup. In most cases, you can just use taskId which auto-detects ID format."
       }
     },
     required: []
@@ -397,7 +405,7 @@ Warning:
     properties: {
       taskId: {
         type: "string",
-        description: "ID of task to delete (preferred). Use this instead of taskName for safety."
+        description: "ID of task to delete (preferred). Works with both regular task IDs (9 characters) and custom IDs with uppercase prefixes (like 'DEV-1234')."
       },
       taskName: {
         type: "string",
@@ -431,7 +439,7 @@ Notes:
     properties: {
       taskId: {
         type: "string",
-        description: "ID of task to retrieve comments for (preferred). Use this instead of taskName if you have it."
+        description: "ID of task to retrieve comments for (preferred). Works with both regular task IDs (9 characters) and custom IDs with uppercase prefixes (like 'DEV-1234')."
       },
       taskName: {
         type: "string",

@@ -60,7 +60,7 @@ const bulkOptionsSchema = {
 const taskIdentifierSchema = {
   taskId: {
     type: "string",
-    description: "Task ID (preferred). Use instead of taskName if available."
+    description: "Task ID (preferred). Works with both regular task IDs (9 characters) and custom IDs with uppercase prefixes (like 'DEV-1234')."
   },
   taskName: {
     type: "string", 
@@ -69,6 +69,10 @@ const taskIdentifierSchema = {
   listName: {
     type: "string",
     description: "REQUIRED with taskName: List containing the task."
+  },
+  customTaskId: {
+    type: "string",
+    description: "Custom task ID (e.g., 'DEV-1234'). Only use if you want to explicitly force custom ID lookup. In most cases, use taskId which auto-detects ID format."
   }
 };
 

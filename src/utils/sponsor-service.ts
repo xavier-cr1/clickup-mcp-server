@@ -39,17 +39,34 @@ export class SponsorService {
   public createResponse(data: any, includeSponsorMessage: boolean = false): { content: { type: string; text: string }[] } {
     const content: { type: string; text: string }[] = [];
     
-    if (this.isEnabled && includeSponsorMessage) {
+    // Special handling for workspace hierarchy which contains a preformatted tree
+    if (data && typeof data === 'object' && 'hierarchy' in data && typeof data.hierarchy === 'string') {
+      // Handle workspace hierarchy specially - it contains a preformatted tree
       content.push({
         type: "text",
-        text: `❤️ Support this project by sponsoring the developer at ${this.sponsorUrl}\n\n`
+        text: data.hierarchy
+      });
+    } else if (typeof data === 'string') {
+      // If it's already a string, use it directly
+      content.push({
+        type: "text",
+        text: data
+      });
+    } else {
+      // Otherwise, stringify the JSON object
+      content.push({
+        type: "text",
+        text: JSON.stringify(data, null, 2)
       });
     }
     
-    content.push({
-      type: "text",
-      text: JSON.stringify(data, null, 2)
-    });
+    // Then add sponsorship message if enabled
+    if (this.isEnabled && includeSponsorMessage) {
+      content.push({
+        type: "text",
+        text: `\n\n❤️ Support this project by sponsoring the developer at ${this.sponsorUrl}`
+      });
+    }
     
     return { content };
   }

@@ -50,9 +50,9 @@ function buildUpdateData(params: any): UpdateTaskData {
 /**
  * Process a task identification validation, returning the task ID
  */
-async function getTaskId(taskId?: string, taskName?: string, listName?: string): Promise<string> {
-  validateTaskIdentification(taskId, taskName, listName);
-  return await resolveTaskIdWithValidation(taskId, taskName, listName);
+async function getTaskId(taskId?: string, taskName?: string, listName?: string, customTaskId?: string): Promise<string> {
+  validateTaskIdentification(taskId, taskName, listName, customTaskId);
+  return await resolveTaskIdWithValidation(taskId, taskName, listName, customTaskId);
 }
 
 /**
@@ -84,8 +84,8 @@ function buildTaskFilters(params: any): TaskFilters {
  */
 async function mapTaskIds(tasks: any[]): Promise<string[]> {
   return Promise.all(tasks.map(async (task) => {
-    validateTaskIdentification(task.taskId, task.taskName, task.listName);
-    return await resolveTaskIdWithValidation(task.taskId, task.taskName, task.listName);
+    validateTaskIdentification(task.taskId, task.taskName, task.listName, task.customTaskId);
+    return await resolveTaskIdWithValidation(task.taskId, task.taskName, task.listName, task.customTaskId);
   }));
 }
 
@@ -152,7 +152,8 @@ export async function duplicateTaskHandler(params) {
  * Handler for getting a task
  */
 export async function getTaskHandler(params) {
-  const taskId = await getTaskId(params.taskId, params.taskName, params.listName);
+  // resolveTaskIdWithValidation now auto-detects whether taskId is a regular ID or custom ID
+  const taskId = await getTaskId(params.taskId, params.taskName, params.listName, params.customTaskId);
   return await taskService.getTask(taskId);
 }
 

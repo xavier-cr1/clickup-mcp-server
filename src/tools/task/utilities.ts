@@ -44,15 +44,15 @@ export function formatTaskData(task: ClickUpTask, additional: any = {}) {
 
 /**
  * Validates task identification parameters
- * Ensures either taskId is provided or both taskName and listName are provided
+ * Ensures either taskId, customTaskId, or both taskName and listName are provided
  */
-export function validateTaskIdentification(taskId?: string, taskName?: string, listName?: string): void {
-  if (!taskId && !taskName) {
-    throw new Error("Either taskId or taskName must be provided");
+export function validateTaskIdentification(taskId?: string, taskName?: string, listName?: string, customTaskId?: string): void {
+  if (!taskId && !taskName && !customTaskId) {
+    throw new Error("Either taskId, customTaskId, or taskName must be provided");
   }
   
-  if (!taskId && taskName && !listName) {
-    throw new Error("When using taskName, listName is required to locate the task");
+  if (!taskId && !customTaskId && taskName && !listName) {
+    throw new Error("listName is required when using taskName");
   }
 }
 
@@ -101,19 +101,91 @@ export function parseBulkOptions(rawOptions: any): BatchProcessingOptions | unde
 }
 
 //=============================================================================
+// ID DETECTION UTILITIES
+//=============================================================================
+
+/**
+ * Determines if an ID is a custom ID based on its format
+ * Custom IDs typically have an uppercase prefix followed by a hyphen and number (e.g., DEV-1234)
+ * Regular task IDs are always 9 characters long
+ * 
+ * @param id The task ID to check
+ * @returns True if the ID appears to be a custom ID
+ */
+export function isCustomTaskId(id: string): boolean {
+  if (!id) return false;
+  
+  // Regular task IDs are exactly 9 characters
+  if (id.length === 9) {
+    return false;
+  }
+  
+  // Custom IDs have an uppercase prefix followed by a hyphen and numbers
+  const customIdPattern = /^[A-Z]+-\d+$/;
+  return customIdPattern.test(id);
+}
+
+//=============================================================================
 // ID RESOLUTION UTILITIES
 //=============================================================================
 
 /**
- * Resolves a task ID from either direct ID or name+list combination
+ * Resolves a task ID from direct ID, custom ID, or name
  * Handles validation and throws appropriate errors
  */
-export async function resolveTaskIdWithValidation(taskId?: string, taskName?: string, listName?: string): Promise<string> {
+export async function resolveTaskIdWithValidation(
+  taskId?: string, 
+  taskName?: string, 
+  listName?: string,
+  customTaskId?: string
+): Promise<string> {
   // Validate parameters
-  validateTaskIdentification(taskId, taskName, listName);
+  validateTaskIdentification(taskId, taskName, listName, customTaskId);
   
-  // If taskId is provided, use it directly
-  if (taskId) return taskId;
+  // If customTaskId is explicitly provided, use it
+  if (customTaskId) {
+    const { task: taskService } = clickUpServices;
+    try {
+      // First try to get the task by custom ID
+      // If listName is provided, we can also look up in a specific list for better performance
+      let listId: string | undefined;
+      if (listName) {
+        listId = await resolveListIdWithValidation(undefined, listName);
+      }
+      
+      // Look up by custom ID
+      const foundTask = await taskService.getTaskByCustomId(customTaskId, listId);
+      return foundTask.id;
+    } catch (error) {
+      throw new Error(`Task with custom ID "${customTaskId}" not found`);
+    }
+  }
+  
+  // If taskId is provided, check if it looks like a custom ID
+  if (taskId) {
+    if (isCustomTaskId(taskId)) {
+      console.log(`Detected task ID "${taskId}" as a custom ID, using custom ID lookup`);
+      // If it looks like a custom ID, try to get it as a custom ID first
+      const { task: taskService } = clickUpServices;
+      try {
+        // Look up by custom ID
+        let listId: string | undefined;
+        if (listName) {
+          listId = await resolveListIdWithValidation(undefined, listName);
+        }
+        
+        const foundTask = await taskService.getTaskByCustomId(taskId, listId);
+        return foundTask.id;
+      } catch (error) {
+        // If it fails as a custom ID, try as a regular ID
+        console.log(`Failed to find task with custom ID "${taskId}", falling back to regular ID`);
+        return taskId;
+      }
+    }
+    
+    // Regular task ID
+    return taskId;
+  }
   
   // At this point we know we have taskName and listName (validation ensures this)
   
