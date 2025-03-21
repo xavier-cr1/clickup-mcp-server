@@ -21,6 +21,7 @@ import {
   updateBulkTasksTool,
   moveBulkTasksTool,
   deleteBulkTasksTool,
+  attachTaskFileTool,
   handleCreateTask,
   handleUpdateTask,
   handleMoveTask,
@@ -32,7 +33,8 @@ import {
   handleUpdateBulkTasks,
   handleMoveBulkTasks,
   handleDeleteBulkTasks,
-  handleGetTask
+  handleGetTask,
+  handleAttachTaskFile
 } from "./tools/task/index.js";
 import {
   createListTool, handleCreateList,
@@ -92,6 +94,7 @@ export function configureServer() {
         duplicateTaskTool,
         deleteTaskTool,
         getTaskCommentsTool,
+        attachTaskFileTool,
         createBulkTasksTool,
         updateBulkTasksTool,
         moveBulkTasksTool,
@@ -111,7 +114,7 @@ export function configureServer() {
 
   // Register CallTool handler with proper logging
   logger.info("Registering tool handlers", {
-    toolCount: 22,
+    toolCount: 23,
     categories: ["workspace", "task", "list", "folder"]
   });
   
@@ -144,6 +147,8 @@ export function configureServer() {
           return handleDeleteTask(params);
         case "get_task_comments":
           return handleGetTaskComments(params);
+        case "attach_task_file":
+          return handleAttachTaskFile(params);
         case "create_bulk_tasks":
           return handleCreateBulkTasks(params);
         case "update_bulk_tasks":

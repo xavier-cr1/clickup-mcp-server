@@ -20,12 +20,6 @@
  * - Smart name-based lookups that eliminate the need for IDs
  * - Support for priorities, statuses, and due dates
  * 
- * AI-Enhanced Capabilities:
- * - Task summarization and status grouping for project overviews
- * - Priority analysis and optimization for workload balancing
- * - Detailed task description generation with structured content
- * - Task relationship identification for dependency management
- * 
  * Technical Features:
  * - Full markdown support for rich text content
  * - Secure credential handling through configuration

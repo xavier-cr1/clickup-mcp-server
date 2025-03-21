@@ -27,6 +27,12 @@ export {
   deleteBulkTasksTool
 } from './bulk-operations.js';
 
+// Re-export attachment tool
+export {
+  attachTaskFileTool,
+  handleAttachTaskFile
+} from './attachments.js';
+
 // Re-export handlers
 export {
   // Single task operation handlers

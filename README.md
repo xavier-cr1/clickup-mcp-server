@@ -15,6 +15,7 @@ A Model Context Protocol (MCP) server for integrating ClickUp tasks with AI appl
    - ClickUp API key from [ClickUp Settings](https://app.clickup.com/settings/apps)
    - Team ID from your ClickUp workspace URL
 2. Choose either hosted installation (sends webhooks) or NPX installation (downloads to local path and installs dependencies)
+3. Use natural language to manage your workspace!
 
 ## Smithery Installation (Quick Start)
 
@@ -52,12 +53,13 @@ Or use this npx command:
 ## Features
 
 - 🎯 **Task Management**
-  - Create, update, and delete individual tasks
+  - Create, update, and delete tasks
   - Move and duplicate tasks between lists, spaces, and folders
-  - Create, update, move, and delete multiple tasks in bulk
+  - Single operation or bulk operation
   - View and modify task details and properties
   - Get task comments
   - Set due dates using natural language and relative time expressions
+  - Attach files to tasks using local file paths, or URL, , or chunked uploads
 
 - 📂 **Workspace Organization**
   - Complete workspace hierarchy (spaces, folders, lists)
@@ -83,6 +85,7 @@ Or use this npx command:
 | [get_tasks](docs/api-reference.md#task-management) | Get tasks from list | `listId`/`listName` |
 | [get_task](docs/api-reference.md#task-management) | Get task details | `taskId`/`taskName` |
 | [get_task_comments](docs/api-reference.md#task-management) | Get comments on a task | `taskId`/`taskName` |
+| [attach_task_file](docs/api-reference.md#task-management) | Attach file to a task | `taskId`/`taskName`, (`file_data` or `file_url`) |
 | [delete_task](docs/api-reference.md#task-management) | Remove task | `taskId`/`taskName` |
 | [delete_bulk_tasks](docs/api-reference.md#task-management) | Remove multiple tasks | `tasks[]` with IDs or names |
 | [move_task](docs/api-reference.md#task-management) | Move task | `taskId`/`taskName`, `listId`/`listName` |

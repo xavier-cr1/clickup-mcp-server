@@ -388,4 +388,80 @@ export interface ClickUpCommentAttachment {
  */
 export interface CommentsResponse {
   comments: ClickUpComment[];
-} 
+}
+
+/**
+ * Task attachment object as returned by the ClickUp API
+ */
+export interface ClickUpTaskAttachment {
+  id: string;
+  date: string;
+  title: string;
+  type: string; // File extension or type
+  source: string; // Usually "upload"
+  thumbnail_small?: string;
+  thumbnail_medium?: string;
+  thumbnail_large?: string;
+  url: string; // Download URL
+  user: {
+    id: number;
+    username: string;
+    email: string;
+    color: string;
+    profilePicture: string | null;
+  };
+  size?: number; // File size in bytes
+  extension?: string; // File extension
+}
+
+/**
+ * Response from the task attachment endpoint
+ */
+export interface TaskAttachmentResponse {
+  success: true;
+  message: string;
+  attachment: ClickUpTaskAttachment;
+}
+
+/**
+ * Response for chunked upload initialization
+ */
+export interface ChunkedUploadInitResponse {
+  success: true;
+  message: string;
+  chunk_session: string;
+  chunks_total: number;
+  chunk_uploaded: number;
+  attachment: null;
+  details: {
+    taskId: string;
+    fileName: string;
+    fileSize: number;
+    chunkCount: number;
+    progress: number;
+  };
+}
+
+/**
+ * Response for chunked upload progress
+ */
+export interface ChunkedUploadProgressResponse {
+  success: true;
+  message: string;
+  chunk_session: string;
+  chunks_remaining: number;
+  details: {
+    taskId: string;
+    fileName: string;
+    chunksReceived: number;
+    progress: number;
+  };
+}
+
+/**
+ * Union type for all possible attachment responses
+ */
+export type AttachmentResponse = 
+  | TaskAttachmentResponse 
+  | ChunkedUploadInitResponse 
+  | ChunkedUploadProgressResponse; 

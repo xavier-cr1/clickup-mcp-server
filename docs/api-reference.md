@@ -18,6 +18,7 @@ This document provides detailed information about all available tools, their par
 | get_tasks | Retrieve tasks from a list | Either `listId` or `listName` | archived, page, order_by, reverse, subtasks, statuses, include_closed, assignees, due_date_gt/lt |
 | get_task | Get single task details | Either `taskId` or `taskName` | `listName` |
 | get_task_comments | Retrieve comments for a task | Either `taskId` or `taskName` | `listName`, `start`, `startId` |
+| attach_task_file | Attach a file to a task | Either `taskId` or `taskName`, and EITHER `file_data` OR `file_url` | `file_name`, `chunk_*` parameters for large files |
 | create_task | Create a new task | `name` and either `listId` or `listName` | description, status, priority (1-4), dueDate |
 | create_bulk_tasks | Create multiple tasks | `tasks[]` | `listId` or `listName` |
 | update_task | Modify task properties | Either `taskId` or `taskName` | name, description, status, priority, dueDate |
@@ -34,6 +35,7 @@ This document provides detailed information about all available tools, their par
 - **Dates**: Unix timestamps in milliseconds
 - **Status**: Uses list's default if not specified
 - **Description**: Supports both plain text and markdown
+- **Files**: Attach files using base64 encoding or URLs
 
 ### Examples
 
@@ -243,6 +245,48 @@ Delete all these tasks from the "Archived" list:
   ]
 }
 ```
+
+#### Attaching a File to a Task
+**User Prompt:**
+```
+Attach a file to the task "Implement Authentication". The file is at URL "https://example.com/files/specs.pdf"
+```
+
+**System Response:**
+```json
+{
+  "taskName": "Implement Authentication",
+  "file_url": "https://example.com/files/specs.pdf",
+  "file_name": "specs.pdf"
+}
+```
+
+**User Prompt:**
+```
+Attach this document to the task with ID 86b4bnnny
+```
+
+**System Response:**
+```json
+{
+  "taskId": "86b4bnnny",
+  "file_data": "<base64-encoded-content>",
+  "file_name": "document.txt"
+}
+```
+
+#### Handling Different File Types
+The attach_task_file tool supports various file types including:
+- Documents (PDF, DOCX, TXT)
+- Images (PNG, JPG, SVG)
+- Data files (CSV, JSON)
+- And many others
+
+Files can be attached using either:
+1. **Base64 Method**: For small files (using `file_data` parameter)
+2. **URL Method**: For files already available online (using `file_url` parameter)
+3. **Local File Path**: For files on the local filesystem (using `file_url` parameter with an absolute file path)
+4. **Chunked Upload**: For large files (automatically selected for `file_data` > 10MB)
 
 ## List Management
 
