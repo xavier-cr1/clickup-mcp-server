@@ -71,7 +71,19 @@ const handleOperationError = (operation: string, error: any) => {
  */
 export const createTaskTool = {
   name: "create_task",
-  description: "Create a single task in a ClickUp list. Use this tool for individual task creation only. For multiple tasks, use create_bulk_tasks instead. Before calling this tool, check if you already have the necessary list ID from previous responses in the conversation history, as this avoids redundant lookups. When creating a task, you MUST provide either a listId or listName.",
+  description: `Purpose: Create a single task in a ClickUp list.
+
+Valid Usage:
+1. Provide listId (preferred if available)
+2. Provide listName (system will look up the list ID)
+
+Requirements:
+- name: REQUIRED
+- EITHER listId OR listName: REQUIRED
+
+Notes:
+- For multiple tasks, use create_bulk_tasks instead
+- Reuse list IDs from previous responses when possible to avoid redundant lookups`,
   inputSchema: {
     type: "object",
     properties: {
@@ -116,7 +128,19 @@ export const createTaskTool = {
  */
 export const updateTaskTool = {
   name: "update_task",
-  description: "Modify an existing task's properties. Valid parameter combinations:\n1. Use taskId alone (preferred if you have it)\n2. Use taskName + listName (listName is REQUIRED when using taskName, not optional)\n\nAt least one update field (name, description, status, priority) must be provided. Only specified fields will be updated.",
+  description: `Purpose: Modify properties of an existing task.
+
+Valid Usage:
+1. Use taskId alone (preferred if available)
+2. Use taskName + listName
+
+Requirements:
+- At least one update field (name, description, status, priority, dueDate) must be provided
+- When using taskName, listName is REQUIRED
+
+Notes:
+- Only specified fields will be updated
+- Using taskId is more reliable than taskName`,
   inputSchema: {
     type: "object",
     properties: {
@@ -167,7 +191,19 @@ export const updateTaskTool = {
  */
 export const moveTaskTool = {
   name: "move_task",
-  description: "Move a task to a different list. Valid parameter combinations:\n1. Use taskId + (listId or listName) - preferred\n2. Use taskName + sourceListName + (listId or listName)\n\nWARNING: When using taskName, sourceListName is ABSOLUTELY REQUIRED - the system cannot find a task by name without knowing which list to search in. Task statuses may reset if destination list has different status options.",
+  description: `Purpose: Move a task to a different list.
+
+Valid Usage:
+1. Use taskId + (listId OR listName) - preferred
+2. Use taskName + sourceListName + (listId OR listName)
+
+Requirements:
+- Destination list: EITHER listId OR listName REQUIRED
+- When using taskName, sourceListName is REQUIRED
+
+Warning:
+- Task statuses may reset if destination list has different status options
+- System cannot find a task by name without knowing which list to search in`,
   inputSchema: {
     type: "object",
     properties: {
@@ -201,7 +237,21 @@ export const moveTaskTool = {
  */
 export const duplicateTaskTool = {
   name: "duplicate_task",
-  description: "Create a copy of a task in the same or different list. Valid parameter combinations:\n1. Use taskId + optional (listId or listName) - preferred\n2. Use taskName + sourceListName + optional (listId or listName)\n\nWARNING: When using taskName, sourceListName is ABSOLUTELY REQUIRED - the system cannot find a task by name without knowing which list to search in. The duplicate preserves the original task's properties.",
+  description: `Purpose: Create a copy of a task in the same or different list.
+
+Valid Usage:
+1. Use taskId + optional (listId OR listName) - preferred
+2. Use taskName + sourceListName + optional (listId OR listName)
+
+Requirements:
+- When using taskName, sourceListName is REQUIRED
+
+Notes:
+- The duplicate preserves the original task's properties
+- If no destination list specified, uses same list as original task
+
+Warning:
+- System cannot find a task by name without knowing which list to search in`,
   inputSchema: {
     type: "object",
     properties: {
@@ -235,7 +285,17 @@ export const duplicateTaskTool = {
  */
 export const getTaskTool = {
   name: "get_task",
-  description: "Retrieve detailed information about a specific task. Valid parameter combinations:\n1. Use taskId alone (preferred)\n2. Use taskName + listName (listName is REQUIRED when using taskName). Task names are only unique within a list, so the system needs to know which list to search in.",
+  description: `Purpose: Retrieve detailed information about a specific task.
+
+Valid Usage:
+1. Use taskId alone (preferred)
+2. Use taskName + listName
+
+Requirements:
+- When using taskName, listName is REQUIRED
+
+Note:
+- Task names are only unique within a list, so the system needs to know which list to search in`,
   inputSchema: {
     type: "object",
     properties: {
@@ -261,7 +321,19 @@ export const getTaskTool = {
  */
 export const getTasksTool = {
   name: "get_tasks",
-  description: "Retrieve tasks from a list with optional filtering. You MUST provide either:\n1. listId (preferred)\n2. listName\n\nUse filters to narrow down results by status, dates, etc.",
+  description: `Purpose: Retrieve tasks from a list with optional filtering.
+
+Valid Usage:
+1. Use listId (preferred)
+2. Use listName
+
+Requirements:
+- EITHER listId OR listName is REQUIRED
+
+Notes:
+- Use filters (archived, statuses, etc.) to narrow down results
+- Pagination available through page parameter
+- Sorting available through order_by and reverse parameters`,
   inputSchema: {
     type: "object",
     properties: {
@@ -310,7 +382,16 @@ export const getTasksTool = {
  */
 export const deleteTaskTool = {
   name: "delete_task",
-  description: "⚠️ PERMANENTLY DELETE a task. This action cannot be undone. Valid parameter combinations:\n1. Use taskId alone (preferred and safest)\n2. Use taskName + optional listName (use with caution).",
+  description: `Purpose: PERMANENTLY DELETE a task.
+
+Valid Usage:
+1. Use taskId alone (preferred and safest)
+2. Use taskName + optional listName
+
+Warning:
+- This action CANNOT be undone
+- Using taskName is risky as names may not be unique
+- Provide listName when using taskName for more precise targeting`,
   inputSchema: {
     type: "object",
     properties: {
@@ -335,7 +416,16 @@ export const deleteTaskTool = {
  */
 export const getTaskCommentsTool = {
   name: "get_task_comments",
-  description: "Retrieve comments for a ClickUp task. You can identify the task by either taskId or taskName. If using taskName, you can optionally provide listName to help locate the correct task if multiple tasks have the same name.",
+  description: `Purpose: Retrieve comments for a ClickUp task.
+
+Valid Usage:
+1. Use taskId (preferred)
+2. Use taskName + optional listName
+
+Notes:
+- If using taskName, providing listName helps locate the correct task
+- Task names may not be unique across different lists
+- Use start and startId parameters for pagination through comments`,
   inputSchema: {
     type: "object",
     properties: {
