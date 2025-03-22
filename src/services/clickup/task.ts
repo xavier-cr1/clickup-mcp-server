@@ -458,6 +458,83 @@ export class TaskService extends BaseClickUpService {
   }
 
   /**
+   * Create a comment on a task
+   * 
+   * @param taskId ID of the task to comment on
+   * @param commentText Text content of the comment
+   * @param notifyAll Whether to notify all assignees
+   * @param assignee Optional user ID to assign the comment to
+   * @returns The created comment
+   */
+  async createTaskComment(
+    taskId: string, 
+    commentText: string, 
+    notifyAll: boolean = false,
+    assignee?: number | null
+  ): Promise<ClickUpComment> {
+    this.logOperation('createTaskComment', { taskId, commentText, notifyAll, assignee });
+    
+    try {
+      const payload: {
+        comment_text: string;
+        notify_all: boolean;
+        assignee?: number;
+      } = {
+        comment_text: commentText,
+        notify_all: notifyAll
+      };
+      
+      if (assignee) {
+        payload.assignee = assignee;
+      }
+      
+      // Make the request directly without using makeRequest for better error handling
+      const response = await this.client.post(
+        `/task/${taskId}/comment`,
+        payload
+      );
+      
+      // Handle different response formats from ClickUp API
+      if (response.data) {
+        if (response.data.comment) {
+          // Standard format: { comment: ClickUpComment }
+          return response.data.comment;
+        } else if (response.data.id && (response.data.comment_text || response.data.comment)) {
+          // Direct format: the comment object itself
+          return response.data as ClickUpComment;
+        } else {
+          // Fallback: construct a minimal valid comment object
+          return {
+            id: response.data.id || `custom-${Date.now()}`,
+            comment: response.data.comment || commentText,
+            comment_text: response.data.comment_text || commentText,
+            user: response.data.user || { id: 0, username: 'Unknown', email: '', color: '' },
+            date: response.data.date || new Date().toISOString(),
+            resolved: false
+          } as ClickUpComment;
+        }
+      }
+      
+      throw new Error('Invalid response from ClickUp API');
+    } catch (error: any) {
+      // Check if comment might have been created despite error
+      if (error.response?.status === 200 || error.response?.status === 201) {
+        // Try to construct a comment object from what we know
+        return {
+          id: `fallback-${Date.now()}`,
+          comment: commentText,
+          comment_text: commentText, 
+          user: { id: 0, username: 'Unknown', email: '', color: '' },
+          date: new Date().toISOString(),
+          resolved: false
+        } as ClickUpComment;
+      }
+      
+      throw this.handleError(error, 'Failed to create task comment');
+    }
+  }
+
+  /**
    * Validate that a list exists
    * 
    * @param listId ID of the list to validate

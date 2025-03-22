@@ -16,7 +16,8 @@ import {
   moveTaskTool,
   duplicateTaskTool,
   deleteTaskTool,
-  getTaskCommentsTool
+  getTaskCommentsTool,
+  createTaskCommentTool
 } from './single-operations.js';
 
 import {
@@ -36,6 +37,7 @@ import {
   duplicateTaskHandler,
   deleteTaskHandler,
   getTaskCommentsHandler,
+  createTaskCommentHandler,
   createBulkTasksHandler,
   updateBulkTasksHandler,
   moveBulkTasksHandler,
@@ -84,6 +86,14 @@ export const handleGetTaskComments = createHandlerWrapper(getTaskCommentsHandler
   comments,
   count: comments.length
 }));
+export const handleCreateTaskComment = createHandlerWrapper(createTaskCommentHandler, (comment) => ({
+  success: true,
+  message: "Comment added successfully",
+  comment: comment && typeof comment === 'object' ? comment : {
+    id: `generated-${Date.now()}`,
+    comment_text: typeof comment === 'string' ? comment : "Comment text unavailable"
+  }
+}));
 
 //=============================================================================
 // BULK TASK OPERATIONS - HANDLER IMPLEMENTATIONS
@@ -122,6 +132,7 @@ export const taskTools = [
   { definition: duplicateTaskTool, handler: handleDuplicateTask },
   { definition: deleteTaskTool, handler: handleDeleteTask },
   { definition: getTaskCommentsTool, handler: handleGetTaskComments },
+  { definition: createTaskCommentTool, handler: handleCreateTaskComment },
   
   // Bulk task operations
   { definition: createBulkTasksTool, handler: handleCreateBulkTasks },

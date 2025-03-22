@@ -459,4 +459,55 @@ Notes:
       }
     }
   }
+};
+
+/**
+ * Tool definition for creating a comment on a task
+ */
+export const createTaskCommentTool = {
+  name: "create_task_comment",
+  description: `Purpose: Create a comment on a ClickUp task.
+
+Valid Usage:
+1. Use taskId (preferred)
+2. Use taskName + listName
+
+Requirements:
+- EITHER taskId OR (taskName + listName) is REQUIRED
+- commentText is REQUIRED
+
+Notes:
+- When using taskName, providing listName helps locate the correct task
+- Set notifyAll to true to send notifications to all task assignees
+- Use assignee to assign the comment to a specific user (optional)`,
+  inputSchema: {
+    type: "object",
+    properties: {
+      taskId: {
+        type: "string",
+        description: "ID of task to comment on (preferred). Works with both regular task IDs (9 characters) and custom IDs with uppercase prefixes (like 'DEV-1234')."
+      },
+      taskName: {
+        type: "string",
+        description: "Name of task to comment on. When using this parameter, you MUST also provide listName."
+      },
+      listName: {
+        type: "string",
+        description: "Name of list containing the task. REQUIRED when using taskName."
+      },
+      commentText: {
+        type: "string",
+        description: "REQUIRED: Text content of the comment to create."
+      },
+      notifyAll: {
+        type: "boolean",
+        description: "Whether to notify all assignees. Default is false."
+      },
+      assignee: {
+        type: "number",
+        description: "Optional user ID to assign the comment to."
+      }
+    },
+    required: ["commentText"]
+  }
 }; 

@@ -3,7 +3,7 @@
 # MCP Server
 A Model Context Protocol (MCP) server for integrating ClickUp tasks with AI applications. This server allows AI agents to interact with ClickUp tasks, spaces, lists, and folders through a standardized protocol.
 
-> 🚧 **Status Update:** -Added attach_task_file tool with support for local files, URLs, and base64 data
+> 🚧 **Status Update:** -Added attach_task_file tool with support for local files, URLs, and base64 data, and create_task_comment tool
 
 <a href="https://glama.ai/mcp/servers/iwjvs2zy63">
   <img width="380" height="200" src="https://glama.ai/mcp/servers/iwjvs2zy63/badge" alt="ClickUp Server MCP server" />
@@ -84,6 +84,7 @@ Or use this npx command:
 | [get_tasks](docs/api-reference.md#task-management) | Get tasks from list | `listId`/`listName` |
 | [get_task](docs/api-reference.md#task-management) | Get task details | `taskId`/`taskName` |
 | [get_task_comments](docs/api-reference.md#task-management) | Get comments on a task | `taskId`/`taskName` |
+| [create_task_comment](docs/api-reference.md#task-management) | Add a comment to a task | `commentText`, (`taskId`/(`taskName`+`listName`)) |
 | [attach_task_file](docs/api-reference.md#task-management) | Attach file to a task | `taskId`/`taskName`, (`file_data` or `file_url`) |
 | [delete_task](docs/api-reference.md#task-management) | Remove task | `taskId`/`taskName` |
 | [delete_bulk_tasks](docs/api-reference.md#task-management) | Remove multiple tasks | `tasks[]` with IDs or names |

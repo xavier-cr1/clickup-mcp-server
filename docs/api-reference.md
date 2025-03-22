@@ -18,6 +18,7 @@ This document provides detailed information about all available tools, their par
 | get_tasks | Retrieve tasks from a list | Either `listId` or `listName` | archived, page, order_by, reverse, subtasks, statuses, include_closed, assignees, due_date_gt/lt |
 | get_task | Get single task details | Either `taskId` or `taskName` | `listName` |
 | get_task_comments | Retrieve comments for a task | Either `taskId` or `taskName` | `listName`, `start`, `startId` |
+| create_task_comment | Add a comment to a task | `commentText` and either `taskId` or (`taskName` + `listName`) | `notifyAll`, `assignee` |
 | attach_task_file | Attach a file to a task | Either `taskId` or `taskName`, and EITHER `file_data` OR `file_url` | `file_name`, `chunk_*` parameters for large files |
 | create_task | Create a new task | `name` and either `listId` or `listName` | description, status, priority (1-4), dueDate |
 | create_bulk_tasks | Create multiple tasks | `tasks[]` | `listId` or `listName` |
@@ -102,6 +103,33 @@ Show me the comments on the "Bug Fix" task.
   "totalComments": 2,
   "pagination": {
     "hasMore": false
+  }
+}
+```
+
+#### Creating a Task Comment
+**User Prompt:**
+```
+Add a comment to the "Bug Fix" task saying "I've fixed the issue by implementing proper mutex locks."
+```
+
+**System Response:**
+```json
+{
+  "success": true,
+  "message": "Comment added successfully",
+  "comment": {
+    "id": "ijkl9012",
+    "comment": "I've fixed the issue by implementing proper mutex locks.",
+    "comment_text": "I've fixed the issue by implementing proper mutex locks.",
+    "user": {
+      "id": 1234567,
+      "username": "developer1",
+      "email": "dev1@example.com",
+      "color": "#ff7800"
+    },
+    "date": "2024-03-16T09:45:30.000Z",
+    "resolved": false
   }
 }
 ```

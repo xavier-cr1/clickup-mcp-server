@@ -183,6 +183,43 @@ export async function getTaskCommentsHandler(params) {
   return await taskService.getTaskComments(taskId, start, startId);
 }
 
+/**
+ * Handler for creating a task comment
+ */
+export async function createTaskCommentHandler(params) {
+  // Validate required parameters
+  if (!params.commentText) {
+    throw new Error('Comment text is required');
+  }
+  
+  try {
+    // Resolve the task ID
+    const taskId = await getTaskId(params.taskId, params.taskName, params.listName);
+    
+    // Extract other parameters with defaults
+    const {
+      commentText,
+      notifyAll = false,
+      assignee = null
+    } = params;
+    
+    // Create the comment
+    return await taskService.createTaskComment(taskId, commentText, notifyAll, assignee);
+  } catch (error) {
+    // If this is a task lookup error, provide more helpful message
+    if (error.message?.includes('not found') || error.message?.includes('identify task')) {
+      if (params.taskName) {
+        throw new Error(`Could not find task "${params.taskName}" in list "${params.listName}"`);
+      } else {
+        throw new Error(`Task with ID "${params.taskId}" not found`);
+      }
+    }
+    
+    // Otherwise, rethrow the original error
+    throw error;
+  }
+}
+
 //=============================================================================
 // BULK TASK OPERATIONS
 //=============================================================================

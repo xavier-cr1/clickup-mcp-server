@@ -17,6 +17,7 @@ import {
   getTasksTool,
   deleteTaskTool,
   getTaskCommentsTool,
+  createTaskCommentTool,
   createBulkTasksTool,
   updateBulkTasksTool,
   moveBulkTasksTool,
@@ -29,6 +30,7 @@ import {
   handleGetTasks,
   handleDeleteTask,
   handleGetTaskComments,
+  handleCreateTaskComment,
   handleCreateBulkTasks,
   handleUpdateBulkTasks,
   handleMoveBulkTasks,
@@ -94,6 +96,7 @@ export function configureServer() {
         duplicateTaskTool,
         deleteTaskTool,
         getTaskCommentsTool,
+        createTaskCommentTool,
         attachTaskFileTool,
         createBulkTasksTool,
         updateBulkTasksTool,
@@ -147,6 +150,8 @@ export function configureServer() {
           return handleDeleteTask(params);
         case "get_task_comments":
           return handleGetTaskComments(params);
+        case "create_task_comment":
+          return handleCreateTaskComment(params);
         case "attach_task_file":
           return handleAttachTaskFile(params);
         case "create_bulk_tasks":
