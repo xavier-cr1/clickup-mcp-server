@@ -3,7 +3,7 @@
 # MCP Server
 A Model Context Protocol (MCP) server for integrating ClickUp tasks with AI applications. This server allows AI agents to interact with ClickUp tasks, spaces, lists, and folders through a standardized protocol.
 
-> 🚧 **Status Update:** -Added attach_task_file tool with support for local files, URLs, and base64 data, and create_task_comment tool
+> 🚧 **Status Update:** -v0.5.0 beta release with new Attach Task Files tool, Create Task Comments tool, Get Task Comments tool, and Custom ID support across all tools.
 
 <a href="https://glama.ai/mcp/servers/iwjvs2zy63">
   <img width="380" height="200" src="https://glama.ai/mcp/servers/iwjvs2zy63/badge" alt="ClickUp Server MCP server" />
@@ -128,6 +128,8 @@ When using this server, you may occasionally see a small sponsor message with a 
 If you find this project useful, please consider supporting:
 
 [![Sponsor TaazKareem](https://img.shields.io/badge/Sponsor-TaazKareem-orange?logo=github)](https://github.com/sponsors/TaazKareem)
+
+<img src="https://github.com/user-attachments/assets/f1658cee-3182-4e54-b6c2-a57571974ed2" width="200">
 
 ## Acknowledgements
 
