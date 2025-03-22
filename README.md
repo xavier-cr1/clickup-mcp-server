@@ -53,18 +53,17 @@ Or use this npx command:
 ## Features
 
 - 🎯 **Task Management**
-  - Create, update, and delete tasks
+  - Create, retrieve, update, and delete tasks
   - Move and duplicate tasks between lists, spaces, and folders
   - Single operation or bulk operation
   - View and modify task details and properties
   - Get task comments
   - Set due dates using natural language and relative time expressions
-  - Attach files to tasks using local file paths, or URL, , or chunked uploads
+  - Attach files to tasks using local file paths, URL, base64, or chunked uploads
 
 - 📂 **Workspace Organization**
   - Complete workspace hierarchy (spaces, folders, lists)
   - Tree structure with clear relationships
-  - Full CRUD operations for workspace components
   - Efficient path-based navigation
 
 - 🔄 **Integration Features**
