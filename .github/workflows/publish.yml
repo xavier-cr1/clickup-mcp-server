@@ -61,14 +61,11 @@ jobs:
         run: |
           sed -i "s/version: \"${{ steps.package_version.outputs.current_version }}\"/version: \"${{ steps.new_version.outputs.new_version }}\"/g" src/server.ts
       
-      - name: Commit server.ts change
+      - name: Commit all version changes
         run: |
-          git add src/server.ts
-          git commit -m "Update server.ts version to ${{ steps.new_version.outputs.new_version }}"
-      
-      - name: Version and Tag
-        run: |
-          npm version ${{ steps.new_version.outputs.new_version }} --git-tag-version --allow-same-version -m "Bump version to %s [skip ci]"
+          git add package.json package-lock.json src/server.ts
+          git commit -m "Bump version to ${{ steps.new_version.outputs.new_version }} [skip ci]"
+          git tag -a v${{ steps.new_version.outputs.new_version }} -m "Version ${{ steps.new_version.outputs.new_version }}"
       
       - name: Build
         run: npm run build
