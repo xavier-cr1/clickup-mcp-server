@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+- Added support for "X minutes from now" expressions in date parsing:
+  - Updated `getRelativeTimestamp` function to accept minutes parameter
+  - Added regex pattern to match "X minutes from now" in natural language parsing
+  - Extended relative time parsing to handle minute-level precision
+
 ## v0.4.69 (2025-03-17)
 
 ### Improvements
