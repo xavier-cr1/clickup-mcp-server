@@ -2,13 +2,30 @@
 
 ## Unreleased
 
-### Improvements
-- Added support for "X minutes from now" expressions in date parsing:
-  - Updated `getRelativeTimestamp` function to accept minutes parameter
-  - Added regex pattern to match "X minutes from now" in natural language parsing
-  - Extended relative time parsing to handle minute-level precision
 
-## v0.4.69 (2025-03-17)
+## Unreleased
+
+### 🚀 New Features
+
+- Enhance date parsing by adding support for "X minutes from now" expressions
+
+### 🔄 Improvements
+
+- Merge pull request #12 from TaazKareem/test-dependency-updates
+- Update README
+- Update README
+- Update FUNDING
+- Add funding options for GitHub and Buy Me a Coffee to support the project
+
+### 📦 Dependencies
+
+- Updated project dependencies
+
+### 🔗 References
+
+- #12: [See pull request](https://github.com/taazkareem/clickup-mcp-server/pull/12)
+
+
 
 ### Improvements
 - Enhanced task name matching with improved flexibility:
