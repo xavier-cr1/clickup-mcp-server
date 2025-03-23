@@ -175,11 +175,10 @@ jobs:
         run: |
           # Extract unreleased notes and format for GitHub release
           NOTES=$(awk '/^## Unreleased/,/^## v/ {print}' changelog.md | sed '1d;$d')
-          # Escape newlines for GitHub Actions
-          NOTES="${NOTES//'%'/'%25'}"
-          NOTES="${NOTES//$'\n'/'%0A'}"
-          NOTES="${NOTES//$'\r'/'%0D'}"
-          echo "release_notes=$NOTES" >> $GITHUB_OUTPUT
+          # Create properly formatted release notes - direct output without URL encoding
+          echo 'RELEASE_NOTES<<EOF' >> $GITHUB_ENV
+          echo "$NOTES" >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
       
       - name: Create GitHub Release
         uses: actions/create-release@v1
@@ -188,7 +187,7 @@ jobs:
         with:
           tag_name: v${{ steps.new_version.outputs.new_version }}
           release_name: v${{ steps.new_version.outputs.new_version }}
-          body: ${{ steps.extract_changelog.outputs.release_notes }}
+          body: ${{ env.RELEASE_NOTES }}
           draft: false
           prerelease: false
       
