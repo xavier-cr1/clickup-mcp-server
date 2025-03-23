@@ -1,13 +1,18 @@
 <img src="https://clickup.com/assets/brand/logo-v3-clickup-dark.svg" alt="ClickUp" height="40" style="vertical-align: middle; margin-top: -4px;">
 
 # MCP Server
+
+[![GitHub Stars](https://img.shields.io/github/stars/TaazKareem/clickup-mcp-server?style=flat&logo=github)](https://github.com/TaazKareem/clickup-mcp-server/stargazers)
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/TaazKareem/clickup-mcp-server/graphs/commit-activity)
+
 A Model Context Protocol (MCP) server for integrating ClickUp tasks with AI applications. This server allows AI agents to interact with ClickUp tasks, spaces, lists, and folders through a standardized protocol.
 
-> 🚧 **Status Update:** -v0.5.0 beta release with new Attach Task Files tool, Create Task Comments tool, Get Task Comments tool, and Custom ID support across all tools.
 
-<a href="https://glama.ai/mcp/servers/iwjvs2zy63">
-  <img width="380" height="200" src="https://glama.ai/mcp/servers/iwjvs2zy63/badge" alt="ClickUp Server MCP server" />
-</a>
+> 🚧 **Status Update:** -v0.5.1 beta release with new Attach Task Files tool, Create Task Comments tool, Get Task Comments tool, and Custom ID support across all tools.
+
+
+
+
 
 ## Setup
 
@@ -25,6 +30,10 @@ The server is hosted on Smithery. There, you can preview the available tools or 
 
 
 ## NPX Installation
+
+[![NPM Version](https://img.shields.io/npm/v/@taazkareem/clickup-mcp-server.svg?style=flat&logo=npm)](https://www.npmjs.com/package/@taazkareem/clickup-mcp-server)
+[![Dependency Status](https://img.shields.io/librariesio/github/TaazKareem/clickup-mcp-server)](https://libraries.io/github/TaazKareem/clickup-mcp-server)
+[![NPM Downloads](https://img.shields.io/npm/dm/@taazkareem/clickup-mcp-server.svg?style=flat&logo=npm)](https://npmcharts.com/compare/@taazkareem/clickup-mcp-server?minimal=true)
 
 Add this entry to your client's MCP settings JSON file:
 
@@ -129,7 +138,9 @@ If you find this project useful, please consider supporting:
 
 [![Sponsor TaazKareem](https://img.shields.io/badge/Sponsor-TaazKareem-orange?logo=github)](https://github.com/sponsors/TaazKareem)
 
-<img src="https://github.com/user-attachments/assets/f1658cee-3182-4e54-b6c2-a57571974ed2" width="200">
+<a href="https://buymeacoffee.com/taazkareem">
+  <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" width="200" alt="Buy Me A Coffee">
+</a>
 
 ## Acknowledgements
 
@@ -140,6 +151,8 @@ Special thanks to [ClickUp](https://clickup.com) for their excellent API and ser
 Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details.
 
 ## License
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 

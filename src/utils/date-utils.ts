@@ -7,15 +7,17 @@
 /**
  * Get a timestamp for a relative time
  * 
+ * @param minutes Minutes from now
  * @param hours Hours from now
  * @param days Days from now
  * @param weeks Weeks from now
  * @param months Months from now
  * @returns Timestamp in milliseconds
  */
-export function getRelativeTimestamp(hours = 0, days = 0, weeks = 0, months = 0): number {
+export function getRelativeTimestamp(minutes = 0, hours = 0, days = 0, weeks = 0, months = 0): number {
   const now = new Date();
   
+  if (minutes) now.setMinutes(now.getMinutes() + minutes);
   if (hours) now.setHours(now.getHours() + hours);
   if (days) now.setDate(now.getDate() + days);
   if (weeks) now.setDate(now.getDate() + (weeks * 7));
@@ -46,7 +48,7 @@ export function parseDueDate(dateString: string): number | undefined {
     }
     
     // Handle relative dates with specific times
-    const relativeTimeRegex = /(?:(\d+)\s*(days?|weeks?|months?)\s*from\s*now|tomorrow|next\s+(?:week|month))\s*(?:at\s+(\d+)(?::(\d+))?\s*(am|pm)?)?/i;
+    const relativeTimeRegex = /(?:(\d+)\s*(minutes?|days?|weeks?|months?)\s*from\s*now|tomorrow|next\s+(?:week|month))\s*(?:at\s+(\d+)(?::(\d+))?\s*(am|pm)?)?/i;
     const match = lowerDate.match(relativeTimeRegex);
     
     if (match) {
@@ -56,7 +58,9 @@ export function parseDueDate(dateString: string): number | undefined {
       // Calculate the future date
       if (amount && unit) {
         const value = parseInt(amount);
-        if (unit.startsWith('day')) {
+        if (unit.startsWith('minute')) {
+          date.setMinutes(date.getMinutes() + value);
+        } else if (unit.startsWith('day')) {
           date.setDate(date.getDate() + value);
         } else if (unit.startsWith('week')) {
           date.setDate(date.getDate() + (value * 7));
@@ -90,29 +94,35 @@ export function parseDueDate(dateString: string): number | undefined {
     }
     
     // Handle hours from now
+    const minutesRegex = /(\d+)\s*minutes?\s*from\s*now/i;
     const hoursRegex = /(\d+)\s*hours?\s*from\s*now/i;
     const daysRegex = /(\d+)\s*days?\s*from\s*now/i;
     const weeksRegex = /(\d+)\s*weeks?\s*from\s*now/i;
     const monthsRegex = /(\d+)\s*months?\s*from\s*now/i;
     
+    if (minutesRegex.test(lowerDate)) {
+      const minutes = parseInt(lowerDate.match(minutesRegex)![1]);
+      return getRelativeTimestamp(minutes);
+    }
+    
     if (hoursRegex.test(lowerDate)) {
       const hours = parseInt(lowerDate.match(hoursRegex)![1]);
-      return getRelativeTimestamp(hours);
+      return getRelativeTimestamp(0, hours);
     }
     
     if (daysRegex.test(lowerDate)) {
       const days = parseInt(lowerDate.match(daysRegex)![1]);
-      return getRelativeTimestamp(0, days);
+      return getRelativeTimestamp(0, 0, days);
     }
     
     if (weeksRegex.test(lowerDate)) {
       const weeks = parseInt(lowerDate.match(weeksRegex)![1]);
-      return getRelativeTimestamp(0, 0, weeks);
+      return getRelativeTimestamp(0, 0, 0, weeks);
     }
     
     if (monthsRegex.test(lowerDate)) {
       const months = parseInt(lowerDate.match(monthsRegex)![1]);
-      return getRelativeTimestamp(0, 0, 0, months);
+      return getRelativeTimestamp(0, 0, 0, 0, months);
     }
     
     // Try to parse as a date string
