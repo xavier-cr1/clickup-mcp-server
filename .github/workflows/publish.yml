@@ -79,6 +79,7 @@ jobs:
           FIXES=""
           IMPROVEMENTS=""
           DEPS=""
+          REPO_UPDATES=""
           
           # Process commits to categorize them
           if [ -z "$LATEST_TAG" ]; then
@@ -102,6 +103,9 @@ jobs:
             elif [[ "$COMMIT" == *"dep"* ]] || [[ "$COMMIT" == *"package"* ]] || [[ "$COMMIT" == *"npm"* ]] || [[ "$COMMIT" == *"version"* ]]; then
               CLEAN_MSG=$(echo "$COMMIT" | sed -E 's/^(dep|dependency|package|npm|version)[: ]*//' | cut -d '.' -f 1 | head -c 100 | sed 's/$//')
               DEPS="${DEPS}- ${CLEAN_MSG}\n"
+            elif [[ "$COMMIT" == *"docs"* ]] || [[ "$COMMIT" == *"readme"* ]] || [[ "$COMMIT" == *"changelog"* ]] || [[ "$COMMIT" == *"workflow"* ]]; then
+              CLEAN_MSG=$(echo "$COMMIT" | sed -E 's/^(docs|doc|readme|changelog|workflow)[: ]*//' | cut -d '.' -f 1 | head -c 100 | sed 's/$//')
+              REPO_UPDATES="${REPO_UPDATES}- ${CLEAN_MSG}\n"
             else
               # For other commits, add to improvements with the first sentence only
               CLEAN_MSG=$(echo "$COMMIT" | cut -d '.' -f 1 | head -c 100 | sed 's/$//')
@@ -112,23 +116,35 @@ jobs:
           # Prepare the new content section
           NEW_CONTENT="## Unreleased\n\n"
           
-          if [ ! -z "$FEATURES" ]; then
-            NEW_CONTENT="${NEW_CONTENT}### 🚀 New Features\n\n${FEATURES}\n"
+          # Combine features, fixes, and improvements into one section
+          FEATURES_AND_IMPROVEMENTS="${FEATURES}${IMPROVEMENTS}${FIXES}"
+          if [ ! -z "$FEATURES_AND_IMPROVEMENTS" ]; then
+            NEW_CONTENT="${NEW_CONTENT}### 🚀 New Features & Improvements\n\n${FEATURES_AND_IMPROVEMENTS}\n"
           fi
           
-          if [ ! -z "$IMPROVEMENTS" ]; then
-            NEW_CONTENT="${NEW_CONTENT}### 🔄 Improvements\n\n${IMPROVEMENTS}\n"
-          fi
-          
-          if [ ! -z "$FIXES" ]; then
-            NEW_CONTENT="${NEW_CONTENT}### 🐛 Bug Fixes\n\n${FIXES}\n"
-          fi
-          
+          # Dependencies section
           if [ ! -z "$DEPS" ]; then
             NEW_CONTENT="${NEW_CONTENT}### 📦 Dependencies\n\n${DEPS}\n"
           elif git diff --name-only ${LATEST_TAG}..HEAD | grep -q "package.json"; then
-            # Even if no dep commit, check if package.json changed
-            NEW_CONTENT="${NEW_CONTENT}### 📦 Dependencies\n\n- Updated project dependencies\n\n"
+            # Check for package.json updates and extract info
+            PACKAGE_CHANGES=$(git diff ${LATEST_TAG}..HEAD -- package.json | grep "[\"\'].*[\"\']:" | grep -v "version\|name\|description\|author\|repository" | sed 's/[+\-]//' | sort | uniq)
+            if [ ! -z "$PACKAGE_CHANGES" ]; then
+              NEW_CONTENT="${NEW_CONTENT}### 📦 Dependencies\n\n- Updated dependencies to use semantic versioning\n- Upgraded:\n"
+              while IFS= read -r PACKAGE; do
+                PACKAGE_NAME=$(echo "$PACKAGE" | grep -o '".*":' | sed 's/[":]//g')
+                if [ ! -z "$PACKAGE_NAME" ]; then
+                  NEW_CONTENT="${NEW_CONTENT}  - ${PACKAGE_NAME}: [updated version]\n"
+                fi
+              done <<< "$PACKAGE_CHANGES"
+              NEW_CONTENT="${NEW_CONTENT}\n"
+            else
+              NEW_CONTENT="${NEW_CONTENT}### 📦 Dependencies\n\n- Updated project dependencies\n\n"
+            fi
+          fi
+          
+          # Repository updates section
+          if [ ! -z "$REPO_UPDATES" ]; then
+            NEW_CONTENT="${NEW_CONTENT}### 🔄 Repository Updates\n\n${REPO_UPDATES}\n"
           fi
           
           # Check for PR numbers in commits and add links

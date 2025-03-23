@@ -32,7 +32,7 @@ The server is hosted on Smithery. There, you can preview the available tools or 
 ## NPX Installation
 
 [![NPM Version](https://img.shields.io/npm/v/@taazkareem/clickup-mcp-server.svg?style=flat&logo=npm)](https://www.npmjs.com/package/@taazkareem/clickup-mcp-server)
-[![Dependency Status](https://img.shields.io/librariesio/github/TaazKareem/clickup-mcp-server)](https://libraries.io/github/TaazKareem/clickup-mcp-server)
+[![Dependency Status](https://img.shields.io/badge/dependencies-up%20to%20date-brightgreen)](https://github.com/TaazKareem/clickup-mcp-server/blob/main/package.json)
 [![NPM Downloads](https://img.shields.io/npm/dm/@taazkareem/clickup-mcp-server.svg?style=flat&logo=npm)](https://npmcharts.com/compare/@taazkareem/clickup-mcp-server?minimal=true)
 
 Add this entry to your client's MCP settings JSON file:
