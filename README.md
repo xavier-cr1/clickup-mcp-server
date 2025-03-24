@@ -3,16 +3,12 @@
 # MCP Server
 
 [![GitHub Stars](https://img.shields.io/github/stars/TaazKareem/clickup-mcp-server?style=flat&logo=github)](https://github.com/TaazKareem/clickup-mcp-server/stargazers)
-[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/TaazKareem/clickup-mcp-server/graphs/commit-activity)
+![Total Supporters](https://img.shields.io/badge/Total%20Supporters-2-blue)
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-brightgreen.svg)](https://github.com/TaazKareem/clickup-mcp-server/graphs/commit-activity)
 
 A Model Context Protocol (MCP) server for integrating ClickUp tasks with AI applications. This server allows AI agents to interact with ClickUp tasks, spaces, lists, and folders through a standardized protocol.
 
-
-> 🚧 **Status Update:** -v0.5.1 beta release with new Attach Task Files tool, Create Task Comments tool, Get Task Comments tool, and Custom ID support across all tools.
-
-
-
-
+> 🚧 **Status Update:** -v0.5.1 release with new Attach Task Files tool, Create Task Comments tool, Get Task Comments tool, and Custom ID support across all tools.
 
 ## Setup
 
@@ -138,9 +134,11 @@ If you find this project useful, please consider supporting:
 
 [![Sponsor TaazKareem](https://img.shields.io/badge/Sponsor-TaazKareem-orange?logo=github)](https://github.com/sponsors/TaazKareem)
 
+
 <a href="https://buymeacoffee.com/taazkareem">
   <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" width="200" alt="Buy Me A Coffee">
 </a>
+
 
 ## Acknowledgements
 
