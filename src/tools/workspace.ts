@@ -9,13 +9,13 @@ import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { WorkspaceTree, WorkspaceNode } from '../services/clickup/types.js';
 import { Logger } from '../logger.js';
 import { sponsorService } from '../utils/sponsor-service.js';
+import { clickUpServices } from '../services/shared.js';
 
 // Create a logger for workspace tools
 const logger = new Logger('WorkspaceTool');
 
-// Use the workspace service imported from the server
-// This is defined when server.ts imports this module
-let workspaceService: any;
+// Use the workspace service from the shared services
+const { workspace: workspaceService } = clickUpServices;
 
 /**
  * Tool definition for retrieving the complete workspace hierarchy
@@ -41,23 +41,6 @@ Notes:
 };
 
 /**
- * Initialize the tool with services
- */
-export function initializeWorkspaceTool(services: any) {
-  logger.info('Initializing workspace tool');
-  
-  if (!services || !services.workspace) {
-    logger.error('Failed to initialize workspace tool: services not provided');
-    throw new Error('Workspace service not available');
-  }
-  
-  workspaceService = services.workspace;
-  logger.info('Workspace tool initialized successfully', {
-    serviceType: workspaceService.constructor.name
-  });
-}
-
-/**
  * Handler for the get_workspace_hierarchy tool
  */
 export async function handleGetWorkspaceHierarchy() {
@@ -68,38 +51,10 @@ export async function handleGetWorkspaceHierarchy() {
     // Generate tree representation
     const treeOutput = formatTreeOutput(hierarchy);
     
-    return sponsorService.createResponse({
-      hierarchy: treeOutput
-    }, true);
+    // Use sponsor service to create the response with optional sponsor message
+    return sponsorService.createResponse({ hierarchy: treeOutput }, true);
   } catch (error: any) {
     return sponsorService.createErrorResponse(`Error getting workspace hierarchy: ${error.message}`);
-  }
-}
-
-/**
- * Format the hierarchy for the response
- */
-function formatHierarchyResponse(hierarchy: WorkspaceTree): any {
-  try {
-    const treeOutput = formatTreeOutput(hierarchy);
-    
-    return {
-      content: [
-        {
-          type: "text",
-          text: treeOutput
-        }
-      ]
-    };
-  } catch (error: any) {
-    return {
-      content: [
-        {
-          type: "text",
-          text: `Error formatting workspace hierarchy: ${error.message}`
-        }
-      ]
-    };
   }
 }
 
@@ -138,5 +93,7 @@ function formatTreeOutput(hierarchy: WorkspaceTree): string {
 
   // Generate tree representation
   const treeLines = formatNodeAsTree(hierarchy.root);
+  
+  // Return plain text instead of adding code block markers
   return treeLines.join('\n');
 } 

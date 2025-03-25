@@ -1,39 +1,28 @@
 #!/usr/bin/env node
 
 /**
- * ClickUp MCP Server - A Model Context Protocol server for ClickUp integration
+ * ClickUp MCP Server
  * 
- * This server enables AI applications to interact with ClickUp through a standardized protocol,
- * allowing AI assistants to manage tasks, lists, and folders in ClickUp workspaces.
+ * This custom server implements the Model Context Protocol (MCP) specification to enable
+ * AI applications to interact with ClickUp workspaces. It provides a standardized 
+ * interface for managing tasks, lists, folders and other ClickUp entities using Natural Language.
  * 
- * Key capabilities include:
+ * Key Features:
+ * - Complete task management (CRUD operations, moving, duplicating)
+ * - Workspace organization (spaces, folders, lists)
+ * - Bulk operations with concurrent processing
+ * - Natural language date parsing
+ * - File attachments support
+ * - Name-based entity resolution
+ * - Markdown formatting
+ * - Built-in rate limiting
  * 
- * Task Management:
- * - Create, update, move and duplicate tasks with rich description support
- * - Find tasks by name with smart disambiguation
- * - Optimized bulk task operations with concurrent processing
- * - Comprehensive filtering and sorting options
- * 
- * Workspace Organization:
- * - Navigate and discover workspace structure with hierarchical views
- * - Create and manage lists and folders with proper nesting
- * - Smart name-based lookups that eliminate the need for IDs
- * - Support for priorities, statuses, and due dates
- * 
- * Technical Features:
- * - Full markdown support for rich text content
- * - Secure credential handling through configuration
- * - Comprehensive error reporting and validation
- * - Name-based entity resolution with fuzzy matching
- * 
- * This implementation follows the Model Context Protocol specification and
- * is designed to be used with AI assistants that support MCP.
+ * For full documentation and usage examples, please refer to the README.md file.
  */
 
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { configureServer, server } from "./server.js";
 import { clickUpServices } from "./services/shared.js";
-import { initializeWorkspaceTool } from "./tools/workspace.js";
 import { info, error, debug, warn } from "./logger.js";
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -85,10 +74,6 @@ async function main() {
       os: process.platform,
       arch: process.arch
     });
-    
-    // Initialize tools with services
-    info("Initializing workspace tools");
-    initializeWorkspaceTool(clickUpServices);
     
     // Configure the server with all handlers
     info("Configuring server request handlers");
