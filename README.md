@@ -21,8 +21,7 @@ A Model Context Protocol (MCP) server for integrating ClickUp tasks with AI appl
 
 [![smithery badge](https://smithery.ai/badge/@TaazKareem/clickup-mcp-server)](https://smithery.ai/server/@TaazKareem/clickup-mcp-server)
 
-- Subject to occasional network congestion 
-- The server is hosted on Smithery. There, you can preview the available tools or copy the commands to run on your specific client app. 
+The server is hosted on Smithery. There, you can preview the available tools or copy the commands to run on your specific client app. 
 
 
 ## NPX Installation
@@ -31,8 +30,7 @@ A Model Context Protocol (MCP) server for integrating ClickUp tasks with AI appl
 [![Dependency Status](https://img.shields.io/badge/dependencies-up%20to%20date-brightgreen)](https://github.com/TaazKareem/clickup-mcp-server/blob/main/package.json)
 [![NPM Downloads](https://img.shields.io/npm/dm/@taazkareem/clickup-mcp-server.svg?style=flat&logo=npm)](https://npmcharts.com/compare/@taazkareem/clickup-mcp-server?minimal=true)
 
-- More stable method. 
-- Add this entry to your client's MCP settings JSON file:
+Add this entry to your client's MCP settings JSON file:
 
 ```json
 {
