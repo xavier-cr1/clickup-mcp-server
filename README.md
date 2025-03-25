@@ -6,7 +6,7 @@
 
 A Model Context Protocol (MCP) server for integrating ClickUp tasks with AI applications. This server allows AI agents to interact with ClickUp tasks, spaces, lists, and folders through a standardized protocol.
 
-> 🚧 **Status Update:** -v0.5.1 release with new Attach Task Files tool, Create Task Comments tool, Get Task Comments tool, and Custom ID support across all tools.
+> 🚧 **Status Update:** v0.5.1 release with new Attach Task Files tool, Create Task Comments tool, Get Task Comments tool, and Custom ID support across all tools.
 
 ## Setup
 
@@ -20,7 +20,7 @@ A Model Context Protocol (MCP) server for integrating ClickUp tasks with AI appl
 
 [![smithery badge](https://smithery.ai/badge/@TaazKareem/clickup-mcp-server)](https://smithery.ai/server/@TaazKareem/clickup-mcp-server)
 
-The server is hosted on Smithery. There, you can preview the available tools or copy the commands to run on your specific client app. 
+The server is hosted on [Smithery](https://smithery.ai/badge/@TaazKareem/clickup-mcp-server). There, you can preview the available tools or copy the commands to run on your specific client app. 
 
 
 ## NPX Installation
