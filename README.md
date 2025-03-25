@@ -20,7 +20,7 @@ A Model Context Protocol (MCP) server for integrating ClickUp tasks with AI appl
 
 [![smithery badge](https://smithery.ai/badge/@TaazKareem/clickup-mcp-server)](https://smithery.ai/server/@TaazKareem/clickup-mcp-server)
 
-The server is hosted on [Smithery](https://smithery.ai/badge/@TaazKareem/clickup-mcp-server). There, you can preview the available tools or copy the commands to run on your specific client app. 
+The server is hosted on [Smithery](https://smithery.ai/server/@TaazKareem/clickup-mcp-server). There, you can preview the available tools or copy the commands to run on your specific client app. 
 
 
 ## NPX Installation
