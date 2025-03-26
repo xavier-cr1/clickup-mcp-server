@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### 🚀 New Features & Improvements
+- Added tag support with tools for:
+  - Managing tags at the space level (get, create, update, delete)
+  - Adding/removing tags from tasks
+  - Support for tags when creating and updating tasks
+- Improved task creation to support tags parameter
+- Enhanced bulk task creation with tags support
+
 ## v0.6.0 (2025-03-26)
 
 ### 🚀 New Features & Improvements

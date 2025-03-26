@@ -51,6 +51,14 @@ import {
   updateFolderTool, handleUpdateFolder,
   deleteFolderTool, handleDeleteFolder
 } from "./tools/folder.js";
+import {
+  getSpaceTagsTool, handleGetSpaceTags,
+  createSpaceTagTool, handleCreateSpaceTag,
+  updateSpaceTagTool, handleUpdateSpaceTag,
+  deleteSpaceTagTool, handleDeleteSpaceTag,
+  addTagToTaskTool, handleAddTagToTask,
+  removeTagFromTaskTool, handleRemoveTagFromTask
+} from "./tools/tag.js";
 import { Logger } from "./logger.js";
 import { clickUpServices } from "./services/shared.js";
 
@@ -110,15 +118,21 @@ export function configureServer() {
         createFolderTool,
         getFolderTool,
         updateFolderTool,
-        deleteFolderTool
+        deleteFolderTool,
+        getSpaceTagsTool,
+        createSpaceTagTool,
+        updateSpaceTagTool,
+        deleteSpaceTagTool,
+        addTagToTaskTool,
+        removeTagFromTaskTool
       ]
     };
   });
 
   // Register CallTool handler with proper logging
   logger.info("Registering tool handlers", {
-    toolCount: 24,
-    categories: ["workspace", "task", "list", "folder"]
+    toolCount: 30,
+    categories: ["workspace", "task", "list", "folder", "tag"]
   });
   
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
@@ -180,6 +194,18 @@ export function configureServer() {
           return handleUpdateFolder(params);
         case "delete_folder":
           return handleDeleteFolder(params);
+        case "get_space_tags":
+          return handleGetSpaceTags(params);
+        case "create_space_tag":
+          return handleCreateSpaceTag(params);
+        case "update_space_tag":
+          return handleUpdateSpaceTag(params);
+        case "delete_space_tag":
+          return handleDeleteSpaceTag(params);
+        case "add_tag_to_task":
+          return handleAddTagToTask(params);
+        case "remove_tag_from_task":
+          return handleRemoveTagFromTask(params);
         default:
           logger.error(`Unknown tool requested: ${name}`);
           throw new Error(`Unknown tool: ${name}`);

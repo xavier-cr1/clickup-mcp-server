@@ -6,7 +6,7 @@
 
 A Model Context Protocol (MCP) server for integrating ClickUp tasks with AI applications. This server allows AI agents to interact with ClickUp tasks, spaces, lists, and folders through a standardized protocol.
 
-> 🚧 **Status Update:** v0.5.2 release with new Attach Task Files tool, Create Task Comments tool, Get Task Comments tool, Custom ID support across all tools, and Subtasks support.
+> 🚧 **Status Update:** v0.6.1 Release adds Complete Tag Support, Subtasks Support, Custom ID Support, and Logging Fixes
 
 ## Setup
 
@@ -55,22 +55,29 @@ Or use this npx command:
 
 ## Features
 
-- 🎯 **Task Management**
+- 📝 **Task Management**
   - Create, retrieve, update, and delete tasks
   - Move and duplicate tasks between lists, spaces, and folders
   - Single operation or bulk operation
   - View and modify task details and properties
-  - Get task comments
   - Set due dates using natural language and relative time expressions
+  - Create and retrieve task comments
   - Attach files to tasks using local file paths, URL, base64, or chunked uploads
   - Create and manage subtasks with support for multi-level nesting
+  - Add and remove tags from tasks
 
-- 📂 **Workspace Organization**
+  - 🏷️ **Tag Management**
+  - Create, update, and delete tags at space level
+  - Add and remove tags from tasks
+  - Customize tag colors (background and foreground)
+  - View all available tags in a space
+
+- 🌳 **Workspace Organization**
   - Complete workspace hierarchy (spaces, folders, lists)
   - Tree structure with clear relationships
   - Efficient path-based navigation
 
-- 🔄 **Integration Features**
+- ⚡ **Integration Features**
   - Name or ID-based item lookup
   - Case-insensitive name matching
   - Markdown formatting support
@@ -104,6 +111,12 @@ Or use this npx command:
 | [get_list](docs/api-reference.md#list-management) | Get list details | `listId`/`listName` |
 | [update_list](docs/api-reference.md#list-management) | Update list properties | `listId`/`listName` |
 | [delete_list](docs/api-reference.md#list-management) | Delete list | `listId`/`listName` |
+| [get_space_tags](docs/api-reference.md#tag-management) | Get space tags | `spaceId`/`spaceName` |
+| [create_space_tag](docs/api-reference.md#tag-management) | Create tag | `tagName`, `spaceId`/`spaceName` |
+| [update_space_tag](docs/api-reference.md#tag-management) | Update tag | `tagName`, `spaceId`/`spaceName` |
+| [delete_space_tag](docs/api-reference.md#tag-management) | Delete tag | `tagName`, `spaceId`/`spaceName` |
+| [add_tag_to_task](docs/api-reference.md#tag-management) | Add tag to task | `tagName`, `taskId`/(`taskName`+`listName`) |
+| [remove_tag_from_task](docs/api-reference.md#tag-management) | Remove tag from task | `tagName`, `taskId`/(`taskName`+`listName`) |
 
 See [full documentation](docs/api-reference.md) for optional parameters and advanced usage.
 

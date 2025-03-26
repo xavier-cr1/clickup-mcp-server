@@ -123,6 +123,13 @@ Notes:
       parent: {
         type: "string",
         description: "Optional ID of the parent task. When specified, this task will be created as a subtask of the specified parent task."
+      },
+      tags: {
+        type: "array",
+        items: {
+          type: "string"
+        },
+        description: "Optional array of tag names to assign to the task. The tags must already exist in the space."
       }
     }
   }

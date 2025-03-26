@@ -139,6 +139,13 @@ Notes:
             dueDate: {
               type: "string",
               description: "Due date. Supports Unix timestamps (in milliseconds) and natural language expressions like '1 hour from now', 'tomorrow', 'next week', etc."
+            },
+            tags: {
+              type: "array",
+              items: {
+                type: "string"
+              },
+              description: "Optional array of tag names to assign to the task. The tags must already exist in the space."
             }
           },
           required: ["name"]
