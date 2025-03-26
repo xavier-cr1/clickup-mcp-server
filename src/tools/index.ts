@@ -9,4 +9,5 @@
 export * from './workspace.js';
 export * from './task/index.js';
 export * from './list.js';
-export * from './folder.js'; 
+export * from './folder.js';
+export * from './tag.js'; 

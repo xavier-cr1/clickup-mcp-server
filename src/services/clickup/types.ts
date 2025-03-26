@@ -466,4 +466,39 @@ export interface ChunkedUploadProgressResponse {
 export type AttachmentResponse = 
   | TaskAttachmentResponse 
   | ChunkedUploadInitResponse 
-  | ChunkedUploadProgressResponse; 
+  | ChunkedUploadProgressResponse;
+
+/**
+ * Tag object as returned by the ClickUp API
+ */
+export interface ClickUpTag {
+  name: string;
+  tag_bg: string;
+  tag_fg: string;
+  creator?: number;
+}
+
+/**
+ * Response when retrieving tags from a space
+ */
+export interface SpaceTagsResponse {
+  tags: ClickUpTag[];
+}
+
+/**
+ * Data for creating a space tag
+ */
+export interface CreateSpaceTagData {
+  tag_name: string;
+  tag_bg: string;
+  tag_fg: string;
+}
+
+/**
+ * Data for updating a space tag
+ */
+export interface UpdateSpaceTagData {
+  tag_name?: string;
+  tag_bg?: string;
+  tag_fg?: string;
+} 

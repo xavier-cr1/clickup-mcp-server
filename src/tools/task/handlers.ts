@@ -97,7 +97,7 @@ async function mapTaskIds(tasks: any[]): Promise<string[]> {
  * Handler for creating a task
  */
 export async function createTaskHandler(params) {
-  const { name, description, markdown_description, status, dueDate, parent } = params;
+  const { name, description, markdown_description, status, dueDate, parent, tags } = params;
   
   if (!name) throw new Error("Task name is required");
   
@@ -113,7 +113,8 @@ export async function createTaskHandler(params) {
     status,
     priority,
     due_date: dueDate ? parseDueDate(dueDate) : undefined,
-    parent
+    parent,
+    tags
   });
 }
 
