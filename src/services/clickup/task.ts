@@ -267,8 +267,11 @@ export class TaskService extends BaseClickUpService {
     
     try {
       return await this.makeRequest(async () => {
-        // Build query with custom_task_ids=true
-        const params = new URLSearchParams({ custom_task_ids: 'true' });
+        // Build query with custom_task_ids=true and team_id
+        const params = new URLSearchParams({ 
+          custom_task_ids: 'true',
+          team_id: this.teamId
+        });
         
         // Use the ClickUp API endpoint for retrieving tasks by ID
         // With custom_task_ids=true parameter, it will treat the ID as a custom ID
