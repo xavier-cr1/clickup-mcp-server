@@ -16,11 +16,11 @@ This document provides detailed information about all available tools, their par
 | Tool | Description | Required Parameters | Optional Parameters |
 |------|-------------|-------------------|-------------------|
 | get_tasks | Retrieve tasks from a list | Either `listId` or `listName` | archived, page, order_by, reverse, subtasks, statuses, include_closed, assignees, due_date_gt/lt |
-| get_task | Get single task details | Either `taskId` or `taskName` | `listName` |
+| get_task | Get single task details | Either `taskId` or `taskName` | `listName`, `subtasks` |
 | get_task_comments | Retrieve comments for a task | Either `taskId` or `taskName` | `listName`, `start`, `startId` |
 | create_task_comment | Add a comment to a task | `commentText` and either `taskId` or (`taskName` + `listName`) | `notifyAll`, `assignee` |
 | attach_task_file | Attach a file to a task | Either `taskId` or `taskName`, and EITHER `file_data` OR `file_url` | `file_name`, `chunk_*` parameters for large files |
-| create_task | Create a new task | `name` and either `listId` or `listName` | description, status, priority (1-4), dueDate |
+| create_task | Create a new task | `name` and either `listId` or `listName` | description, status, priority (1-4), dueDate, parent |
 | create_bulk_tasks | Create multiple tasks | `tasks[]` | `listId` or `listName` |
 | update_task | Modify task properties | Either `taskId` or `taskName` | name, description, status, priority, dueDate |
 | update_bulk_tasks | Modify multiple tasks | `tasks[]` with task identifiers | Each task can have: name, description, status, priority, etc. |
@@ -37,6 +37,10 @@ This document provides detailed information about all available tools, their par
 - **Status**: Uses list's default if not specified
 - **Description**: Supports both plain text and markdown
 - **Files**: Attach files using base64 encoding or URLs
+- **Subtasks**: 
+  - Retrieve subtasks with `subtasks: true` parameter on `get_task` or `get_tasks`
+  - Create subtasks by setting `parent` parameter with parent task ID on `create_task`
+  - Multi-level subtasks are supported (subtasks can have their own subtasks)
 
 ### Examples
 
@@ -315,6 +319,58 @@ Files can be attached using either:
 2. **URL Method**: For files already available online (using `file_url` parameter)
 3. **Local File Path**: For files on the local filesystem (using `file_url` parameter with an absolute file path)
 4. **Chunked Upload**: For large files (automatically selected for `file_data` > 10MB)
+
+#### Retrieving Tasks with Subtasks
+**User Prompt:**
+```
+Get the "Project Planning" task with all its subtasks
+```
+
+**System Response:**
+```json
+{
+  "taskName": "Project Planning",
+  "subtasks": true
+}
+```
+
+**Response will include:**
+```json
+{
+  "id": "abc123",
+  "name": "Project Planning",
+  "description": "Plan the new project phase",
+  "subtasks": [
+    {
+      "id": "def456",
+      "name": "Define Requirements",
+      "parent": "abc123",
+      "top_level_parent": "abc123"
+    },
+    {
+      "id": "ghi789",
+      "name": "Create Timeline",
+      "parent": "abc123",
+      "top_level_parent": "abc123"
+    }
+  ]
+}
+```
+
+#### Creating a Subtask
+**User Prompt:**
+```
+Create a subtask under "Project Planning" called "Schedule Team Meeting"
+```
+
+**System Response:**
+```json
+{
+  "name": "Schedule Team Meeting",
+  "parent": "abc123",
+  "listName": "Development Tasks"
+}
+```
 
 ## List Management
 

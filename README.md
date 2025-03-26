@@ -6,7 +6,7 @@
 
 A Model Context Protocol (MCP) server for integrating ClickUp tasks with AI applications. This server allows AI agents to interact with ClickUp tasks, spaces, lists, and folders through a standardized protocol.
 
-> 🚧 **Status Update:** v0.5.1 release with new Attach Task Files tool, Create Task Comments tool, Get Task Comments tool, and Custom ID support across all tools.
+> 🚧 **Status Update:** v0.5.2 release with new Attach Task Files tool, Create Task Comments tool, Get Task Comments tool, Custom ID support across all tools, and Subtasks support.
 
 ## Setup
 
@@ -63,6 +63,7 @@ Or use this npx command:
   - Get task comments
   - Set due dates using natural language and relative time expressions
   - Attach files to tasks using local file paths, URL, base64, or chunked uploads
+  - Create and manage subtasks with support for multi-level nesting
 
 - 📂 **Workspace Organization**
   - Complete workspace hierarchy (spaces, folders, lists)
@@ -80,12 +81,12 @@ Or use this npx command:
 | Tool | Description | Required Parameters |
 |------|-------------|-------------------|
 | [get_workspace_hierarchy](docs/api-reference.md#workspace-navigation) | Get workspace structure | None |
-| [create_task](docs/api-reference.md#task-management) | Create a task | `name`, (`listId`/`listName`) |
+| [create_task](docs/api-reference.md#task-management) | Create a task | `name`, (`listId`/`listName`), optional `parent` |
 | [create_bulk_tasks](docs/api-reference.md#task-management) | Create multiple tasks | `tasks[]` |
 | [update_task](docs/api-reference.md#task-management) | Modify task | `taskId`/`taskName` |
 | [update_bulk_tasks](docs/api-reference.md#task-management) | Update multiple tasks | `tasks[]` with IDs or names |
-| [get_tasks](docs/api-reference.md#task-management) | Get tasks from list | `listId`/`listName` |
-| [get_task](docs/api-reference.md#task-management) | Get task details | `taskId`/`taskName` |
+| [get_tasks](docs/api-reference.md#task-management) | Get tasks from list | `listId`/`listName`, optional `subtasks` |
+| [get_task](docs/api-reference.md#task-management) | Get task details | `taskId`/`taskName`, optional `subtasks` |
 | [get_task_comments](docs/api-reference.md#task-management) | Get comments on a task | `taskId`/`taskName` |
 | [create_task_comment](docs/api-reference.md#task-management) | Add a comment to a task | `commentText`, (`taskId`/(`taskName`+`listName`)) |
 | [attach_task_file](docs/api-reference.md#task-management) | Attach file to a task | `taskId`/`taskName`, (`file_data` or `file_url`) |
@@ -157,7 +158,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Disclaimer
 
-Disclaimer: This software makes use of third-party APIs and may reference trademarks
+This software makes use of third-party APIs and may reference trademarks
 or brands owned by third parties. The use of such APIs or references does not imply 
 any affiliation with or endorsement by the respective companies. All trademarks and 
 brand names are the property of their respective owners. This project is an independent

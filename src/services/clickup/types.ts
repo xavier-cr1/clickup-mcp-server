@@ -189,6 +189,7 @@ export interface ClickUpTask {
     creator?: number;
   }[];
   parent: string | null;
+  top_level_parent?: string | null;
   priority: ClickUpPriority | null;
   due_date: string | null;
   start_date: string | null;
@@ -210,6 +211,7 @@ export interface ClickUpTask {
     name: string;
   };
   url: string;
+  subtasks?: ClickUpTask[];
 }
 
 /**

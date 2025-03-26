@@ -97,7 +97,7 @@ async function mapTaskIds(tasks: any[]): Promise<string[]> {
  * Handler for creating a task
  */
 export async function createTaskHandler(params) {
-  const { name, description, markdown_description, status, dueDate } = params;
+  const { name, description, markdown_description, status, dueDate, parent } = params;
   
   if (!name) throw new Error("Task name is required");
   
@@ -112,7 +112,8 @@ export async function createTaskHandler(params) {
     markdown_description,
     status,
     priority,
-    due_date: dueDate ? parseDueDate(dueDate) : undefined
+    due_date: dueDate ? parseDueDate(dueDate) : undefined,
+    parent
   });
 }
 
@@ -154,6 +155,14 @@ export async function duplicateTaskHandler(params) {
 export async function getTaskHandler(params) {
   // resolveTaskIdWithValidation now auto-detects whether taskId is a regular ID or custom ID
   const taskId = await getTaskId(params.taskId, params.taskName, params.listName, params.customTaskId);
+  
+  // If subtasks parameter is provided and true, use the getTaskWithSubtasks method
+  if (params.subtasks) {
+    const task = await taskService.getTask(taskId);
+    const subtasks = await taskService.getSubtasks(taskId);
+    return { ...task, subtasks };
+  }
+  
   return await taskService.getTask(taskId);
 }
 
@@ -163,15 +172,6 @@ export async function getTaskHandler(params) {
 export async function getTasksHandler(params) {
   const listId = await getListId(params.listId, params.listName);
   return await taskService.getTasks(listId, buildTaskFilters(params));
-}
-
-/**
- * Handler for deleting a task
- */
-export async function deleteTaskHandler(params) {
-  const taskId = await getTaskId(params.taskId, params.taskName, params.listName);
-  await taskService.deleteTask(taskId);
-  return true;
 }
 
 /**
@@ -307,4 +307,13 @@ export async function deleteBulkTasksHandler(params) {
   );
   
   return taskIds.map(() => true);
+}
+
+/**
+ * Handler for deleting a task
+ */
+export async function deleteTaskHandler(params) {
+  const taskId = await getTaskId(params.taskId, params.taskName, params.listName);
+  await taskService.deleteTask(taskId);
+  return true;
 } 

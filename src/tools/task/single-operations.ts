@@ -83,7 +83,8 @@ Requirements:
 
 Notes:
 - For multiple tasks, use create_bulk_tasks instead
-- Reuse list IDs from previous responses when possible to avoid redundant lookups`,
+- Reuse list IDs from previous responses when possible to avoid redundant lookups
+- To create a subtask, set the parent parameter to the ID of the parent task`,
   inputSchema: {
     type: "object",
     properties: {
@@ -118,6 +119,10 @@ Notes:
       dueDate: {
         type: "string",
         description: "Optional due date. Supports Unix timestamps (ms) or natural language like '1 hour from now', 'tomorrow', 'next week', etc."
+      },
+      parent: {
+        type: "string",
+        description: "Optional ID of the parent task. When specified, this task will be created as a subtask of the specified parent task."
       }
     }
   }
@@ -299,7 +304,8 @@ Requirements:
 Note:
 - Task names are only unique within a list, so the system needs to know which list to search in
 - Regular task IDs are always 9 characters long (e.g., "86b394eqa")
-- Custom IDs have an uppercase prefix followed by a hyphen and number (e.g., "DEV-1234")`,
+- Custom IDs have an uppercase prefix followed by a hyphen and number (e.g., "DEV-1234")
+- Set subtasks=true to include all subtasks in the response`,
   inputSchema: {
     type: "object",
     properties: {
@@ -318,6 +324,10 @@ Note:
       customTaskId: {
         type: "string",
         description: "Custom task ID (e.g., 'DEV-1234'). Only use this if you want to explicitly force custom ID lookup. In most cases, you can just use taskId which auto-detects ID format."
+      },
+      subtasks: {
+        type: "boolean",
+        description: "Whether to include subtasks in the response. Set to true to retrieve full details of all subtasks."
       }
     },
     required: []
@@ -353,6 +363,15 @@ Notes:
         type: "string",
         description: "Name of list to get tasks from. Only use if you don't have listId."
       },
+      subtasks: {
+        type: "boolean",
+        description: "Include subtasks"
+      },
+      statuses: {
+        type: "array",
+        items: { type: "string" },
+        description: "Filter by status names (e.g. ['To Do', 'In Progress'])"
+      },
       archived: {
         type: "boolean",
         description: "Include archived tasks"
@@ -368,54 +387,9 @@ Notes:
       reverse: {
         type: "boolean",
         description: "Reverse sort order (descending)"
-      },
-      subtasks: {
-        type: "boolean",
-        description: "Include subtasks"
-      },
-      statuses: {
-        type: "array",
-        items: {
-          type: "string"
-        },
-        description: "Filter by status names (e.g. ['To Do', 'In Progress'])"
       }
     },
     required: []
-  }
-};
-
-/**
- * Tool definition for deleting a task
- */
-export const deleteTaskTool = {
-  name: "delete_task",
-  description: `Purpose: PERMANENTLY DELETE a task.
-
-Valid Usage:
-1. Use taskId alone (preferred and safest)
-2. Use taskName + optional listName
-
-Warning:
-- This action CANNOT be undone
-- Using taskName is risky as names may not be unique
-- Provide listName when using taskName for more precise targeting`,
-  inputSchema: {
-    type: "object",
-    properties: {
-      taskId: {
-        type: "string",
-        description: "ID of task to delete (preferred). Works with both regular task IDs (9 characters) and custom IDs with uppercase prefixes (like 'DEV-1234')."
-      },
-      taskName: {
-        type: "string",
-        description: "Name of task to delete. Use with extreme caution as names may not be unique."
-      },
-      listName: {
-        type: "string",
-        description: "Name of list containing the task. Helps ensure correct task deletion when using taskName."
-      }
-    }
   }
 };
 
@@ -509,5 +483,39 @@ Notes:
       }
     },
     required: ["commentText"]
+  }
+};
+
+/**
+ * Tool definition for deleting a task
+ */
+export const deleteTaskTool = {
+  name: "delete_task",
+  description: `Purpose: PERMANENTLY DELETE a task.
+
+Valid Usage:
+1. Use taskId alone (preferred and safest)
+2. Use taskName + optional listName
+
+Warning:
+- This action CANNOT be undone
+- Using taskName is risky as names may not be unique
+- Provide listName when using taskName for more precise targeting`,
+  inputSchema: {
+    type: "object",
+    properties: {
+      taskId: {
+        type: "string",
+        description: "ID of task to delete (preferred). Works with both regular task IDs (9 characters) and custom IDs with uppercase prefixes (like 'DEV-1234')."
+      },
+      taskName: {
+        type: "string",
+        description: "Name of task to delete. Use with extreme caution as names may not be unique."
+      },
+      listName: {
+        type: "string",
+        description: "Name of list containing the task. Helps ensure correct task deletion when using taskName."
+      }
+    }
   }
 }; 

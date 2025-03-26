@@ -248,11 +248,40 @@ export class TaskService extends BaseClickUpService {
     
     try {
       return await this.makeRequest(async () => {
-        const response = await this.client.get<ClickUpTask>(`/task/${taskId}`);
+        const response = await this.client.get<ClickUpTask>(
+          `/task/${taskId}`
+        );
         return response.data;
       });
     } catch (error) {
       throw this.handleError(error, `Failed to get task ${taskId}`);
+    }
+  }
+
+  /**
+   * Get subtasks of a specific task
+   * @param taskId The ID of the parent task
+   * @returns Array of subtask details
+   */
+  async getSubtasks(taskId: string): Promise<ClickUpTask[]> {
+    this.logOperation('getSubtasks', { taskId });
+    
+    try {
+      return await this.makeRequest(async () => {
+        // First, get the task to get its list ID
+        const task = await this.getTask(taskId);
+        const listId = task.list.id;
+        
+        // Then get all tasks from the list
+        const allTasks = await this.getTasks(listId, { subtasks: true });
+        
+        // Filter tasks that have the specified task as parent
+        return allTasks.filter(t => 
+          t.parent === taskId || t.top_level_parent === taskId
+        );
+      });
+    } catch (error) {
+      throw this.handleError(error, `Failed to get subtasks of task ${taskId}`);
     }
   }
 

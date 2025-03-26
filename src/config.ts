@@ -23,15 +23,13 @@ interface Config {
   clickupApiKey: string;
   clickupTeamId: string;
   enableSponsorMessage: boolean;
-  sponsorUrl: string;
 }
 
 // Load configuration from command line args or environment variables
 const configuration: Config = {
   clickupApiKey: envArgs.clickupApiKey || process.env.CLICKUP_API_KEY || '',
   clickupTeamId: envArgs.clickupTeamId || process.env.CLICKUP_TEAM_ID || '',
-  enableSponsorMessage: process.env.ENABLE_SPONSOR_MESSAGE !== 'false',
-  sponsorUrl: process.env.SPONSOR_URL || 'https://github.com/sponsors/taazkareem'
+  enableSponsorMessage: process.env.ENABLE_SPONSOR_MESSAGE !== 'false'
 };
 
 // Validate only the required variables are present

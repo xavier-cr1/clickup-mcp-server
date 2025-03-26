@@ -117,7 +117,7 @@ export function configureServer() {
 
   // Register CallTool handler with proper logging
   logger.info("Registering tool handlers", {
-    toolCount: 23,
+    toolCount: 24,
     categories: ["workspace", "task", "list", "folder"]
   });
   

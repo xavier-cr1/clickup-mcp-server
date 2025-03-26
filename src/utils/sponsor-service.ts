@@ -15,11 +15,10 @@ const logger = new Logger('SponsorService');
  */
 export class SponsorService {
   private isEnabled: boolean;
-  private sponsorUrl: string;
+  private readonly sponsorUrl: string = 'https://github.com/sponsors/taazkareem';
   
   constructor() {
     this.isEnabled = config.enableSponsorMessage;
-    this.sponsorUrl = config.sponsorUrl;
     logger.info('SponsorService initialized', { enabled: this.isEnabled });
   }
   
@@ -64,7 +63,7 @@ export class SponsorService {
     if (this.isEnabled && includeSponsorMessage) {
       content.push({
         type: "text",
-        text: `\n\n❤️ Support this project by sponsoring the developer at ${this.sponsorUrl}`
+        text: `⎯ Support this project by sponsoring the developer at ${this.sponsorUrl}`
       });
     }
     
