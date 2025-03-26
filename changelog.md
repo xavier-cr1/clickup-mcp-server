@@ -17,6 +17,7 @@
 ### 🔄 Repository Updates
 - Updated documentation for subtasks feature
 - Improved API reference with subtasks examples
+- Added Security Policy and Code of Conduct
 
 ### 🔗 References
 - #18: [See pull request](https://github.com/taazkareem/clickup-mcp-server/pull/18)
