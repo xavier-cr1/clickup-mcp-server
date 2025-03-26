@@ -125,6 +125,9 @@ The server provides clear error messages for:
 - API errors
 - Rate limiting
 
+The `LOG_LEVEL` environment variable can be specified to control the verbosity of server logs. Valid values are `trace`, `debug`, `info`, `warn`, and `error` (default).
+This can be also be specified on the command line as, e.g. `--env LOG_LEVEL=info`.
+
 ## Support the Developer
 
 When using this server, you may occasionally see a small sponsor message with a link to this repository included in tool responses. I hope you can support the project!

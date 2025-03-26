@@ -29,8 +29,36 @@ export enum LogLevel {
   ERROR = 4,
 }
 
-// Fixed log level - always use TRACE as the minimum level for complete logging
-const configuredLevel = LogLevel.TRACE;
+// Parse LOG_LEVEL environment variable or command line argument
+const parseLogLevel = (levelStr: string | undefined): LogLevel => {
+  if (!levelStr) return LogLevel.ERROR; // Default to ERROR if not specified
+  
+  switch (levelStr.toUpperCase()) {
+    case 'trace': return LogLevel.TRACE;
+    case 'debug': return LogLevel.DEBUG;
+    case 'info': return LogLevel.INFO;
+    case 'warn': return LogLevel.WARN;
+    case 'error': return LogLevel.ERROR;
+    default:
+      console.error(`Invalid LOG_LEVEL: ${levelStr}, defaulting to ERROR`);
+      return LogLevel.ERROR;
+  }
+};
+
+// Parse command line arguments for LOG_LEVEL
+const args = process.argv.slice(2);
+let argLogLevel: string | undefined;
+for (let i = 0; i < args.length; i++) {
+  if (args[i] === '--env' && i + 1 < args.length) {
+    const [key, value] = args[i + 1].split('=');
+    if (key === 'LOG_LEVEL') argLogLevel = value;
+    i++;
+  }
+}
+
+// Get log level from environment variable or command line, default to ERROR
+const configuredLevel = parseLogLevel(argLogLevel || process.env.LOG_LEVEL);
+console.debug(`Log level set to: ${LogLevel[configuredLevel]}`);
 
 /**
  * Check if a log level is enabled based on the configured level
