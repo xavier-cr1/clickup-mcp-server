@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+## v0.6.0 (2025-03-26)
+
+### 🚀 New Features & Improvements
+- Added subtasks support with multi-level nesting capability
+- Implemented parent parameter for creating subtasks
+- Made logging level configurable via environment variable or command line
+- Fixed custom task ID handling across all operations
+- Default log level now set to ERROR for improved compatibility
+
+### 📦 Dependencies
+- No dependency changes in this release
+
+### 🔄 Repository Updates
+- Updated documentation for subtasks feature
+- Improved API reference with subtasks examples
+
+### 🔗 References
+- #18: [See pull request](https://github.com/taazkareem/clickup-mcp-server/pull/18)
+- #20: [See pull request](https://github.com/taazkareem/clickup-mcp-server/pull/20)
+
 ## v0.5.1 (2025-03-23)
 
 ### 🚀 New Features & Improvements
