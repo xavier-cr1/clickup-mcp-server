@@ -2,7 +2,42 @@
 
 ## Unreleased
 
-## v0.5.1 (2025-03-23)
+
+## Unreleased
+
+### 🚀 New Features & Improvements
+
+- Add subtasks support with multi-level nesting capability
+- Update README
+- Update README
+- Update README
+- Update README with new supporter badge and refined status update for v0
+- Update changelog for v0
+- Fix getting task by custom id
+- Merge pull request #18 from colinmollenhour/main
+- Add support for log level to be controlled via environment variable or command line argument
+- Fix Smithery link URL
+- Add photo attribution
+- Update README
+- Refactor workspace tool initialization in workspace
+- Remove update-changelog
+- Merge branch 'main' of https://github
+- Create Security Policy
+- Create CODE_OF_CONDUCT
+- Merge branch 'main' of https://github
+- Refactor GitHub Actions workflow to simplify release notes handling
+- docs: Include logging and custom ID fixes in changelog - PR #18 and PR #20
+- Merge pull request #20 from colinmollenhour/fix-get-task-by-custom-id
+- Fix incorrect comparison
+
+### 🔗 References
+
+- #18: [See pull request](https://github.com/taazkareem/clickup-mcp-server/pull/18)
+- #20: [See pull request](https://github.com/taazkareem/clickup-mcp-server/pull/20)
+- #20: [See pull request](https://github.com/taazkareem/clickup-mcp-server/pull/20)
+- #18: [See pull request](https://github.com/taazkareem/clickup-mcp-server/pull/18)
+
+
 
 ### 🚀 New Features & Improvements
 - Added support for Custom IDs across all tools
