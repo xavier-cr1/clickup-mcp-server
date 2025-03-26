@@ -34,11 +34,11 @@ const parseLogLevel = (levelStr: string | undefined): LogLevel => {
   if (!levelStr) return LogLevel.ERROR; // Default to ERROR if not specified
   
   switch (levelStr.toUpperCase()) {
-    case 'trace': return LogLevel.TRACE;
-    case 'debug': return LogLevel.DEBUG;
-    case 'info': return LogLevel.INFO;
-    case 'warn': return LogLevel.WARN;
-    case 'error': return LogLevel.ERROR;
+    case 'TRACE': return LogLevel.TRACE;
+    case 'DEBUG': return LogLevel.DEBUG;
+    case 'INFO': return LogLevel.INFO;
+    case 'WARN': return LogLevel.WARN;
+    case 'ERROR': return LogLevel.ERROR;
     default:
       console.error(`Invalid LOG_LEVEL: ${levelStr}, defaulting to ERROR`);
       return LogLevel.ERROR;
