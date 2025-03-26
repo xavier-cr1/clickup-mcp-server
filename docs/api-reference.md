@@ -6,6 +6,7 @@ This document provides detailed information about all available tools, their par
 - [Task Management](#task-management)
 - [List Management](#list-management)
 - [Folder Management](#folder-management)
+- [Tag Management](#tag-management)
 - [Workspace Organization](#workspace-organization)
 - [Prompts](#prompts)
 - [Common Parameters](#common-parameters)
@@ -459,6 +460,114 @@ Update the "Development Projects" folder to be named "Active Development Project
   "name": "Active Development Projects"
 }
 ```
+
+## Tag Management
+
+| Tool | Description | Required Parameters | Optional Parameters |
+|------|-------------|-------------------|-------------------|
+| get_space_tags | Get all tags in a space | Either `spaceId` or `spaceName` | None |
+| create_space_tag | Create a new tag | `tagName` and either `spaceId` or `spaceName` | `tagBg` (hex color), `tagFg` (hex color) |
+| update_space_tag | Update an existing tag | `tagName` and either `spaceId` or `spaceName` | `newTagName`, `tagBg`, `tagFg` |
+| delete_space_tag | Delete a tag | `tagName` and either `spaceId` or `spaceName` | None |
+| add_tag_to_task | Add tag to a task | `tagName` and either `taskId` or (`taskName` + `listName`) | None |
+| remove_tag_from_task | Remove tag from task | `tagName` and either `taskId` or (`taskName` + `listName`) | None |
+
+### Tag Parameters
+
+- **tagName**: Name of the tag (case-sensitive)
+- **tagBg**: Background color in hex format (e.g., "#FF5733")
+- **tagFg**: Foreground (text) color in hex format (e.g., "#FFFFFF")
+- **newTagName**: New name when updating a tag
+
+### Examples
+
+#### Getting Space Tags
+**User Prompt:**
+```
+Show me all tags in the "Development" space
+```
+
+**System Response:**
+```json
+{
+  "spaceName": "Development",
+  "tags": [
+    {
+      "name": "feature",
+      "tag_bg": "#FF5733",
+      "tag_fg": "#FFFFFF"
+    },
+    {
+      "name": "bug",
+      "tag_bg": "#DC3545",
+      "tag_fg": "#FFFFFF"
+    }
+  ]
+}
+```
+
+#### Creating a Tag
+**User Prompt:**
+```
+Create a new tag called "priority" in the "Development" space with red background
+```
+
+**System Response:**
+```json
+{
+  "spaceName": "Development",
+  "tagName": "priority",
+  "tagBg": "#FF0000",
+  "tagFg": "#FFFFFF"
+}
+```
+
+#### Updating a Tag
+**User Prompt:**
+```
+Update the "priority" tag to have a blue background
+```
+
+**System Response:**
+```json
+{
+  "spaceName": "Development",
+  "tagName": "priority",
+  "tagBg": "#0000FF"
+}
+```
+
+#### Adding a Tag to a Task
+**User Prompt:**
+```
+Add the "feature" tag to the task "Implement Authentication"
+```
+
+**System Response:**
+```json
+{
+  "taskName": "Implement Authentication",
+  "tagName": "feature"
+}
+```
+
+### Important Notes
+
+1. **Tag Existence**: Before adding a tag to a task, ensure the tag exists in the space. Use `get_space_tags` to verify tag existence and `create_space_tag` to create it if needed.
+
+2. **Color Formats**: Colors must be provided in hex format:
+   - Valid: "#FF5733", "#fff"
+   - Invalid: "red", "rgb(255,0,0)"
+
+3. **Case Sensitivity**: Tag names are case-sensitive. "Feature" and "feature" are treated as different tags.
+
+4. **Task Tags**: When creating or updating tasks, you can include tags in the task properties:
+   ```json
+   {
+     "name": "New Task",
+     "tags": ["feature", "priority"]
+   }
+   ```
 
 ## Workspace Organization
 

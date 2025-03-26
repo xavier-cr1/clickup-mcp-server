@@ -202,9 +202,14 @@ Valid Usage:
 Requirements:
 - tagName: REQUIRED
 - EITHER taskId OR (taskName + listName): REQUIRED
+- The tag MUST exist in the space containing the task before calling this tool
+
+Warning:
+- The operation will fail if the tag does not exist in the space
+- Always use get_space_tags first to verify the tag exists
+- If the tag doesn't exist, create it using create_space_tag before adding it to the task
 
 Notes:
-- The tag must already exist in the space containing the task
 - Use get_space_tags to see available tags
 - Use create_space_tag to create a new tag if needed`,
   inputSchema: {
@@ -228,7 +233,7 @@ Notes:
       },
       tagName: {
         type: "string",
-        description: "Name of the tag to add to the task."
+        description: "Name of the tag to add to the task. The tag must already exist in the space."
       }
     },
     required: ["tagName"]
@@ -296,31 +301,20 @@ function createHandlerWrapper<T>(
     try {
       logger.debug('Handler called with params', { params });
       
-      // Add the sponsor ID to the service for tracking
-      const sponsorInfo = sponsorService.getSponsorInfo();
-      
       // Call the handler
       const result = await handler(params);
       
       // Format the result for response
       const formattedResult = formatResponse(result);
       
-      return {
-        success: true,
-        data: formattedResult,
-      };
+      // Use the sponsor service to create the formatted response
+      return sponsorService.createResponse(formattedResult, true);
     } catch (error: any) {
       // Log the error
       logger.error('Error in handler', { error: error.message, code: error.code });
       
-      // Format and return the error
-      return {
-        success: false,
-        error: {
-          message: error.message,
-          code: error.code || 'UNKNOWN_ERROR'
-        }
-      };
+      // Format and return the error using sponsor service
+      return sponsorService.createErrorResponse(error, params);
     }
   };
 }

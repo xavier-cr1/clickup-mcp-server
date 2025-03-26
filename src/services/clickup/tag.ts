@@ -22,7 +22,7 @@ export class ClickUpTagService extends BaseClickUpService {
     try {
       this.logger.debug(`Getting tags for space: ${spaceId}`);
       
-      const response = await this.client.get<SpaceTagsResponse>(`/space/${spaceId}/tags`);
+      const response = await this.client.get<SpaceTagsResponse>(`/space/${spaceId}/tag`);
       
       return {
         success: true,
@@ -54,9 +54,16 @@ export class ClickUpTagService extends BaseClickUpService {
     try {
       this.logger.debug(`Creating tag "${tagData.tag_name}" in space: ${spaceId}`);
       
+      // Send tag data wrapped in a 'tag' object
       const response = await this.client.post<{ tag: ClickUpTag }>(
-        `/space/${spaceId}/tag`, 
-        tagData
+        `/space/${spaceId}/tag`,
+        {
+          tag: {
+            name: tagData.tag_name,
+            tag_bg: tagData.tag_bg,
+            tag_fg: tagData.tag_fg
+          }
+        }
       );
       
       return {
