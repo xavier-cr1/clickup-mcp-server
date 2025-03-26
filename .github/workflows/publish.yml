@@ -61,117 +61,11 @@ jobs:
         run: |
           sed -i "s/version: \"${{ steps.package_version.outputs.current_version }}\"/version: \"${{ steps.new_version.outputs.new_version }}\"/g" src/server.ts
       
-      - name: Auto-generate changelog
-        run: |
-          # Create changelog.md if it doesn't exist
-          if [ ! -f "changelog.md" ]; then
-            echo "# Changelog" > changelog.md
-            echo "" >> changelog.md
-            echo "## Unreleased" >> changelog.md
-            echo "" >> changelog.md
-          fi
-          
-          # Get latest tag
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          
-          # Initialize sections
-          FEATURES=""
-          FIXES=""
-          IMPROVEMENTS=""
-          DEPS=""
-          REPO_UPDATES=""
-          
-          # Process commits to categorize them
-          if [ -z "$LATEST_TAG" ]; then
-            COMMITS=$(git log --pretty=format:"%s" -n 20)
-          else
-            COMMITS=$(git log ${LATEST_TAG}..HEAD --pretty=format:"%s")
-          fi
-          
-          while IFS= read -r COMMIT; do
-            # Smart categorization based on keywords in commit messages
-            if [[ "$COMMIT" == *"feat"* ]] || [[ "$COMMIT" == *"add"* ]] || [[ "$COMMIT" == *"new"* ]] || [[ "$COMMIT" == *"introduce"* ]]; then
-              # Extract a cleaner message - take first sentence or up to 100 chars
-              CLEAN_MSG=$(echo "$COMMIT" | sed -E 's/^(feat|feature|add|new|implement|introduce)[: ]*//' | cut -d '.' -f 1 | head -c 100 | sed 's/$//')
-              FEATURES="${FEATURES}- ${CLEAN_MSG}\n"
-            elif [[ "$COMMIT" == *"fix"* ]] || [[ "$COMMIT" == *"bug"* ]] || [[ "$COMMIT" == *"issue"* ]] || [[ "$COMMIT" == *"resolve"* ]] || [[ "$COMMIT" == *"correct"* ]]; then
-              CLEAN_MSG=$(echo "$COMMIT" | sed -E 's/^(fix|bug|issue|resolve|correct)[: ]*//' | cut -d '.' -f 1 | head -c 100 | sed 's/$//')
-              FIXES="${FIXES}- ${CLEAN_MSG}\n"
-            elif [[ "$COMMIT" == *"improve"* ]] || [[ "$COMMIT" == *"update"* ]] || [[ "$COMMIT" == *"enhance"* ]] || [[ "$COMMIT" == *"refactor"* ]] || [[ "$COMMIT" == *"optimize"* ]]; then
-              CLEAN_MSG=$(echo "$COMMIT" | sed -E 's/^(improve|update|enhance|refactor|optimize)[: ]*//' | cut -d '.' -f 1 | head -c 100 | sed 's/$//')
-              IMPROVEMENTS="${IMPROVEMENTS}- ${CLEAN_MSG}\n"
-            elif [[ "$COMMIT" == *"dep"* ]] || [[ "$COMMIT" == *"package"* ]] || [[ "$COMMIT" == *"npm"* ]] || [[ "$COMMIT" == *"version"* ]]; then
-              CLEAN_MSG=$(echo "$COMMIT" | sed -E 's/^(dep|dependency|package|npm|version)[: ]*//' | cut -d '.' -f 1 | head -c 100 | sed 's/$//')
-              DEPS="${DEPS}- ${CLEAN_MSG}\n"
-            elif [[ "$COMMIT" == *"docs"* ]] || [[ "$COMMIT" == *"readme"* ]] || [[ "$COMMIT" == *"changelog"* ]] || [[ "$COMMIT" == *"workflow"* ]]; then
-              CLEAN_MSG=$(echo "$COMMIT" | sed -E 's/^(docs|doc|readme|changelog|workflow)[: ]*//' | cut -d '.' -f 1 | head -c 100 | sed 's/$//')
-              REPO_UPDATES="${REPO_UPDATES}- ${CLEAN_MSG}\n"
-            else
-              # For other commits, add to improvements with the first sentence only
-              CLEAN_MSG=$(echo "$COMMIT" | cut -d '.' -f 1 | head -c 100 | sed 's/$//')
-              IMPROVEMENTS="${IMPROVEMENTS}- ${CLEAN_MSG}\n"
-            fi
-          done <<< "$COMMITS"
-          
-          # Prepare the new content section
-          NEW_CONTENT="## Unreleased\n\n"
-          
-          # Combine features, fixes, and improvements into one section
-          FEATURES_AND_IMPROVEMENTS="${FEATURES}${IMPROVEMENTS}${FIXES}"
-          if [ ! -z "$FEATURES_AND_IMPROVEMENTS" ]; then
-            NEW_CONTENT="${NEW_CONTENT}### 🚀 New Features & Improvements\n\n${FEATURES_AND_IMPROVEMENTS}\n"
-          fi
-          
-          # Dependencies section
-          if [ ! -z "$DEPS" ]; then
-            NEW_CONTENT="${NEW_CONTENT}### 📦 Dependencies\n\n${DEPS}\n"
-          elif git diff --name-only ${LATEST_TAG}..HEAD | grep -q "package.json"; then
-            # Check for package.json updates and extract info
-            PACKAGE_CHANGES=$(git diff ${LATEST_TAG}..HEAD -- package.json | grep "[\"\'].*[\"\']:" | grep -v "version\|name\|description\|author\|repository" | sed 's/[+\-]//' | sort | uniq)
-            if [ ! -z "$PACKAGE_CHANGES" ]; then
-              NEW_CONTENT="${NEW_CONTENT}### 📦 Dependencies\n\n- Updated dependencies to use semantic versioning\n- Upgraded:\n"
-              while IFS= read -r PACKAGE; do
-                PACKAGE_NAME=$(echo "$PACKAGE" | grep -o '".*":' | sed 's/[":]//g')
-                if [ ! -z "$PACKAGE_NAME" ]; then
-                  NEW_CONTENT="${NEW_CONTENT}  - ${PACKAGE_NAME}: [updated version]\n"
-                fi
-              done <<< "$PACKAGE_CHANGES"
-              NEW_CONTENT="${NEW_CONTENT}\n"
-            else
-              NEW_CONTENT="${NEW_CONTENT}### 📦 Dependencies\n\n- Updated project dependencies\n\n"
-            fi
-          fi
-          
-          # Repository updates section
-          if [ ! -z "$REPO_UPDATES" ]; then
-            NEW_CONTENT="${NEW_CONTENT}### 🔄 Repository Updates\n\n${REPO_UPDATES}\n"
-          fi
-          
-          # Check for PR numbers in commits and add links
-          PR_REFS=$(git log ${LATEST_TAG}..HEAD --pretty=format:"%s" | grep -o '#[0-9]\+' || echo "")
-          if [ ! -z "$PR_REFS" ]; then
-            NEW_CONTENT="${NEW_CONTENT}### 🔗 References\n\n"
-            while IFS= read -r PR; do
-              PR_NUM=$(echo "$PR" | sed 's/#//')
-              NEW_CONTENT="${NEW_CONTENT}- ${PR}: [See pull request](https://github.com/taazkareem/clickup-mcp-server/pull/${PR_NUM})\n"
-            done <<< "$PR_REFS"
-            NEW_CONTENT="${NEW_CONTENT}\n"
-          fi
-          
-          # Update the changelog file
-          if grep -q "## Unreleased" changelog.md; then
-            # Replace existing Unreleased section up to the next section
-            sed -i '/## Unreleased/,/^## /c'"$NEW_CONTENT"'' changelog.md
-            # Add back the next Unreleased header
-            sed -i "1s/# Changelog/# Changelog\n\n## Unreleased\n/" changelog.md
-          else
-            # Add new Unreleased section at the top
-            sed -i "1s/# Changelog/# Changelog\n\n${NEW_CONTENT}/" changelog.md
-          fi
+      # Automatic changelog generation removed - manual updates preferred
       
       - name: Commit all version changes
         run: |
-          git add package.json package-lock.json src/server.ts changelog.md
+          git add package.json package-lock.json src/server.ts
           git commit -m "Bump version to ${{ steps.new_version.outputs.new_version }} [skip ci]"
           git tag -a v${{ steps.new_version.outputs.new_version }} -m "Version ${{ steps.new_version.outputs.new_version }}"
       
@@ -186,11 +80,16 @@ jobs:
       - name: Push changes
         run: git push --follow-tags
       
-      - name: Extract changelog entries
-        id: extract_changelog
+      - name: Extract release notes from file
+        id: extract_notes
         run: |
-          # Extract unreleased notes and format for GitHub release
-          NOTES=$(awk '/^## Unreleased/,/^## v/ {print}' changelog.md | sed '1d;$d')
+          if [ -f "release-notes.md" ]; then
+            # If release-notes.md exists, use it for the GitHub release
+            NOTES=$(cat release-notes.md)
+          else
+            # Otherwise use a simple format
+            NOTES="## v${{ steps.new_version.outputs.new_version }} ($(date +'%Y-%m-%d'))\n\nSee [changelog.md](https://github.com/taazkareem/clickup-mcp-server/blob/main/changelog.md) for details."
+          fi
           # Properly escape the content for GitHub Actions output
           NOTES="${NOTES//'%'/'%25'}"
           NOTES="${NOTES//$'\n'/'%0A'}"
@@ -204,12 +103,6 @@ jobs:
         with:
           tag_name: v${{ steps.new_version.outputs.new_version }}
           release_name: v${{ steps.new_version.outputs.new_version }}
-          body: ${{ steps.extract_changelog.outputs.release_notes }}
+          body: ${{ steps.extract_notes.outputs.release_notes }}
           draft: false
-          prerelease: false
-      
-      - name: Update changelog
-        run: |
-          # Replace Unreleased with new version and date
-          sed -i "s/## Unreleased/## v${{ steps.new_version.outputs.new_version }} ($(date +'%Y-%m-%d'))\n\n## Unreleased/g" changelog.md
-          git add changelog.md 
+          prerelease: false 
