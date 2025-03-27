@@ -13,11 +13,15 @@
   - Support for color variations (e.g., "dark blue", "light green")
   - Automatic generation of contrasting foreground colors
   - Color commands in both tag creation and updates
-- Added `get_workspace_tasks` tool for filtering workspace tasks by various criteria:
+- Added `get_workspace_tasks` tool for retrieving filtered workspace tasks by various criteria:
   - Requires at least one filter parameter (tags, list_ids, space_ids, etc.)
-  - Returns complete task details including descriptions, assignees, custom fields, and metadata
   - Supports filtering by tags, due dates, status, and more
   - Includes pagination and sorting options
+  - Implements Adaptive Response Format with two detail levels:
+    - `summary`: Lightweight response with essential task information
+    - `detailed`: Complete task information with all fields (default)
+  - Automatic format selection based on response size (50,000 token threshold)
+  - Optimized for handling large datasets efficiently
 
 ### 🔄 Repository Updates
 - Updated documentation to reflect new tool requirements and capabilities

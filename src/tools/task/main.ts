@@ -49,6 +49,10 @@ import {
   getWorkspaceTasksHandler
 } from './handlers.js';
 
+// Import shared services
+import { clickUpServices } from '../../services/shared.js';
+const { task: taskService } = clickUpServices;
+
 //=============================================================================
 // HANDLER WRAPPER UTILITY
 //=============================================================================
@@ -126,10 +130,11 @@ export const handleDeleteBulkTasks = createHandlerWrapper(deleteBulkTasksHandler
 // WORKSPACE TASK OPERATIONS - HANDLER IMPLEMENTATIONS
 //=============================================================================
 
-export const handleGetWorkspaceTasks = createHandlerWrapper(getWorkspaceTasksHandler, (tasks) => ({
-  tasks,
-  count: tasks.length
-}));
+export const handleGetWorkspaceTasks = createHandlerWrapper(
+  // This adapts the new handler signature to match what createHandlerWrapper expects
+  (params) => getWorkspaceTasksHandler(taskService, params),
+  (response) => response // Pass through the response as is
+);
 
 //=============================================================================
 // TOOL DEFINITIONS AND HANDLERS EXPORT

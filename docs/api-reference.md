@@ -262,6 +262,108 @@ Find all tasks with the tags "bug" and "high-priority" across the workspace
 }
 ```
 
+#### Adaptive Response Format in Workspace Tasks
+
+The `get_workspace_tasks` tool offers two response formats to optimize for different use cases:
+
+1. **Summary Format** (`detail_level: 'summary'`):
+   - Lightweight response with essential task information
+   - Ideal for lists, overviews, and large datasets
+   - Includes: id, name, status, list info, due date, URL, priority, and tags
+   - Automatically used when response size exceeds 50,000 tokens
+
+2. **Detailed Format** (`detail_level: 'detailed'`):
+   - Complete task information including all fields
+   - Best for detailed views and task management
+   - Includes: all task data, custom fields, descriptions, comments, etc.
+
+Example using summary format:
+```json
+{
+  "summaries": [
+    {
+      "id": "123abc",
+      "name": "🎯 Important Task",
+      "status": "in progress",
+      "list": {
+        "id": "456def",
+        "name": "Project Alpha"
+      },
+      "due_date": "2024-03-20T10:00:00Z",
+      "url": "https://app.clickup.com/t/123abc",
+      "priority": 1,
+      "tags": [
+        {
+          "name": "urgent",
+          "tag_bg": "#ff0000",
+          "tag_fg": "#ffffff"
+        }
+      ]
+    }
+  ],
+  "total_count": 100,
+  "has_more": true,
+  "next_page": 1
+}
+```
+
+Example using detailed format:
+```json
+{
+  "tasks": [
+    {
+      // Full task object with all fields
+      "id": "123abc",
+      "name": "🎯 Important Task",
+      "description": "Detailed task description...",
+      "status": {
+        "status": "in progress",
+        "color": "#4A90E2"
+      },
+      "custom_fields": [...],
+      "assignees": [...],
+      "watchers": [...],
+      "checklists": [...],
+      // ... all other task fields
+    }
+  ],
+  "total_count": 100,
+  "has_more": true,
+  "next_page": 1
+}
+```
+
+##### Best Practices for Workspace Tasks
+
+1. **Use Filters**: At least one filter parameter is required to prevent overly broad queries:
+   - `tags`: Filter by tag names
+   - `list_ids`: Filter by specific lists
+   - `folder_ids`: Filter by folders
+   - `space_ids`: Filter by spaces
+   - `statuses`: Filter by task status
+   - `assignees`: Filter by assigned users
+   - Date filters: `due_date_gt`, `due_date_lt`, etc.
+
+2. **Pagination**: Use `page`, `order_by`, and `reverse` parameters to navigate through results:
+   ```json
+   {
+     "list_ids": ["123"],
+     "page": 0,
+     "order_by": "due_date",
+     "reverse": true
+   }
+   ```
+
+3. **Response Size**: For large datasets:
+   - Use `detail_level: 'summary'` to get lightweight responses
+   - The tool automatically switches to summary format if response exceeds 50,000 tokens
+   - Use filters to narrow down results
+
+4. **Adaptive Response Pattern**:
+   1. Fetch summaries first for list views
+   2. Load details on-demand when viewing specific tasks
+   3. Use pagination to load more items as needed
+
 #### Bulk Updating Tasks
 **User Prompt:**
 ```
