@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.6.2 (2025-03-27)
+
+### 🛠️ Bug Fixes
+- Fixed binary execution issue by adding proper shebang line to the main executable
+
 ## Unreleased
 
 ### 🚀 New Features & Improvements

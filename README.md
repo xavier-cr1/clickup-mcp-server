@@ -6,7 +6,7 @@
 
 A Model Context Protocol (MCP) server for integrating ClickUp tasks with AI applications. This server allows AI agents to interact with ClickUp tasks, spaces, lists, and folders through a standardized protocol.
 
-> 🚧 **Status Update:** Rolling out v0.6.1 which will add Complete Tag Support including natural language tag color commands, Subtasks Support, Custom ID Support, and Logging Fixes
+> 🚧 **Status Update:** Rolling out v0.6.2 which will add Complete Tag Support including natural language tag color commands, Subtasks Support, Custom ID Support, and Logging Fixes
 
 ## Setup
 

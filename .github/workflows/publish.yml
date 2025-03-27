@@ -86,6 +86,9 @@ jobs:
           if [ -f "release-notes.md" ]; then
             # If release-notes.md exists, use it for the GitHub release
             NOTES=$(cat release-notes.md)
+          elif [ ! -z "${{ github.event.inputs.release_notes }}" ]; then
+            # If release notes were provided as input, use those
+            NOTES="${{ github.event.inputs.release_notes }}"
           else
             # Otherwise use a simple format
             NOTES="## v${{ steps.new_version.outputs.new_version }} ($(date +'%Y-%m-%d'))\n\nSee [changelog.md](https://github.com/taazkareem/clickup-mcp-server/blob/main/changelog.md) for details."
