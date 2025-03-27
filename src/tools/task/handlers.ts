@@ -221,6 +221,55 @@ export async function createTaskCommentHandler(params) {
   }
 }
 
+/**
+ * Handler for getting workspace tasks
+ */
+export async function getWorkspaceTasksHandler(params) {
+  try {
+    // Build task filters from the provided parameters
+    const filters: TaskFilters = {};
+    
+    // Copy all supported filter parameters
+    if (params.tags !== undefined) filters.tags = params.tags;
+    if (params.list_ids !== undefined) filters.list_ids = params.list_ids;
+    if (params.folder_ids !== undefined) filters.folder_ids = params.folder_ids;
+    if (params.space_ids !== undefined) filters.space_ids = params.space_ids;
+    if (params.statuses !== undefined) filters.statuses = params.statuses;
+    if (params.assignees !== undefined) filters.assignees = params.assignees;
+    if (params.include_closed !== undefined) filters.include_closed = params.include_closed;
+    if (params.archived !== undefined) filters.archived = params.archived;
+    if (params.include_closed_lists !== undefined) filters.include_closed_lists = params.include_closed_lists;
+    if (params.include_archived_lists !== undefined) filters.include_archived_lists = params.include_archived_lists;
+    if (params.page !== undefined) filters.page = params.page;
+    if (params.order_by !== undefined) filters.order_by = params.order_by;
+    if (params.reverse !== undefined) filters.reverse = params.reverse;
+    if (params.due_date_gt !== undefined) filters.due_date_gt = params.due_date_gt;
+    if (params.due_date_lt !== undefined) filters.due_date_lt = params.due_date_lt;
+    if (params.date_created_gt !== undefined) filters.date_created_gt = params.date_created_gt;
+    if (params.date_created_lt !== undefined) filters.date_created_lt = params.date_created_lt;
+    if (params.date_updated_gt !== undefined) filters.date_updated_gt = params.date_updated_gt;
+    if (params.date_updated_lt !== undefined) filters.date_updated_lt = params.date_updated_lt;
+    
+    // Check if at least one filter is provided
+    const hasFilter = Object.keys(filters).some(key => 
+      !['page', 'order_by', 'reverse'].includes(key)
+    );
+    
+    if (!hasFilter) {
+      throw new Error('At least one filter parameter is required. Please provide tags, list_ids, folder_ids, space_ids, statuses, assignees, or date filters.');
+    }
+    
+    // Retrieve workspace tasks
+    const tasks = await taskService.getWorkspaceTasks(filters);
+    
+    // Format task data consistently with other task tools
+    return tasks.map(task => formatTaskData(task));
+  } catch (error) {
+    console.error('Error getting workspace tasks:', error);
+    throw error;
+  }
+}
+
 //=============================================================================
 // BULK TASK OPERATIONS
 //=============================================================================

@@ -30,6 +30,7 @@ This document provides detailed information about all available tools, their par
 | move_task | Move task to another list | Either `taskId` or `taskName`, and either `listId` or `listName` | `sourceListName` |
 | move_bulk_tasks | Move multiple tasks | `tasks[]` with task identifiers, and target list | None |
 | duplicate_task | Copy task to another list | Either `taskId` or `taskName`, and either `listId` or `listName` | `sourceListName` |
+| get_workspace_tasks | Retrieve tasks across the workspace with filtering | At least one filter parameter (tags, list_ids, folder_ids, space_ids, statuses, assignees, or date filters) | page, order_by, reverse |
 
 ### Task Parameters
 
@@ -195,6 +196,69 @@ Create these tasks in the "Sprint Backlog" list:
       "priority": 4
     }
   ]
+}
+```
+
+#### Filtering Tasks by Tags
+**User Prompt:**
+```
+Find all tasks with the tags "bug" and "high-priority" across the workspace
+```
+
+**System Response:**
+```json
+{
+  "name": "get_workspace_tasks",
+  "params": {
+    "tags": ["bug", "high-priority"],
+    "include_closed": false
+  },
+  "response": {
+    "tasks": [
+      {
+        "id": "abcd1234",
+        "name": "Fix authentication bug",
+        "description": "Detailed bug description...",
+        "text_content": "Plain text version...",
+        "status": {
+          "status": "In Progress",
+          "color": "#f1c975"
+        },
+        "creator": {
+          "id": 123,
+          "username": "dev1",
+          "email": "dev1@example.com"
+        },
+        "assignees": [
+          {
+            "id": 456,
+            "username": "dev2",
+            "email": "dev2@example.com"
+          }
+        ],
+        "watchers": [...],
+        "checklists": [...],
+        "custom_fields": [...],
+        "list": {
+          "id": "list123",
+          "name": "Current Sprint"
+        },
+        "tags": [
+          {
+            "name": "bug",
+            "tag_bg": "#e50000",
+            "tag_fg": "#ffffff"
+          },
+          {
+            "name": "high-priority",
+            "tag_bg": "#ff7800",
+            "tag_fg": "#ffffff"
+          }
+        ]
+      }
+    ],
+    "count": 1
+  }
 }
 ```
 

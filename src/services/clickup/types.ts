@@ -181,6 +181,7 @@ export interface ClickUpTask {
     profilePicture: string | null;
   };
   assignees: ClickUpUser[];
+  watchers: ClickUpUser[];
   checklists: any[];
   tags: {
     name: string;
@@ -195,6 +196,10 @@ export interface ClickUpTask {
   start_date: string | null;
   time_estimate: number | null;
   time_spent: number | null;
+  custom_fields: Record<string, any>;
+  dependencies: string[];
+  linked_tasks: string[];
+  team_id: string;
   list: {
     id: string;
     name: string;
@@ -267,7 +272,7 @@ export interface CreateFolderData {
 export interface UpdateTaskData extends Partial<CreateTaskData> {}
 
 /**
- * Task filters for getTasks method
+ * Task filtering parameters
  */
 export interface TaskFilters {
   include_closed?: boolean;
@@ -285,6 +290,16 @@ export interface TaskFilters {
   date_updated_gt?: number;
   date_updated_lt?: number;
   custom_fields?: Record<string, any>;
+  
+  // New filtering options for team tasks endpoint
+  tags?: string[];             // Filter by tag names
+  list_ids?: string[];         // Filter by list IDs
+  folder_ids?: string[];       // Filter by folder IDs
+  space_ids?: string[];        // Filter by space IDs
+  archived?: boolean;          // Include archived tasks
+  include_closed_lists?: boolean;  // Include tasks from closed lists
+  include_archived_lists?: boolean; // Include tasks from archived lists
+  include_compact_time_entries?: boolean; // Include compact time entries
 }
 
 /**
@@ -501,4 +516,11 @@ export interface UpdateSpaceTagData {
   tag_name?: string;
   tag_bg?: string;
   tag_fg?: string;
+}
+
+/**
+ * Response type for team tasks endpoint
+ */
+export interface TeamTasksResponse {
+  tasks: ClickUpTask[];
 } 

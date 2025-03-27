@@ -23,6 +23,7 @@ import {
   moveBulkTasksTool,
   deleteBulkTasksTool,
   attachTaskFileTool,
+  getWorkspaceTasksTool,
   handleCreateTask,
   handleUpdateTask,
   handleMoveTask,
@@ -36,7 +37,8 @@ import {
   handleMoveBulkTasks,
   handleDeleteBulkTasks,
   handleGetTask,
-  handleAttachTaskFile
+  handleAttachTaskFile,
+  handleGetWorkspaceTasks
 } from "./tools/task/index.js";
 import {
   createListTool, handleCreateList,
@@ -110,6 +112,7 @@ export function configureServer() {
         updateBulkTasksTool,
         moveBulkTasksTool,
         deleteBulkTasksTool,
+        getWorkspaceTasksTool,
         createListTool,
         createListInFolderTool,
         getListTool,
@@ -131,7 +134,7 @@ export function configureServer() {
 
   // Register CallTool handler with proper logging
   logger.info("Registering tool handlers", {
-    toolCount: 30,
+    toolCount: 31,
     categories: ["workspace", "task", "list", "folder", "tag"]
   });
   
@@ -176,6 +179,8 @@ export function configureServer() {
           return handleMoveBulkTasks(params);
         case "delete_bulk_tasks":
           return handleDeleteBulkTasks(params);
+        case "get_workspace_tasks":
+          return handleGetWorkspaceTasks(params);
         case "create_list":
           return handleCreateList(params);
         case "create_list_in_folder":

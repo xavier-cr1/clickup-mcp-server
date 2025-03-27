@@ -29,6 +29,7 @@ node_modules/
 .cursorrules
 .cursorignore
 .specstory
+checklist.md
 
 # Temporary files
 .tmp/

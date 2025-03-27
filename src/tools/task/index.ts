@@ -28,6 +28,11 @@ export {
   deleteBulkTasksTool
 } from './bulk-operations.js';
 
+// Re-export workspace task operation tools
+export {
+  getWorkspaceTasksTool
+} from './workspace-operations.js';
+
 // Re-export attachment tool
 export {
   attachTaskFileTool,
@@ -51,7 +56,10 @@ export {
   createBulkTasksHandler,
   updateBulkTasksHandler,
   moveBulkTasksHandler,
-  deleteBulkTasksHandler
+  deleteBulkTasksHandler,
+  
+  // Team task operation handlers
+  getWorkspaceTasksHandler
 } from './handlers.js';
 
 // Re-export utilities

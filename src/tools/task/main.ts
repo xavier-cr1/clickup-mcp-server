@@ -27,6 +27,10 @@ import {
   deleteBulkTasksTool
 } from './bulk-operations.js';
 
+import {
+  getWorkspaceTasksTool
+} from './workspace-operations.js';
+
 // Import handlers
 import {
   createTaskHandler,
@@ -41,7 +45,8 @@ import {
   createBulkTasksHandler,
   updateBulkTasksHandler,
   moveBulkTasksHandler,
-  deleteBulkTasksHandler
+  deleteBulkTasksHandler,
+  getWorkspaceTasksHandler
 } from './handlers.js';
 
 //=============================================================================
@@ -118,6 +123,15 @@ export const handleDeleteBulkTasks = createHandlerWrapper(deleteBulkTasksHandler
 }));
 
 //=============================================================================
+// WORKSPACE TASK OPERATIONS - HANDLER IMPLEMENTATIONS
+//=============================================================================
+
+export const handleGetWorkspaceTasks = createHandlerWrapper(getWorkspaceTasksHandler, (tasks) => ({
+  tasks,
+  count: tasks.length
+}));
+
+//=============================================================================
 // TOOL DEFINITIONS AND HANDLERS EXPORT
 //=============================================================================
 
@@ -138,5 +152,8 @@ export const taskTools = [
   { definition: createBulkTasksTool, handler: handleCreateBulkTasks },
   { definition: updateBulkTasksTool, handler: handleUpdateBulkTasks },
   { definition: moveBulkTasksTool, handler: handleMoveBulkTasks },
-  { definition: deleteBulkTasksTool, handler: handleDeleteBulkTasks }
+  { definition: deleteBulkTasksTool, handler: handleDeleteBulkTasks },
+  
+  // Team task operations
+  { definition: getWorkspaceTasksTool, handler: handleGetWorkspaceTasks }
 ];

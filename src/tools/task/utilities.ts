@@ -27,13 +27,47 @@ const { workspace: workspaceService } = clickUpServices;
 export function formatTaskData(task: ClickUpTask, additional: any = {}) {
   return {
     id: task.id,
+    custom_id: task.custom_id,
     name: task.name,
+    text_content: task.text_content,
+    description: task.description,
     url: task.url,
     status: task.status?.status || "Unknown",
+    status_color: task.status?.color,
+    orderindex: task.orderindex,
+    date_created: task.date_created,
+    date_updated: task.date_updated,
+    date_closed: task.date_closed,
+    creator: task.creator,
+    assignees: task.assignees,
+    watchers: task.watchers,
+    checklists: task.checklists,
+    tags: task.tags,
+    parent: task.parent,
+    priority: task.priority,
     due_date: task.due_date ? formatDueDate(Number(task.due_date)) : undefined,
-    list: task.list.name,
-    space: task.space.name,
-    folder: task.folder?.name,
+    start_date: task.start_date,
+    time_estimate: task.time_estimate,
+    time_spent: task.time_spent,
+    custom_fields: task.custom_fields,
+    dependencies: task.dependencies,
+    linked_tasks: task.linked_tasks,
+    team_id: task.team_id,
+    list: {
+      id: task.list.id,
+      name: task.list.name,
+      access: task.list.access
+    },
+    folder: task.folder ? {
+      id: task.folder.id,
+      name: task.folder.name,
+      hidden: task.folder.hidden,
+      access: task.folder.access
+    } : null,
+    space: {
+      id: task.space.id,
+      name: task.space.name
+    },
     ...additional
   };
 }

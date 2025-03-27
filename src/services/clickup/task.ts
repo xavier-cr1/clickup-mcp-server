@@ -20,7 +20,8 @@ import {
   ClickUpComment,
   ClickUpList,
   TaskPriority,
-  ClickUpTaskAttachment
+  ClickUpTaskAttachment,
+  TeamTasksResponse
 } from './types.js';
 import { ListService } from './list.js';
 import { WorkspaceService } from './workspace.js';
@@ -88,6 +89,24 @@ export class TaskService extends BaseClickUpService {
     if (filters.assignees && filters.assignees.length > 0) {
       filters.assignees.forEach(assignee => params.append('assignees[]', assignee));
     }
+    
+    // Team tasks endpoint specific parameters
+    if (filters.tags && filters.tags.length > 0) {
+      filters.tags.forEach(tag => params.append('tags[]', tag));
+    }
+    if (filters.list_ids && filters.list_ids.length > 0) {
+      filters.list_ids.forEach(id => params.append('list_ids[]', id));
+    }
+    if (filters.folder_ids && filters.folder_ids.length > 0) {
+      filters.folder_ids.forEach(id => params.append('folder_ids[]', id));
+    }
+    if (filters.space_ids && filters.space_ids.length > 0) {
+      filters.space_ids.forEach(id => params.append('space_ids[]', id));
+    }
+    if (filters.archived !== undefined) params.append('archived', String(filters.archived));
+    if (filters.include_closed_lists !== undefined) params.append('include_closed_lists', String(filters.include_closed_lists));
+    if (filters.include_archived_lists !== undefined) params.append('include_archived_lists', String(filters.include_archived_lists));
+    if (filters.include_compact_time_entries !== undefined) params.append('include_compact_time_entries', String(filters.include_compact_time_entries));
     
     // Date filters
     if (filters.due_date_gt) params.append('due_date_gt', String(filters.due_date_gt));
@@ -698,6 +717,27 @@ export class TaskService extends BaseClickUpService {
       });
     } catch (error) {
       throw this.handleError(error, `Failed to upload attachment from URL to task ${taskId}`);
+    }
+  }
+
+  /**
+   * Get filtered tasks across the entire team/workspace using tags and other filters
+   * @param filters Task filters to apply including tags, list/folder/space filtering
+   * @returns An array of tasks matching the filters
+   */
+  async getWorkspaceTasks(filters: TaskFilters = {}): Promise<ClickUpTask[]> {
+    try {
+      this.logOperation('getWorkspaceTasks', { filters });
+      
+      const params = this.buildTaskFilterParams(filters);
+      const response = await this.client.get<TeamTasksResponse>(`/team/${this.teamId}/task`, { 
+        params 
+      });
+      
+      return response.data.tasks;
+    } catch (error) {
+      this.logOperation('getWorkspaceTasks', { error: error.message, status: error.response?.status });
+      throw this.handleError(error, 'Failed to get workspace tasks');
     }
   }
 } 
