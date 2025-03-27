@@ -24,6 +24,9 @@ console.error(`Logging to ${join(__dirname, logFileName)}`);
 // Use the configured log level from config.ts
 const configuredLevel = config.logLevel;
 
+// Re-export LogLevel enum
+export { LogLevel };
+
 /**
  * Check if a log level is enabled based on the configured level
  * @param level The log level to check
