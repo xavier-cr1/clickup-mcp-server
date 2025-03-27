@@ -7,8 +7,12 @@
   - Managing tags at the space level (get, create, update, delete)
   - Adding/removing tags from tasks
   - Support for tags when creating and updating tasks
-- Improved task creation to support tags parameter
 - Enhanced bulk task creation with tags support
+- Added natural language color processing for tags:
+  - Create tags with color names (e.g., "blue", "red", "yellow")
+  - Support for color variations (e.g., "dark blue", "light green")
+  - Automatic generation of contrasting foreground colors
+  - Color commands in both tag creation and updates
 
 ## v0.6.0 (2025-03-26)
 

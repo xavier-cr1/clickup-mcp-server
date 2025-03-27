@@ -466,8 +466,8 @@ Update the "Development Projects" folder to be named "Active Development Project
 | Tool | Description | Required Parameters | Optional Parameters |
 |------|-------------|-------------------|-------------------|
 | get_space_tags | Get all tags in a space | Either `spaceId` or `spaceName` | None |
-| create_space_tag | Create a new tag | `tagName` and either `spaceId` or `spaceName` | `tagBg` (hex color), `tagFg` (hex color) |
-| update_space_tag | Update an existing tag | `tagName` and either `spaceId` or `spaceName` | `newTagName`, `tagBg`, `tagFg` |
+| create_space_tag | Create a new tag | `tagName` and either `spaceId` or `spaceName` | `tagBg` (hex color), `tagFg` (hex color), `colorCommand` (natural language) |
+| update_space_tag | Update an existing tag | `tagName` and either `spaceId` or `spaceName` | `newTagName`, `tagBg`, `tagFg`, `colorCommand` (natural language) |
 | delete_space_tag | Delete a tag | `tagName` and either `spaceId` or `spaceName` | None |
 | add_tag_to_task | Add tag to a task | `tagName` and either `taskId` or (`taskName` + `listName`) | None |
 | remove_tag_from_task | Remove tag from task | `tagName` and either `taskId` or (`taskName` + `listName`) | None |
@@ -478,6 +478,7 @@ Update the "Development Projects" folder to be named "Active Development Project
 - **tagBg**: Background color in hex format (e.g., "#FF5733")
 - **tagFg**: Foreground (text) color in hex format (e.g., "#FFFFFF")
 - **newTagName**: New name when updating a tag
+- **colorCommand**: Natural language color description (e.g., "blue tag", "dark red background")
 
 ### Examples
 
@@ -522,6 +523,21 @@ Create a new tag called "priority" in the "Development" space with red backgroun
 }
 ```
 
+#### Creating a Tag with Natural Language Color Command
+**User Prompt:**
+```
+Create a new tag called "important" in the "Development" space using dark blue color
+```
+
+**System Response:**
+```json
+{
+  "spaceName": "Development",
+  "tagName": "important",
+  "colorCommand": "dark blue color"
+}
+```
+
 #### Updating a Tag
 **User Prompt:**
 ```
@@ -534,6 +550,21 @@ Update the "priority" tag to have a blue background
   "spaceName": "Development",
   "tagName": "priority",
   "tagBg": "#0000FF"
+}
+```
+
+#### Updating a Tag with Natural Language Color Command
+**User Prompt:**
+```
+Change the "priority" tag color to light green
+```
+
+**System Response:**
+```json
+{
+  "spaceName": "Development",
+  "tagName": "priority",
+  "colorCommand": "light green"
 }
 ```
 
@@ -555,9 +586,10 @@ Add the "feature" tag to the task "Implement Authentication"
 
 1. **Tag Existence**: Before adding a tag to a task, ensure the tag exists in the space. Use `get_space_tags` to verify tag existence and `create_space_tag` to create it if needed.
 
-2. **Color Formats**: Colors must be provided in hex format:
-   - Valid: "#FF5733", "#fff"
-   - Invalid: "red", "rgb(255,0,0)"
+2. **Color Formats**: 
+   - **Hex Format**: Colors can be provided in hex format (e.g., "#FF5733", "#fff")
+   - **Natural Language**: Colors can be specified using natural language (e.g., "blue", "dark red", "light green")
+   - When using natural language colors, the system automatically generates appropriate foreground (text) colors for optimal contrast
 
 3. **Case Sensitivity**: Tag names are case-sensitive. "Feature" and "feature" are treated as different tags.
 
@@ -568,6 +600,8 @@ Add the "feature" tag to the task "Implement Authentication"
      "tags": ["feature", "priority"]
    }
    ```
+
+5. **Supported Color Names**: Basic colors (red, blue, green, etc.) and common variations (dark blue, light green, etc.) are supported.
 
 ## Workspace Organization
 
