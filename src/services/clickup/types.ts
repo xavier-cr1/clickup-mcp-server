@@ -275,31 +275,29 @@ export interface UpdateTaskData extends Partial<CreateTaskData> {}
  * Task filtering parameters
  */
 export interface TaskFilters {
-  include_closed?: boolean;
-  subtasks?: boolean;
-  page?: number;
-  order_by?: 'id' | 'created' | 'updated' | 'due_date';
-  reverse?: boolean;
+  tags?: string[];
+  list_ids?: string[];
+  folder_ids?: string[];
+  space_ids?: string[];
   statuses?: string[];
-  include_subtasks?: boolean;
   assignees?: string[];
-  due_date_gt?: number;
-  due_date_lt?: number;
   date_created_gt?: number;
   date_created_lt?: number;
   date_updated_gt?: number;
   date_updated_lt?: number;
+  due_date_gt?: number;
+  due_date_lt?: number;
+  include_closed?: boolean;
+  include_archived_lists?: boolean;
+  include_closed_lists?: boolean;
+  archived?: boolean;
+  order_by?: 'id' | 'created' | 'updated' | 'due_date';
+  reverse?: boolean;
+  page?: number;
+  subtasks?: boolean;
+  include_subtasks?: boolean;
+  include_compact_time_entries?: boolean;
   custom_fields?: Record<string, any>;
-  
-  // New filtering options for team tasks endpoint
-  tags?: string[];             // Filter by tag names
-  list_ids?: string[];         // Filter by list IDs
-  folder_ids?: string[];       // Filter by folder IDs
-  space_ids?: string[];        // Filter by space IDs
-  archived?: boolean;          // Include archived tasks
-  include_closed_lists?: boolean;  // Include tasks from closed lists
-  include_archived_lists?: boolean; // Include tasks from archived lists
-  include_compact_time_entries?: boolean; // Include compact time entries
 }
 
 /**
@@ -523,4 +521,52 @@ export interface UpdateSpaceTagData {
  */
 export interface TeamTasksResponse {
   tasks: ClickUpTask[];
+}
+
+/**
+ * Minimal task data for summary view
+ */
+export interface TaskSummary {
+  id: string;
+  name: string;
+  status: string;
+  list: {
+    id: string;
+    name: string;
+  };
+  due_date: string | null;
+  url: string;
+  priority: number | null;
+  tags: {
+    name: string;
+    tag_bg: string;
+    tag_fg: string;
+  }[];
+}
+
+/**
+ * Response format for detailed task data
+ */
+export interface DetailedTaskResponse {
+  tasks: ClickUpTask[];
+  total_count: number;
+  has_more: boolean;
+  next_page: number;
+}
+
+/**
+ * Response format for task summaries
+ */
+export interface WorkspaceTasksResponse {
+  summaries: TaskSummary[];
+  total_count: number;
+  has_more: boolean;
+  next_page: number;
+}
+
+/**
+ * Extended task filters with detail level option
+ */
+export interface ExtendedTaskFilters extends TaskFilters {
+  detail_level?: 'summary' | 'detailed';
 } 
