@@ -4,6 +4,78 @@
  *
  * MCP Server for ClickUp integration
  */
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+  ListPromptsRequestSchema,
+  GetPromptRequestSchema,
+} from "@modelcontextprotocol/sdk/types.js";
+import { createClickUpServices } from "./services/clickup/index.js";
+import config from "./config.js";
+import { workspaceHierarchyTool, handleGetWorkspaceHierarchy } from "./tools/workspace.js";
+import {
+  createTaskTool,
+  updateTaskTool,
+  moveTaskTool,
+  duplicateTaskTool,
+  getTaskTool,
+  getTasksTool,
+  deleteTaskTool,
+  getTaskCommentsTool,
+  createTaskCommentTool,
+  createBulkTasksTool,
+  updateBulkTasksTool,
+  moveBulkTasksTool,
+  deleteBulkTasksTool,
+  attachTaskFileTool,
+  getWorkspaceTasksTool,
+  handleCreateTask,
+  handleUpdateTask,
+  handleMoveTask,
+  handleDuplicateTask,
+  handleGetTasks,
+  handleDeleteTask,
+  handleGetTaskComments,
+  handleCreateTaskComment,
+  handleCreateBulkTasks,
+  handleUpdateBulkTasks,
+  handleMoveBulkTasks,
+  handleDeleteBulkTasks,
+  handleGetTask,
+  handleAttachTaskFile,
+  handleGetWorkspaceTasks
+} from "./tools/task/index.js";
+import {
+  createListTool, handleCreateList,
+  createListInFolderTool, handleCreateListInFolder,
+  getListTool, handleGetList,
+  updateListTool, handleUpdateList,
+  deleteListTool, handleDeleteList
+} from "./tools/list.js";
+import {
+  createFolderTool, handleCreateFolder,
+  getFolderTool, handleGetFolder,
+  updateFolderTool, handleUpdateFolder,
+  deleteFolderTool, handleDeleteFolder
+} from "./tools/folder.js";
+import {
+  getSpaceTagsTool, handleGetSpaceTags,
+  createSpaceTagTool, handleCreateSpaceTag,
+  updateSpaceTagTool, handleUpdateSpaceTag,
+  deleteSpaceTagTool, handleDeleteSpaceTag,
+  addTagToTaskTool, handleAddTagToTask,
+  removeTagFromTaskTool, handleRemoveTagFromTask
+} from "./tools/tag.js";
+import { Logger } from "./logger.js";
+import { clickUpServices } from "./services/shared.js";
+
+// Create a logger instance for server
+const logger = new Logger('Server');
+
+// Use existing services from shared module instead of creating new ones
+const { workspace } = clickUpServices;
+
 export const server = new Server(
   {
     name: "clickup-mcp-server",
