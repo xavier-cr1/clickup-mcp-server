@@ -1,4 +1,7 @@
 /**
+ * SPDX-FileCopyrightText: © 2025 Talib Kareem <taazkareem@icloud.com>
+ * SPDX-License-Identifier: MIT
+ *
  * ClickUp MCP Workspace Tools
  * 
  * This module defines workspace-related tools like retrieving workspace hierarchy.

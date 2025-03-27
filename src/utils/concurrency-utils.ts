@@ -1,4 +1,7 @@
 /**
+ * SPDX-FileCopyrightText: © 2025 Talib Kareem <taazkareem@icloud.com>
+ * SPDX-License-Identifier: MIT
+ *
  * Concurrency Utilities
  * 
  * This module provides utilities for handling concurrent operations,

@@ -1,4 +1,7 @@
 /**
+ * SPDX-FileCopyrightText: © 2025 Talib Kareem <taazkareem@icloud.com>
+ * SPDX-License-Identifier: MIT
+ *
  * ClickUp MCP Folder Tools
  * 
  * This module defines folder-related tools for creating, retrieving,

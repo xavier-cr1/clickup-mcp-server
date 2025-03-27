@@ -1,4 +1,7 @@
 /**
+ * SPDX-FileCopyrightText: © 2025 Talib Kareem <taazkareem@icloud.com>
+ * SPDX-License-Identifier: MIT
+ *
  * ClickUp Bulk Service
  * 
  * Enhanced implementation for bulk operations that leverages the existing single-operation methods.

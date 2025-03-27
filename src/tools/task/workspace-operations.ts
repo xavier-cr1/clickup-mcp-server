@@ -1,4 +1,7 @@
 /**
+ * SPDX-FileCopyrightText: © 2025 Talib Kareem <taazkareem@icloud.com>
+ * SPDX-License-Identifier: MIT
+ *
  * ClickUp MCP Workspace Task Operations
  * 
  * This module defines tools for workspace-wide task operations, including

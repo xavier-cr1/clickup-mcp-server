@@ -1,4 +1,7 @@
 /**
+ * SPDX-FileCopyrightText: © 2025 Talib Kareem <taazkareem@icloud.com>
+ * SPDX-License-Identifier: MIT
+ *
  * Date Utility Functions
  * 
  * This module provides utilities for handling dates, timestamps, and due date parsing.

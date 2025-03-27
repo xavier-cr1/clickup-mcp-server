@@ -1,4 +1,7 @@
 /**
+ * SPDX-FileCopyrightText: © 2025 Talib Kareem <taazkareem@icloud.com>
+ * SPDX-License-Identifier: MIT
+ *
  * ClickUp MCP Bulk Task Operations
  * 
  * This module defines tools for bulk task operations including creating,

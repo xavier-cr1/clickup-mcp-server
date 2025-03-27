@@ -1,4 +1,7 @@
 /**
+ * SPDX-FileCopyrightText: © 2025 Talib Kareem <taazkareem@icloud.com>
+ * SPDX-License-Identifier: MIT
+ *
  * Resolver Utility Functions
  * 
  * This module provides utilities for resolving entity IDs from names or other identifiers.
