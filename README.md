@@ -1,3 +1,5 @@
+# ClickUp MCP Server
+
 <img src="assets/images/clickup_mcp_server_social_image.png" alt="ClickUp MCP Server" width="100%">
 
 ![Total Supporters](https://img.shields.io/badge/🏆%20Total%20Supporters-2-gold)
@@ -6,7 +8,7 @@
 
 A Model Context Protocol (MCP) server for integrating ClickUp tasks with AI applications. This server allows AI agents to interact with ClickUp tasks, spaces, lists, and folders through a standardized protocol.
 
-> 🚧 **Status Update:** v0.6.1 Release adds Complete Tag Support, Subtasks Support, Custom ID Support, and Logging Fixes
+> 🚧 **Status Update:** v0.6.1 Release will add Complete Tag Support, Subtasks Support, Custom ID Support, and Logging Fixes
 
 ## Setup
 
@@ -21,7 +23,6 @@ A Model Context Protocol (MCP) server for integrating ClickUp tasks with AI appl
 [![smithery badge](https://smithery.ai/badge/@TaazKareem/clickup-mcp-server)](https://smithery.ai/server/@TaazKareem/clickup-mcp-server)
 
 The server is hosted on [Smithery](https://smithery.ai/server/@TaazKareem/clickup-mcp-server). There, you can preview the available tools or copy the commands to run on your specific client app. 
-
 
 ## NPX Installation
 
@@ -55,33 +56,11 @@ Or use this npx command:
 
 ## Features
 
-- 📝 **Task Management**
-  - Create, retrieve, update, and delete tasks
-  - Move and duplicate tasks between lists, spaces, and folders
-  - Single operation or bulk operation
-  - View and modify task details and properties
-  - Set due dates using natural language and relative time expressions
-  - Create and retrieve task comments
-  - Attach files to tasks using local file paths, URL, base64, or chunked uploads
-  - Create and manage subtasks with support for multi-level nesting
-  - Add and remove tags from tasks
-
-  - 🏷️ **Tag Management**
-  - Create, update, and delete tags at space level
-  - Add and remove tags from tasks
-  - Customize tag colors (background and foreground)
-  - View all available tags in a space
-
-- 🌳 **Workspace Organization**
-  - Complete workspace hierarchy (spaces, folders, lists)
-  - Tree structure with clear relationships
-  - Efficient path-based navigation
-
-- ⚡ **Integration Features**
-  - Name or ID-based item lookup
-  - Case-insensitive name matching
-  - Markdown formatting support
-  - Built-in API rate limiting
+| 📝 Task Management | 🏷️ Tag Management |
+|----------------------------|----------------------------|
+| • Create, update, and delete tasks<br>• Move and duplicate tasks anywhere<br>• Support for single and bulk operations<br>• Set due dates with natural language<br>• Create and manage subtasks<br>• Add comments and attachments | • Create, update, and delete space tags<br>• Add and remove tags from tasks<br>• Customize tag colors and appearance<br>• View all space tags<br>• Bulk tag operations<br>• Tag-based task organization |
+| 🌳 **Workspace Organization** | ⚡ **Integration Features** |
+| • Navigate spaces, folders, and lists<br>• Create and manage folders<br>• Organize lists within spaces<br>• Create lists in folders<br>• View workspace hierarchy<br>• Efficient path navigation | • Name or ID-based lookups<br>• Case-insensitive matching<br>• Markdown formatting support<br>• Built-in rate limiting<br>• Error handling and validation<br>• Comprehensive API coverage |
 
 ## Available Tools
 

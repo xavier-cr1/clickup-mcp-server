@@ -8,6 +8,7 @@
 import { createWriteStream } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import config, { LogLevel } from './config.js';
 
 // Get the directory name of the current module
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -20,45 +21,8 @@ const logFileName = 'server.log';
 const logStream = createWriteStream(join(__dirname, logFileName), { flags: 'w' });
 console.error(`Logging to ${join(__dirname, logFileName)}`);
 
-// Log levels with numeric values for filtering
-export enum LogLevel {
-  TRACE = 0,
-  DEBUG = 1,
-  INFO = 2,
-  WARN = 3,
-  ERROR = 4,
-}
-
-// Parse LOG_LEVEL environment variable or command line argument
-const parseLogLevel = (levelStr: string | undefined): LogLevel => {
-  if (!levelStr) return LogLevel.ERROR; // Default to ERROR if not specified
-  
-  switch (levelStr.toUpperCase()) {
-    case 'TRACE': return LogLevel.TRACE;
-    case 'DEBUG': return LogLevel.DEBUG;
-    case 'INFO': return LogLevel.INFO;
-    case 'WARN': return LogLevel.WARN;
-    case 'ERROR': return LogLevel.ERROR;
-    default:
-      console.error(`Invalid LOG_LEVEL: ${levelStr}, defaulting to ERROR`);
-      return LogLevel.ERROR;
-  }
-};
-
-// Parse command line arguments for LOG_LEVEL
-const args = process.argv.slice(2);
-let argLogLevel: string | undefined;
-for (let i = 0; i < args.length; i++) {
-  if (args[i] === '--env' && i + 1 < args.length) {
-    const [key, value] = args[i + 1].split('=');
-    if (key === 'LOG_LEVEL') argLogLevel = value;
-    i++;
-  }
-}
-
-// Get log level from environment variable or command line, default to ERROR
-const configuredLevel = parseLogLevel(argLogLevel || process.env.LOG_LEVEL);
-console.debug(`Log level set to: ${LogLevel[configuredLevel]}`);
+// Use the configured log level from config.ts
+const configuredLevel = config.logLevel;
 
 /**
  * Check if a log level is enabled based on the configured level
