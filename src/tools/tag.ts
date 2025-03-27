@@ -12,6 +12,7 @@ import { clickUpServices } from '../services/shared.js';
 import { Logger } from '../logger.js';
 import { sponsorService } from '../utils/sponsor-service.js';
 import { ClickUpTag } from '../services/clickup/types.js';
+import { processColorCommand } from '../utils/color-processor.js';
 
 // Create a logger specific to tag tools
 const logger = new Logger('TagTools');
@@ -70,6 +71,7 @@ Requirements:
 Notes:
 - New tag will be available for all tasks in the space
 - You can specify background and foreground colors in HEX format (e.g., #FF0000)
+- You can also provide a color command (e.g., "blue tag") to automatically generate colors
 - After creating a tag, you can add it to tasks using add_tag_to_task`,
   inputSchema: {
     type: "object",
@@ -93,6 +95,10 @@ Notes:
       tagFg: {
         type: "string",
         description: "Foreground (text) color for the tag in HEX format (e.g., #FFFFFF). Defaults to #FFFFFF (white)."
+      },
+      colorCommand: {
+        type: "string",
+        description: "Natural language color command (e.g., 'blue tag', 'dark red background'). When provided, this will override tagBg and tagFg with automatically generated values."
       }
     },
     required: ["tagName"]
@@ -113,10 +119,11 @@ Valid Usage:
 Requirements:
 - tagName: REQUIRED
 - EITHER spaceId OR spaceName: REQUIRED
-- At least one of newTagName, tagBg, or tagFg must be provided
+- At least one of newTagName, tagBg, tagFg, or colorCommand must be provided
 
 Notes:
 - Changes to the tag will apply to all tasks in the space that use this tag
+- You can provide a color command (e.g., "blue tag") to automatically generate colors
 - You cannot partially update a tag - provide all properties you want to keep`,
   inputSchema: {
     type: "object",
@@ -144,6 +151,10 @@ Notes:
       tagFg: {
         type: "string",
         description: "New foreground (text) color for the tag in HEX format (e.g., #FFFFFF)."
+      },
+      colorCommand: {
+        type: "string",
+        description: "Natural language color command (e.g., 'blue tag', 'dark red background'). When provided, this will override tagBg and tagFg with automatically generated values."
       }
     },
     required: ["tagName"]
@@ -448,8 +459,21 @@ export async function createSpaceTag(params: {
   tagName: string;
   tagBg?: string;
   tagFg?: string;
+  colorCommand?: string;
 }) {
-  const { spaceId, spaceName, tagName, tagBg = '#000000', tagFg = '#ffffff' } = params;
+  let { spaceId, spaceName, tagName, tagBg = '#000000', tagFg = '#ffffff', colorCommand } = params;
+  
+  // Process color command if provided
+  if (colorCommand) {
+    const colors = processColorCommand(colorCommand);
+    if (colors) {
+      tagBg = colors.background;
+      tagFg = colors.foreground;
+      logger.info(`Processed color command: "${colorCommand}" → BG: ${tagBg}, FG: ${tagFg}`);
+    } else {
+      logger.warn(`Could not process color command: "${colorCommand}". Using default colors.`);
+    }
+  }
   
   if (!tagName) {
     logger.error('createSpaceTag called without tagName');
@@ -471,7 +495,7 @@ export async function createSpaceTag(params: {
     };
   }
 
-  logger.info('Creating tag in space', { spaceId, spaceName, tagName });
+  logger.info('Creating tag in space', { spaceId, spaceName, tagName, tagBg, tagFg });
   
   try {
     // If spaceName is provided, we need to resolve it to an ID
@@ -546,8 +570,22 @@ export async function updateSpaceTag(params: {
   newTagName?: string;
   tagBg?: string;
   tagFg?: string;
+  colorCommand?: string;
 }) {
-  const { spaceId, spaceName, tagName, newTagName, tagBg, tagFg } = params;
+  const { spaceId, spaceName, tagName, newTagName, colorCommand } = params;
+  let { tagBg, tagFg } = params;
+  
+  // Process color command if provided
+  if (colorCommand) {
+    const colors = processColorCommand(colorCommand);
+    if (colors) {
+      tagBg = colors.background;
+      tagFg = colors.foreground;
+      logger.info(`Processed color command: "${colorCommand}" → BG: ${tagBg}, FG: ${tagFg}`);
+    } else {
+      logger.warn(`Could not process color command: "${colorCommand}". Using default colors.`);
+    }
+  }
   
   if (!tagName) {
     logger.error('updateSpaceTag called without tagName');
@@ -570,17 +608,17 @@ export async function updateSpaceTag(params: {
   }
   
   // Make sure there's at least one property to update
-  if (!newTagName && !tagBg && !tagFg) {
+  if (!newTagName && !tagBg && !tagFg && !colorCommand) {
     logger.error('updateSpaceTag called without properties to update');
     return {
       success: false,
       error: {
-        message: 'At least one property (newTagName, tagBg, or tagFg) must be provided'
+        message: 'At least one property (newTagName, tagBg, tagFg, or colorCommand) must be provided'
       }
     };
   }
 
-  logger.info('Updating tag in space', { spaceId, spaceName, tagName });
+  logger.info('Updating tag in space', { spaceId, spaceName, tagName, newTagName, tagBg, tagFg });
   
   try {
     // If spaceName is provided, we need to resolve it to an ID
