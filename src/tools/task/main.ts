@@ -27,6 +27,10 @@ import {
   deleteBulkTasksTool
 } from './bulk-operations.js';
 
+import {
+  getWorkspaceTasksTool
+} from './workspace-operations.js';
+
 // Import handlers
 import {
   createTaskHandler,
@@ -41,8 +45,13 @@ import {
   createBulkTasksHandler,
   updateBulkTasksHandler,
   moveBulkTasksHandler,
-  deleteBulkTasksHandler
+  deleteBulkTasksHandler,
+  getWorkspaceTasksHandler
 } from './handlers.js';
+
+// Import shared services
+import { clickUpServices } from '../../services/shared.js';
+const { task: taskService } = clickUpServices;
 
 //=============================================================================
 // HANDLER WRAPPER UTILITY
@@ -118,6 +127,16 @@ export const handleDeleteBulkTasks = createHandlerWrapper(deleteBulkTasksHandler
 }));
 
 //=============================================================================
+// WORKSPACE TASK OPERATIONS - HANDLER IMPLEMENTATIONS
+//=============================================================================
+
+export const handleGetWorkspaceTasks = createHandlerWrapper(
+  // This adapts the new handler signature to match what createHandlerWrapper expects
+  (params) => getWorkspaceTasksHandler(taskService, params),
+  (response) => response // Pass through the response as is
+);
+
+//=============================================================================
 // TOOL DEFINITIONS AND HANDLERS EXPORT
 //=============================================================================
 
@@ -138,5 +157,8 @@ export const taskTools = [
   { definition: createBulkTasksTool, handler: handleCreateBulkTasks },
   { definition: updateBulkTasksTool, handler: handleUpdateBulkTasks },
   { definition: moveBulkTasksTool, handler: handleMoveBulkTasks },
-  { definition: deleteBulkTasksTool, handler: handleDeleteBulkTasks }
+  { definition: deleteBulkTasksTool, handler: handleDeleteBulkTasks },
+  
+  // Team task operations
+  { definition: getWorkspaceTasksTool, handler: handleGetWorkspaceTasks }
 ];

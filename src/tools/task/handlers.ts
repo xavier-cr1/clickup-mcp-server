@@ -20,6 +20,8 @@ import {
   resolveListIdWithValidation,
   formatTaskData
 } from './utilities.js';
+import { TaskService } from '../../services/clickup/task.js';
+import { ExtendedTaskFilters } from '../../services/clickup/types.js';
 
 // Use shared services instance
 const { task: taskService, list: listService } = clickUpServices;
@@ -218,6 +220,68 @@ export async function createTaskCommentHandler(params) {
     
     // Otherwise, rethrow the original error
     throw error;
+  }
+}
+
+/**
+ * Handler for getting workspace tasks with filtering
+ */
+export async function getWorkspaceTasksHandler(
+  taskService: TaskService,
+  params: Record<string, any>
+): Promise<Record<string, any>> {
+  try {
+    // Require at least one filter parameter
+    const hasFilter = [
+      'tags',
+      'list_ids',
+      'folder_ids', 
+      'space_ids',
+      'statuses',
+      'assignees',
+      'date_created_gt',
+      'date_created_lt',
+      'date_updated_gt',
+      'date_updated_lt',
+      'due_date_gt',
+      'due_date_lt'
+    ].some(key => params[key] !== undefined);
+
+    if (!hasFilter) {
+      throw new Error('At least one filter parameter is required (tags, list_ids, folder_ids, space_ids, statuses, assignees, or date filters)');
+    }
+
+    // Create filter object from parameters
+    const filters: ExtendedTaskFilters = {
+      tags: params.tags,
+      list_ids: params.list_ids,
+      folder_ids: params.folder_ids,
+      space_ids: params.space_ids,
+      statuses: params.statuses,
+      include_closed: params.include_closed,
+      include_archived_lists: params.include_archived_lists,
+      include_closed_lists: params.include_closed_lists,
+      archived: params.archived,
+      order_by: params.order_by,
+      reverse: params.reverse,
+      due_date_gt: params.due_date_gt,
+      due_date_lt: params.due_date_lt,
+      date_created_gt: params.date_created_gt,
+      date_created_lt: params.date_created_lt,
+      date_updated_gt: params.date_updated_gt,
+      date_updated_lt: params.date_updated_lt,
+      assignees: params.assignees,
+      page: params.page,
+      detail_level: params.detail_level || 'detailed'
+    };
+
+    // Get tasks with adaptive response format support
+    const response = await taskService.getWorkspaceTasks(filters);
+
+    // Return the response without adding the redundant _note field
+    return response;
+  } catch (error) {
+    throw new Error(`Failed to get workspace tasks: ${error.message}`);
   }
 }
 

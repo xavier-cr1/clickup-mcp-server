@@ -20,10 +20,16 @@ import {
   ClickUpComment,
   ClickUpList,
   TaskPriority,
-  ClickUpTaskAttachment
+  ClickUpTaskAttachment,
+  TeamTasksResponse,
+  TaskSummary,
+  WorkspaceTasksResponse,
+  DetailedTaskResponse,
+  ExtendedTaskFilters
 } from './types.js';
 import { ListService } from './list.js';
 import { WorkspaceService } from './workspace.js';
+import { estimateTokensFromObject, wouldExceedTokenLimit } from '../../utils/token-utils.js';
 
 export class TaskService extends BaseClickUpService {
   private listService: ListService;
@@ -88,6 +94,24 @@ export class TaskService extends BaseClickUpService {
     if (filters.assignees && filters.assignees.length > 0) {
       filters.assignees.forEach(assignee => params.append('assignees[]', assignee));
     }
+    
+    // Team tasks endpoint specific parameters
+    if (filters.tags && filters.tags.length > 0) {
+      filters.tags.forEach(tag => params.append('tags[]', tag));
+    }
+    if (filters.list_ids && filters.list_ids.length > 0) {
+      filters.list_ids.forEach(id => params.append('list_ids[]', id));
+    }
+    if (filters.folder_ids && filters.folder_ids.length > 0) {
+      filters.folder_ids.forEach(id => params.append('folder_ids[]', id));
+    }
+    if (filters.space_ids && filters.space_ids.length > 0) {
+      filters.space_ids.forEach(id => params.append('space_ids[]', id));
+    }
+    if (filters.archived !== undefined) params.append('archived', String(filters.archived));
+    if (filters.include_closed_lists !== undefined) params.append('include_closed_lists', String(filters.include_closed_lists));
+    if (filters.include_archived_lists !== undefined) params.append('include_archived_lists', String(filters.include_archived_lists));
+    if (filters.include_compact_time_entries !== undefined) params.append('include_compact_time_entries', String(filters.include_compact_time_entries));
     
     // Date filters
     if (filters.due_date_gt) params.append('due_date_gt', String(filters.due_date_gt));
@@ -699,5 +723,138 @@ export class TaskService extends BaseClickUpService {
     } catch (error) {
       throw this.handleError(error, `Failed to upload attachment from URL to task ${taskId}`);
     }
+  }
+
+  /**
+   * Format task data for summary view
+   * @param task The task to format
+   * @returns TaskSummary object
+   */
+  private formatTaskSummary(task: ClickUpTask): TaskSummary {
+    return {
+      id: task.id,
+      name: task.name,
+      status: task.status.status,
+      list: {
+        id: task.list.id,
+        name: task.list.name
+      },
+      due_date: task.due_date,
+      url: task.url,
+      priority: this.extractPriorityValue(task),
+      tags: task.tags.map(tag => ({
+        name: tag.name,
+        tag_bg: tag.tag_bg,
+        tag_fg: tag.tag_fg
+      }))
+    };
+  }
+
+  /**
+   * Estimates token count for a task in JSON format
+   * @param task ClickUp task
+   * @returns Estimated token count
+   */
+  private estimateTaskTokens(task: ClickUpTask): number {
+    return estimateTokensFromObject(task);
+  }
+
+  /**
+   * Get filtered tasks across the entire team/workspace using tags and other filters
+   * @param filters Task filters to apply including tags, list/folder/space filtering
+   * @returns Either a DetailedTaskResponse or WorkspaceTasksResponse depending on detail_level
+   */
+  async getWorkspaceTasks(filters: ExtendedTaskFilters = {}): Promise<DetailedTaskResponse | WorkspaceTasksResponse> {
+    try {
+      this.logOperation('getWorkspaceTasks', { filters });
+      
+      const params = this.buildTaskFilterParams(filters);
+      const response = await this.client.get<TeamTasksResponse>(`/team/${this.teamId}/task`, { 
+        params 
+      });
+
+      const tasks = response.data.tasks;
+      const totalCount = tasks.length; // Note: This is just the current page count
+      const hasMore = totalCount === 100; // ClickUp returns max 100 tasks per page
+      const nextPage = (filters.page || 0) + 1;
+
+      // If the estimated token count exceeds 50,000 or detail_level is 'summary',
+      // return summary format for efficiency and to avoid hitting token limits
+      const TOKEN_LIMIT = 50000;
+      
+      // Estimate tokens for the full response
+      let tokensExceedLimit = false;
+      
+      if (filters.detail_level !== 'summary' && tasks.length > 0) {
+        // We only need to check token count if detailed was requested
+        // For summary requests, we always return summary format
+        
+        // First check with a sample task - if one task exceeds the limit, we definitely need summary
+        const sampleTask = tasks[0];
+        
+        // Check if all tasks would exceed the token limit
+        const estimatedTokensPerTask = this.estimateTaskTokens(sampleTask);
+        const estimatedTotalTokens = estimatedTokensPerTask * tasks.length;
+        
+        // Add 10% overhead for the response wrapper
+        tokensExceedLimit = estimatedTotalTokens * 1.1 > TOKEN_LIMIT;
+        
+        // Double-check with more precise estimation if we're close to the limit
+        if (!tokensExceedLimit && estimatedTotalTokens * 1.1 > TOKEN_LIMIT * 0.8) {
+          // More precise check - build a representative sample and extrapolate
+          tokensExceedLimit = wouldExceedTokenLimit(
+            { tasks, total_count: totalCount, has_more: hasMore, next_page: nextPage },
+            TOKEN_LIMIT
+          );
+        }
+      }
+
+      // Determine if we should return summary or detailed based on request and token limit
+      const shouldUseSummary = filters.detail_level === 'summary' || tokensExceedLimit;
+
+      this.logOperation('getWorkspaceTasks', { 
+        totalTasks: tasks.length, 
+        estimatedTokens: tasks.reduce((count, task) => count + this.estimateTaskTokens(task), 0), 
+        usingDetailedFormat: !shouldUseSummary,
+        requestedFormat: filters.detail_level || 'auto'
+      });
+
+      if (shouldUseSummary) {
+        return {
+          summaries: tasks.map(task => this.formatTaskSummary(task)),
+          total_count: totalCount,
+          has_more: hasMore,
+          next_page: nextPage
+        };
+      }
+
+      return {
+        tasks,
+        total_count: totalCount,
+        has_more: hasMore,
+        next_page: nextPage
+      };
+    } catch (error) {
+      this.logOperation('getWorkspaceTasks', { error: error.message, status: error.response?.status });
+      throw this.handleError(error, 'Failed to get workspace tasks');
+    }
+  }
+
+  /**
+   * Get task summaries for lightweight retrieval
+   * @param filters Task filters to apply
+   * @returns WorkspaceTasksResponse with task summaries
+   */
+  async getTaskSummaries(filters: TaskFilters = {}): Promise<WorkspaceTasksResponse> {
+    return this.getWorkspaceTasks({ ...filters, detail_level: 'summary' }) as Promise<WorkspaceTasksResponse>;
+  }
+
+  /**
+   * Get detailed task data
+   * @param filters Task filters to apply
+   * @returns DetailedTaskResponse with full task data
+   */
+  async getTaskDetails(filters: TaskFilters = {}): Promise<DetailedTaskResponse> {
+    return this.getWorkspaceTasks({ ...filters, detail_level: 'detailed' }) as Promise<DetailedTaskResponse>;
   }
 } 
