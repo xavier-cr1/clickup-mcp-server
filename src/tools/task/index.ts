@@ -73,6 +73,5 @@ export {
   validateTaskUpdateData,
   validateBulkTasks,
   parseBulkOptions,
-  resolveTaskIdWithValidation,
   resolveListIdWithValidation
 } from './utilities.js'; 

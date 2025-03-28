@@ -11,13 +11,43 @@ import { clickUpServices } from '../services/shared.js';
 import { findListIDByName } from '../tools/list.js';
 
 /**
- * Resolve a list ID from either a direct ID or list name
+ * Check if a task name matches search criteria
  * 
- * @param listId Optional direct list ID
- * @param listName Optional list name to resolve
- * @param workspaceService Workspace service to use for lookup
- * @returns Resolved list ID
- * @throws Error if neither listId nor listName is provided, or if list name can't be resolved
+ * Performs flexible case-insensitive and emoji-aware text matching
+ * Used by multiple components for consistent name matching behavior
+ */
+export function isNameMatch(taskName: string, searchTerm: string): boolean {
+  const normalizedTask = taskName.toLowerCase().trim();
+  const normalizedSearch = searchTerm.toLowerCase().trim();
+  
+  // Handle empty strings - don't match empty task names
+  if (normalizedTask === '') return false;
+  if (normalizedSearch === '') return false;
+  
+  // Exact match check
+  if (normalizedTask === normalizedSearch) return true;
+  
+  // Substring match check
+  if (normalizedTask.includes(normalizedSearch) || normalizedSearch.includes(normalizedTask)) return true;
+  
+  // Handle emoji characters in names
+  if (/[\p{Emoji}]/u.test(normalizedSearch) || /[\p{Emoji}]/u.test(normalizedTask)) {
+    const taskWithoutEmoji = normalizedTask.replace(/[\p{Emoji}]/gu, '').trim();
+    const searchWithoutEmoji = normalizedSearch.replace(/[\p{Emoji}]/gu, '').trim();
+    
+    // Don't match if either becomes empty after emoji removal
+    if (taskWithoutEmoji === '' || searchWithoutEmoji === '') return false;
+    
+    return taskWithoutEmoji === searchWithoutEmoji ||
+           taskWithoutEmoji.includes(searchWithoutEmoji) ||
+           searchWithoutEmoji.includes(taskWithoutEmoji);
+  }
+  
+  return false;
+}
+
+/**
+ * Resolve a list ID from either a direct ID or list name
  */
 export async function resolveListId(
   listId?: string,
@@ -40,50 +70,4 @@ export async function resolveListId(
   
   // If neither is provided, throw an error
   throw new Error("Either listId or listName must be provided");
-}
-
-/**
- * Resolve a task ID from either a direct ID or task name + list info
- * 
- * @param taskId Optional direct task ID
- * @param taskName Optional task name to resolve
- * @param listId Optional list ID for task lookup
- * @param listName Optional list name for task lookup
- * @param taskService Task service to use for lookup
- * @returns Resolved task ID
- * @throws Error if parameters are insufficient or task can't be found
- */
-export async function resolveTaskId(
-  taskId?: string,
-  taskName?: string,
-  listId?: string,
-  listName?: string,
-  taskService = clickUpServices.task
-): Promise<string> {
-  // If task ID is directly provided, use it
-  if (taskId) {
-    return taskId;
-  }
-  
-  // If task name is provided, we need list info to find it
-  if (taskName) {
-    // We need either listId or listName to find a task by name
-    if (!listId && !listName) {
-      throw new Error(`List name or ID is required when using task name for task "${taskName}"`);
-    }
-    
-    // Get list ID
-    const targetListId = await resolveListId(listId, listName);
-    
-    // Find the task in the list
-    const foundTask = await taskService.findTaskByName(targetListId, taskName);
-    if (!foundTask) {
-      throw new Error(`Task "${taskName}" not found in list`);
-    }
-    
-    return foundTask.id;
-  }
-  
-  // If neither is provided, throw an error
-  throw new Error("Either taskId or taskName must be provided");
 } 

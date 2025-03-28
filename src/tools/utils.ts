@@ -14,11 +14,11 @@ import { clickUpServices } from '../services/shared.js';
 export { 
   getRelativeTimestamp,
   parseDueDate,
-  formatDueDate
+  formatDueDate,
+  formatRelativeTime
 } from '../utils/date-utils.js';
 
 // Re-export resolver utilities
 export {
-  resolveListId,
-  resolveTaskId
+  resolveListId
 } from '../utils/resolver-utils.js'; 

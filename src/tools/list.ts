@@ -13,12 +13,9 @@ import {
   CreateListData, 
   ClickUpList
 } from '../services/clickup/types.js';
-import { clickUpServices } from '../services/shared.js';
+import { listService, workspaceService } from '../services/shared.js';
 import config from '../config.js';
 import { sponsorService } from '../utils/sponsor-service.js';
-
-// Use shared services instance
-const { list: listService, workspace: workspaceService } = clickUpServices;
 
 /**
  * Tool definition for creating a list directly in a space

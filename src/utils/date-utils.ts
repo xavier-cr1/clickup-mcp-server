@@ -269,4 +269,36 @@ export function getTodayRange(): { start: number, end: number } {
     start: getStartOfDay(),
     end: getEndOfDay()
   };
+}
+
+/**
+ * Format a date for display in errors and messages
+ * @param timestamp The timestamp to format
+ * @returns A human-readable relative time (e.g., "2 hours ago")
+ */
+export function formatRelativeTime(timestamp: string | number): string {
+  if (!timestamp) return 'Unknown';
+  
+  const timestampNum = typeof timestamp === 'string' ? parseInt(timestamp, 10) : timestamp;
+  const now = Date.now();
+  const diffMs = now - timestampNum;
+  
+  // Convert to appropriate time unit
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 60) return `${diffSec} seconds ago`;
+  
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin} minutes ago`;
+  
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour} hours ago`;
+  
+  const diffDays = Math.floor(diffHour / 24);
+  if (diffDays < 30) return `${diffDays} days ago`;
+  
+  const diffMonths = Math.floor(diffDays / 30);
+  if (diffMonths < 12) return `${diffMonths} months ago`;
+  
+  const diffYears = Math.floor(diffMonths / 12);
+  return `${diffYears} years ago`;
 } 

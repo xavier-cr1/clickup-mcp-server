@@ -9,13 +9,12 @@
  */
 
 import { 
-  ClickUpTask, 
-  TaskPriority, 
-  UpdateTaskData
+  ClickUpTask
 } from '../../services/clickup/types.js';
 import { BatchProcessingOptions } from '../../utils/concurrency-utils.js';
 import { formatDueDate } from '../utils.js';
 import { clickUpServices } from '../../services/shared.js';
+import { findListIDByName } from '../../tools/list.js';
 
 // Use shared services instance for ID resolution
 const { workspace: workspaceService } = clickUpServices;
@@ -82,14 +81,22 @@ export function formatTaskData(task: ClickUpTask, additional: any = {}) {
 /**
  * Validates task identification parameters
  * Ensures either taskId, customTaskId, or both taskName and listName are provided
+ * When useGlobalLookup is true, allows taskName without listName
  */
-export function validateTaskIdentification(taskId?: string, taskName?: string, listName?: string, customTaskId?: string): void {
+export function validateTaskIdentification(
+  taskId?: string, 
+  taskName?: string, 
+  listName?: string, 
+  customTaskId?: string,
+  useGlobalLookup = true
+): void {
   if (!taskId && !taskName && !customTaskId) {
     throw new Error("Either taskId, customTaskId, or taskName must be provided");
   }
   
-  if (!taskId && !customTaskId && taskName && !listName) {
-    throw new Error("listName is required when using taskName");
+  // When global lookup is not enabled, we need list context for task name lookup
+  if (!useGlobalLookup && !taskId && !customTaskId && taskName && !listName) {
+    throw new Error("listName is required when using taskName and global lookup is disabled");
   }
 }
 
@@ -166,84 +173,6 @@ export function isCustomTaskId(id: string): boolean {
   return customIdPattern.test(id);
 }
 
-//=============================================================================
-// ID RESOLUTION UTILITIES
-//=============================================================================
-
-/**
- * Resolves a task ID from direct ID, custom ID, or name
- * Handles validation and throws appropriate errors
- */
-export async function resolveTaskIdWithValidation(
-  taskId?: string, 
-  taskName?: string, 
-  listName?: string,
-  customTaskId?: string
-): Promise<string> {
-  // Validate parameters
-  validateTaskIdentification(taskId, taskName, listName, customTaskId);
-  
-  // If customTaskId is explicitly provided, use it
-  if (customTaskId) {
-    const { task: taskService } = clickUpServices;
-    try {
-      // First try to get the task by custom ID
-      // If listName is provided, we can also look up in a specific list for better performance
-      let listId: string | undefined;
-      if (listName) {
-        listId = await resolveListIdWithValidation(undefined, listName);
-      }
-      
-      // Look up by custom ID
-      const foundTask = await taskService.getTaskByCustomId(customTaskId, listId);
-      return foundTask.id;
-    } catch (error) {
-      throw new Error(`Task with custom ID "${customTaskId}" not found`);
-    }
-  }
-  
-  // If taskId is provided, check if it looks like a custom ID
-  if (taskId) {
-    if (isCustomTaskId(taskId)) {
-      console.log(`Detected task ID "${taskId}" as a custom ID, using custom ID lookup`);
-      // If it looks like a custom ID, try to get it as a custom ID first
-      const { task: taskService } = clickUpServices;
-      try {
-        // Look up by custom ID
-        let listId: string | undefined;
-        if (listName) {
-          listId = await resolveListIdWithValidation(undefined, listName);
-        }
-        
-        const foundTask = await taskService.getTaskByCustomId(taskId, listId);
-        return foundTask.id;
-      } catch (error) {
-        // If it fails as a custom ID, try as a regular ID
-        console.log(`Failed to find task with custom ID "${taskId}", falling back to regular ID`);
-        return taskId;
-      }
-    }
-    
-    // Regular task ID
-    return taskId;
-  }
-  
-  // At this point we know we have taskName and listName (validation ensures this)
-  
-  // Find the list ID from its name
-  const listId = await resolveListIdWithValidation(undefined, listName!);
-  
-  // Find the task in the list
-  const { task: taskService } = clickUpServices;
-  const foundTask = await taskService.findTaskByName(listId, taskName!);
-  
-  if (!foundTask) {
-    throw new Error(`Task "${taskName}" not found in list "${listName}"`);
-  }
-  
-  return foundTask.id;
-}
-
 /**
  * Resolves a list ID from either direct ID or name
  * Handles validation and throws appropriate errors
@@ -256,10 +185,7 @@ export async function resolveListIdWithValidation(listId?: string, listName?: st
   if (listId) return listId;
   
   // At this point we know we have listName (validation ensures this)
-  
-  // Find the list ID from its name
-  const hierarchy = await workspaceService.getWorkspaceHierarchy();
-  const listInfo = workspaceService.findIDByNameInHierarchy(hierarchy, listName!, 'list');
+  const listInfo = await findListIDByName(workspaceService, listName!);
   
   if (!listInfo) {
     throw new Error(`List "${listName}" not found`);

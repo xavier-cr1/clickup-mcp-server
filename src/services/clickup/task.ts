@@ -33,6 +33,8 @@ import {
 import { ListService } from './list.js';
 import { WorkspaceService } from './workspace.js';
 import { estimateTokensFromObject, wouldExceedTokenLimit } from '../../utils/token-utils.js';
+import { isNameMatch } from '../../utils/resolver-utils.js';
+import { findListIDByName } from '../../tools/list.js';
 
 export class TaskService extends BaseClickUpService {
   private listService: ListService;
@@ -177,46 +179,8 @@ export class TaskService extends BaseClickUpService {
    * @returns Matching task or null
    */
   private findMatchingTask(tasks: ClickUpTask[], taskName: string): ClickUpTask | null {
-    // Normalize the search term
-    const normalizedSearchTerm = taskName.toLowerCase().trim();
-    
-    // First try exact match
-    let matchingTask = tasks.find(task => 
-      task.name.toLowerCase().trim() === normalizedSearchTerm
-    );
-    
-    // If no exact match, try substring match
-    if (!matchingTask) {
-      matchingTask = tasks.find(task => 
-        task.name.toLowerCase().trim().includes(normalizedSearchTerm) ||
-        normalizedSearchTerm.includes(task.name.toLowerCase().trim())
-      );
-    }
-    
-    // If still no match and there are emoji characters, try matching without emoji
-    if (!matchingTask && /[\p{Emoji}]/u.test(normalizedSearchTerm)) {
-      matchingTask = this.findMatchingTaskWithoutEmoji(tasks, normalizedSearchTerm);
-    }
-    
-    return matchingTask || null;
-  }
-  
-  /**
-   * Find matching task with emoji characters removed
-   * @param tasks List of tasks to search
-   * @param searchTerm Search term (with emoji)
-   * @returns Matching task or null
-   */
-  private findMatchingTaskWithoutEmoji(tasks: ClickUpTask[], searchTerm: string): ClickUpTask | null {
-    // Remove emoji and try again (simple approximation)
-    const withoutEmoji = searchTerm.replace(/[\p{Emoji}]/gu, '').trim();
-    
-    return tasks.find(task => {
-      const taskNameWithoutEmoji = task.name.toLowerCase().replace(/[\p{Emoji}]/gu, '').trim();
-      return taskNameWithoutEmoji === withoutEmoji ||
-        taskNameWithoutEmoji.includes(withoutEmoji) ||
-        withoutEmoji.includes(taskNameWithoutEmoji);
-    }) || null;
+    // Use the shared isNameMatch utility function
+    return tasks.find(task => isNameMatch(task.name, taskName)) || null;
   }
   
   /**
@@ -859,5 +823,353 @@ export class TaskService extends BaseClickUpService {
    */
   async getTaskDetails(filters: TaskFilters = {}): Promise<DetailedTaskResponse> {
     return this.getWorkspaceTasks({ ...filters, detail_level: 'detailed' }) as Promise<DetailedTaskResponse>;
+  }
+
+  /**
+   * Unified method for finding tasks by ID or name with consistent handling of global lookup
+   * 
+   * This method provides a single entry point for all task lookup operations:
+   * - Direct lookup by task ID (regular or custom)
+   * - Lookup by task name within a specific list
+   * - Global lookup by task name across the entire workspace
+   * 
+   * @param options Lookup options with the following parameters:
+   *   - taskId: Optional task ID for direct lookup
+   *   - customTaskId: Optional custom task ID for direct lookup
+   *   - taskName: Optional task name to search for
+   *   - listId: Optional list ID to scope the search
+   *   - listName: Optional list name to scope the search
+   *   - allowMultipleMatches: Whether to return all matches instead of throwing an error
+   *   - useSmartDisambiguation: Whether to automatically select the most recently updated task
+   *   - includeFullDetails: Whether to include full task details (true) or just task summaries (false)
+   *   - includeListContext: Whether to include list/folder/space context with results
+   * @returns Either a single task or an array of tasks depending on options
+   * @throws Error if task cannot be found or if multiple matches are found when not allowed
+   */
+  async findTasks({
+    taskId,
+    customTaskId,
+    taskName,
+    listId,
+    listName,
+    allowMultipleMatches = false,
+    useSmartDisambiguation = false,
+    includeFullDetails = true,
+    includeListContext = true
+  }: {
+    taskId?: string;
+    customTaskId?: string;
+    taskName?: string;
+    listId?: string;
+    listName?: string;
+    allowMultipleMatches?: boolean;
+    useSmartDisambiguation?: boolean;
+    includeFullDetails?: boolean;
+    includeListContext?: boolean;
+  }): Promise<ClickUpTask | ClickUpTask[] | null> {
+    try {
+      this.logOperation('findTasks', { 
+        taskId, 
+        customTaskId, 
+        taskName, 
+        listId, 
+        listName,
+        allowMultipleMatches,
+        useSmartDisambiguation
+      });
+      
+      // Case 1: Direct task ID lookup (highest priority)
+      if (taskId) {
+        // Check if it looks like a custom ID
+        if (taskId.includes('-') && /^[A-Z]+\-\d+$/.test(taskId)) {
+          this.logOperation('findTasks', { detectedCustomId: taskId });
+          
+          try {
+            // Try to get it as a custom ID first
+            let resolvedListId: string | undefined;
+            if (listId) {
+              resolvedListId = listId;
+            } else if (listName) {
+              const listInfo = await findListIDByName(this.workspaceService!, listName);
+              if (listInfo) {
+                resolvedListId = listInfo.id;
+              }
+            }
+            
+            const foundTask = await this.getTaskByCustomId(taskId, resolvedListId);
+            return foundTask;
+          } catch (error) {
+            // If it fails as a custom ID, try as a regular ID
+            this.logOperation('findTasks', { 
+              message: `Failed to find task with custom ID "${taskId}", falling back to regular ID`,
+              error: error.message
+            });
+            return await this.getTask(taskId);
+          }
+        }
+        
+        // Regular task ID
+        return await this.getTask(taskId);
+      }
+      
+      // Case 2: Explicit custom task ID lookup
+      if (customTaskId) {
+        let resolvedListId: string | undefined;
+        if (listId) {
+          resolvedListId = listId;
+        } else if (listName) {
+          const listInfo = await findListIDByName(this.workspaceService!, listName);
+          if (listInfo) {
+            resolvedListId = listInfo.id;
+          }
+        }
+        
+        return await this.getTaskByCustomId(customTaskId, resolvedListId);
+      }
+      
+      // Case 3: Task name lookup (requires either list context or global lookup)
+      if (taskName) {
+        // Case 3a: Task name + list context - search in specific list
+        if (listId || listName) {
+          let resolvedListId: string;
+          if (listId) {
+            resolvedListId = listId;
+          } else {
+            const listInfo = await findListIDByName(this.workspaceService!, listName!);
+            if (!listInfo) {
+              throw new Error(`List "${listName}" not found`);
+            }
+            resolvedListId = listInfo.id;
+          }
+          
+          const foundTask = await this.findTaskByName(resolvedListId, taskName);
+          if (!foundTask) {
+            throw new Error(`Task "${taskName}" not found in list`);
+          }
+          
+          return includeFullDetails ? await this.getTask(foundTask.id) : foundTask;
+        }
+        
+        // Case 3b: Task name without list context - global lookup across workspace
+        // Get lightweight task summaries for efficient first-pass filtering
+        const response = await this.getTaskSummaries({});
+        
+        if (!this.workspaceService) {
+          throw new Error("Workspace service required for global task lookup");
+        }
+        
+        // Create an index to efficiently look up list context information
+        const hierarchy = await this.workspaceService.getWorkspaceHierarchy();
+        const listContextMap = new Map<string, { 
+          listId: string, 
+          listName: string, 
+          spaceId: string, 
+          spaceName: string, 
+          folderId?: string, 
+          folderName?: string 
+        }>();
+        
+        // Function to recursively build list context map
+        function buildListContextMap(nodes: any[], spaceId?: string, spaceName?: string, folderId?: string, folderName?: string) {
+          for (const node of nodes) {
+            if (node.type === 'space') {
+              // Process space children
+              if (node.children) {
+                buildListContextMap(node.children, node.id, node.name);
+              }
+            } else if (node.type === 'folder') {
+              // Process folder children
+              if (node.children) {
+                buildListContextMap(node.children, spaceId, spaceName, node.id, node.name);
+              }
+            } else if (node.type === 'list') {
+              // Add list context to map
+              listContextMap.set(node.id, {
+                listId: node.id,
+                listName: node.name,
+                spaceId: spaceId!,
+                spaceName: spaceName!,
+                folderId,
+                folderName
+              });
+            }
+          }
+        }
+        
+        // Build the context map
+        buildListContextMap(hierarchy.root.children);
+        
+        // Find tasks that match the provided name
+        const initialMatches: { id: string, task: any, listContext: any }[] = [];
+        
+        // Process task summaries to find initial matches
+        for (const taskSummary of response.summaries) {
+          if (isNameMatch(taskSummary.name, taskName)) {
+            // Get list context information
+            const listContext = listContextMap.get(taskSummary.list.id);
+            
+            if (listContext) {
+              // Store task summary and context
+              initialMatches.push({
+                id: taskSummary.id,
+                task: taskSummary,
+                listContext
+              });
+            }
+          }
+        }
+        
+        // Handle the no matches case
+        if (initialMatches.length === 0) {
+          throw new Error(`Task "${taskName}" not found in any list across your workspace. Please check the task name and try again.`);
+        }
+        
+        // Handle the single match case - we can return early if we don't need full details
+        if (initialMatches.length === 1 && !useSmartDisambiguation && !includeFullDetails) {
+          const match = initialMatches[0];
+          
+          if (includeListContext) {
+            return {
+              ...match.task,
+              list: {
+                id: match.listContext.listId,
+                name: match.listContext.listName
+              },
+              folder: match.listContext.folderId ? {
+                id: match.listContext.folderId,
+                name: match.listContext.folderName
+              } : undefined,
+              space: {
+                id: match.listContext.spaceId,
+                name: match.listContext.spaceName
+              }
+            };
+          }
+          
+          return match.task;
+        }
+        
+        // For multiple matches or when we need details, fetch full task info
+        const fullMatches: ClickUpTask[] = [];
+        
+        try {
+          // Process in sequence for better reliability
+          for (const match of initialMatches) {
+            const fullTask = await this.getTask(match.id);
+            
+            if (includeListContext) {
+              // Enhance task with context information
+              (fullTask as any).list = {
+                ...fullTask.list,
+                name: match.listContext.listName
+              };
+              
+              if (match.listContext.folderId) {
+                (fullTask as any).folder = {
+                  id: match.listContext.folderId,
+                  name: match.listContext.folderName
+                };
+              }
+              
+              (fullTask as any).space = {
+                id: match.listContext.spaceId,
+                name: match.listContext.spaceName
+              };
+            }
+            
+            fullMatches.push(fullTask);
+          }
+          
+          // Sort by update time for disambiguation
+          if (fullMatches.length > 1) {
+            fullMatches.sort((a, b) => {
+              const aDate = parseInt(a.date_updated || '0', 10);
+              const bDate = parseInt(b.date_updated || '0', 10);
+              return bDate - aDate; // Most recent first
+            });
+          }
+        } catch (error) {
+          this.logOperation('findTasks', { 
+            error: error.message, 
+            message: "Failed to get detailed task information" 
+          });
+          
+          // If detailed fetch fails, use the summaries with context info
+          // This fallback ensures we still return something useful
+          if (allowMultipleMatches) {
+            return initialMatches.map(match => ({
+              ...match.task,
+              list: {
+                id: match.listContext.listId,
+                name: match.listContext.listName
+              },
+              folder: match.listContext.folderId ? {
+                id: match.listContext.folderId,
+                name: match.listContext.folderName
+              } : undefined,
+              space: {
+                id: match.listContext.spaceId,
+                name: match.listContext.spaceName
+              }
+            }));
+          } else {
+            // For single result, return the first match
+            const match = initialMatches[0];
+            return {
+              ...match.task,
+              list: {
+                id: match.listContext.listId,
+                name: match.listContext.listName
+              },
+              folder: match.listContext.folderId ? {
+                id: match.listContext.folderId,
+                name: match.listContext.folderName
+              } : undefined,
+              space: {
+                id: match.listContext.spaceId,
+                name: match.listContext.spaceName
+              }
+            };
+          }
+        }
+        
+        // Return results based on options
+        if (fullMatches.length === 1 || useSmartDisambiguation) {
+          return fullMatches[0]; // Return most recently updated if multiple and smart disambiguation enabled
+        } else if (allowMultipleMatches) {
+          return fullMatches; // Return all matches
+        } else {
+          // Format error message for multiple matches
+          const matchesInfo = fullMatches.map(task => {
+            const listName = task.list?.name || "Unknown list";
+            const folderName = (task as any).folder?.name;
+            const spaceName = (task as any).space?.name || "Unknown space";
+            
+            const updateTime = task.date_updated 
+              ? new Date(parseInt(task.date_updated, 10)).toLocaleString()
+              : "Unknown date";
+              
+            const location = `list "${listName}"${folderName ? ` (folder: "${folderName}")` : ''} (space: "${spaceName}")`;
+            return `- "${task.name}" in ${location} - Updated ${updateTime}`;
+          }).join('\n');
+          
+          throw new Error(`Multiple tasks found with name "${taskName}":\n${matchesInfo}\n\nPlease provide list context to disambiguate or set allowMultipleMatches to true.`);
+        }
+      }
+      
+      // No valid lookup parameters provided
+      throw new Error("At least one of taskId, customTaskId, or taskName must be provided");
+    } catch (error) {
+      if (error.message?.includes('Task "') && error.message?.includes('not found')) {
+        throw error;
+      }
+      
+      if (error.message?.includes('Multiple tasks found')) {
+        throw error;
+      }
+      
+      // Unexpected errors
+      throw this.handleError(error, `Error finding task: ${error.message}`);
+    }
   }
 } 

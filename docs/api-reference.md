@@ -17,7 +17,7 @@ This document provides detailed information about all available tools, their par
 | Tool | Description | Required Parameters | Optional Parameters |
 |------|-------------|-------------------|-------------------|
 | get_tasks | Retrieve tasks from a list | Either `listId` or `listName` | archived, page, order_by, reverse, subtasks, statuses, include_closed, assignees, due_date_gt/lt |
-| get_task | Get single task details | Either `taskId` or `taskName` | `listName`, `subtasks` |
+| get_task | Get single task details with global lookup | Either `taskId` or `taskName` (list context optional) | `listName` (for disambiguation), `subtasks` |
 | get_task_comments | Retrieve comments for a task | Either `taskId` or `taskName` | `listName`, `start`, `startId` |
 | create_task_comment | Add a comment to a task | `commentText` and either `taskId` or (`taskName` + `listName`) | `notifyAll`, `assignee` |
 | attach_task_file | Attach a file to a task | Either `taskId` or `taskName`, and EITHER `file_data` OR `file_url` | `file_name`, `chunk_*` parameters for large files |
@@ -48,6 +48,12 @@ This document provides detailed information about all available tools, their par
   - `startDate`: When work on the task should begin
   - Both support natural language expressions (e.g., "now", "today", "tomorrow at 9am")
   - Date ranges can be specified using `start of today` and `end of today`
+- **Global Task Lookup**:
+  - Find tasks by name across the entire workspace without specifying a list
+  - Smart disambiguation when multiple tasks share the same name
+  - Shows context (list, folder, space) for each matching task
+  - Prioritizes most recently updated task when multiple matches exist
+  - Backward compatible with list-specific lookups
 
 ### Examples
 
@@ -189,6 +195,69 @@ Move the "Bug Fix" task from the "Sprint Backlog" list to "Current Sprint" list
   "sourceListName": "Sprint Backlog",
   "destinationListName": "Current Sprint"
 }
+```
+
+#### Global Task Lookup
+**User Prompt:**
+```
+Get details for task "Roadmap Planning"
+```
+
+**System Response:**
+```json
+{
+  "taskName": "Roadmap Planning"
+}
+```
+
+**Response for Multiple Matches:**
+```json
+{
+  "matches": [
+    {
+      "id": "abc123",
+      "name": "🌐 Website Update",
+      "description": "First instance of Website Update task in Programming list",
+      "list": {
+        "name": "Programming",
+        "id": "123"
+      },
+      "folder": {
+        "name": "Development",
+        "id": "456"
+      },
+      "space": {
+        "name": "Education",
+        "id": "789"
+      },
+      "date_updated": "2024-03-15T10:30:45.000Z"
+    },
+    {
+      "id": "def456",
+      "name": "🌐 Website Update",
+      "description": "Second instance of Website Update task in AI Assistant App list",
+      "list": {
+        "name": "AI Assistant App",
+        "id": "234"
+      },
+      "folder": {
+        "name": "Macrodroid",
+        "id": "567"
+      },
+      "space": {
+        "name": "Custom Space",
+        "id": "890"
+      },
+      "date_updated": "2024-03-10T11:15:20.000Z"
+    }
+  ],
+  "count": 2
+}
+```
+
+**For Disambiguation Resolution:**
+```
+Get details for task "Website Update" in list "AI Assistant App"
 ```
 
 #### Updating Task Status

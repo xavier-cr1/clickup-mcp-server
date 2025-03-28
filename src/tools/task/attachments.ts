@@ -8,25 +8,31 @@
  * with automatic method selection based on file source and size.
  */
 
-import { taskService } from '../../services/shared.js';
-import { validateTaskIdentification, resolveTaskIdWithValidation } from './utilities.js';
-import { sponsorService } from '../../utils/sponsor-service.js';
+import * as fs from 'fs';
+import { promisify } from 'util';
+import { createReadStream } from 'fs';
+import { Stream } from 'stream';
+import { IncomingMessage, request as httpRequest } from 'http';
+import { request as httpsRequest } from 'https';
 import { 
-  TaskAttachmentResponse,
-  ChunkedUploadInitResponse,
-  ChunkedUploadProgressResponse,
-  ClickUpTaskAttachment
+  ClickUpTask, 
+  ClickUpTaskAttachment 
 } from '../../services/clickup/types.js';
+import { clickUpServices } from '../../services/shared.js';
+import { 
+  ChunkSession, 
+  TaskAttachmentResponse, 
+  ChunkedUploadInitResponse, 
+  ChunkedUploadProgressResponse 
+} from './attachments.types.js';
+import { validateTaskIdentification } from './utilities.js';
+import { sponsorService } from '../../utils/sponsor-service.js';
+
+// Use shared services instance
+const { task: taskService } = clickUpServices;
 
 // Session storage for chunked uploads (in-memory for demonstration)
-// In production, this should use a more persistent store
-const chunkSessions = new Map<string, {
-  taskId: string,
-  fileName: string,
-  fileSize: number,
-  chunks: Map<number, Buffer>,
-  timestamp: number
-}>();
+const chunkSessions = new Map<string, ChunkSession>();
 
 // Clean up expired sessions periodically
 setInterval(() => {
@@ -135,7 +141,20 @@ async function attachTaskFileHandler(params: any): Promise<any> {
   }
   
   // Resolve task ID
-  const resolvedTaskId = await resolveTaskIdWithValidation(taskId, taskName, listName);
+  const result = await taskService.findTasks({
+    taskId,
+    taskName,
+    listName,
+    allowMultipleMatches: false,
+    useSmartDisambiguation: true,
+    includeFullDetails: false
+  });
+
+  if (!result || Array.isArray(result)) {
+    throw new Error("Task not found");
+  }
+
+  const resolvedTaskId = result.id;
   
   try {
     // CASE 1: Chunked upload continuation
@@ -296,7 +315,8 @@ async function handleChunkUpload(
     const sortedChunks = Array.from(session.chunks.entries())
       .sort((a, b) => a[0] - b[0]);
     
-    for (const [index, chunk] of sortedChunks) {
+    for (const entry of sortedChunks) {
+      const [index, chunk] = entry;
       chunk.copy(fileData, offset);
       offset += chunk.length;
     }

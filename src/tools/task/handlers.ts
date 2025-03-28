@@ -19,7 +19,6 @@ import {
   validateTaskUpdateData,
   validateBulkTasks,
   parseBulkOptions,
-  resolveTaskIdWithValidation,
   resolveListIdWithValidation,
   formatTaskData
 } from './utilities.js';
@@ -64,11 +63,34 @@ function buildUpdateData(params: any): UpdateTaskData {
 }
 
 /**
- * Process a task identification validation, returning the task ID
+ * Resolves a task ID from various input formats
+ * Smart disambiguation is used for task name lookups
+ * 
+ * @param taskId Direct task ID
+ * @param taskName Task name to search for
+ * @param listName List name for context
+ * @param customTaskId Custom task ID (prefixed format) 
+ * @returns Resolved task ID
  */
-async function getTaskId(taskId?: string, taskName?: string, listName?: string, customTaskId?: string): Promise<string> {
-  validateTaskIdentification(taskId, taskName, listName, customTaskId);
-  return await resolveTaskIdWithValidation(taskId, taskName, listName, customTaskId);
+export async function getTaskId(taskId?: string, taskName?: string, listName?: string, customTaskId?: string): Promise<string> {
+  validateTaskIdentification(taskId, taskName, listName, customTaskId, true);
+  
+  const result = await taskService.findTasks({
+    taskId,
+    customTaskId,
+    taskName,
+    listName,
+    allowMultipleMatches: false,
+    useSmartDisambiguation: true,
+    includeFullDetails: false,
+    includeListContext: false
+  });
+  
+  if (result && !Array.isArray(result)) {
+    return result.id;
+  }
+  
+  throw new Error("Task not found");
 }
 
 /**
@@ -97,11 +119,12 @@ function buildTaskFilters(params: any): TaskFilters {
 
 /**
  * Map tasks for bulk operations, resolving task IDs
+ * Uses smart disambiguation for tasks without list context
  */
 async function mapTaskIds(tasks: any[]): Promise<string[]> {
   return Promise.all(tasks.map(async (task) => {
     validateTaskIdentification(task.taskId, task.taskName, task.listName, task.customTaskId);
-    return await resolveTaskIdWithValidation(task.taskId, task.taskName, task.listName, task.customTaskId);
+    return await getTaskId(task.taskId, task.taskName, task.listName, task.customTaskId);
   }));
 }
 
@@ -190,17 +213,47 @@ export async function duplicateTaskHandler(params) {
  * Handler for getting a task
  */
 export async function getTaskHandler(params) {
-  // resolveTaskIdWithValidation now auto-detects whether taskId is a regular ID or custom ID
-  const taskId = await getTaskId(params.taskId, params.taskName, params.listName, params.customTaskId);
-  
-  // If subtasks parameter is provided and true, use the getTaskWithSubtasks method
-  if (params.subtasks) {
-    const task = await taskService.getTask(taskId);
-    const subtasks = await taskService.getSubtasks(taskId);
-    return { ...task, subtasks };
+  // Use the new unified findTasks method to handle all lookup scenarios
+  try {
+    const result = await taskService.findTasks({
+      taskId: params.taskId,
+      customTaskId: params.customTaskId,
+      taskName: params.taskName,
+      listName: params.listName,
+      allowMultipleMatches: true,
+      useSmartDisambiguation: false,
+      includeFullDetails: true,
+      includeListContext: true
+    });
+
+    // Handle the response based on the result type
+    if (Array.isArray(result)) {
+      // If multiple tasks matched, format them with task count
+      return {
+        matches: result,
+        count: result.length
+      };
+    } else if (result) {
+      // Single task found, check if we need to include subtasks
+      if (params.subtasks) {
+        const subtasks = await taskService.getSubtasks(result.id);
+        return { ...result, subtasks };
+      }
+      
+      // Return the single task
+      return result;
+    } else {
+      throw new Error("Task not found");
+    }
+  } catch (error) {
+    // Enhance error message for non-existent tasks
+    if (params.taskName && error.message.includes('not found')) {
+      throw new Error(`Task "${params.taskName}" not found. Please check the task name and try again.`);
+    }
+    
+    // Pass along other formatted errors
+    throw error;
   }
-  
-  return await taskService.getTask(taskId);
 }
 
 /**
@@ -285,7 +338,8 @@ export async function getWorkspaceTasksHandler(
       throw new Error('At least one filter parameter is required (tags, list_ids, folder_ids, space_ids, statuses, assignees, or date filters)');
     }
 
-    // Create filter object from parameters
+    // For workspace tasks, we'll continue to use the direct getWorkspaceTasks method
+    // since it supports specific workspace-wide filters that aren't part of the unified findTasks
     const filters: ExtendedTaskFilters = {
       tags: params.tags,
       list_ids: params.list_ids,
