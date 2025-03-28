@@ -77,10 +77,10 @@
   - [ ] Test core operations
 
 ## Search Module Implementation
-- [ ] Move search functionality to `task-search.ts`
-  - [ ] Extract findTaskByName method
-  - [ ] Extract findTasks method
-  - [ ] Extract getTaskSummaries and getTaskDetails methods
+- [x] Move search functionality to `task-search.ts`
+  - [x] Extract findTaskByName method
+  - [x] Extract findTasks method
+  - [x] Extract getTaskSummaries and getTaskDetails methods
   - [ ] Optimize search functionality
   - [ ] Test search operations
 
@@ -97,10 +97,10 @@
   - [ ] Test comment operations
 
 ## Index Module Implementation
-- [ ] Create unified TaskService in `task-index.ts`
-  - [ ] Import functionality from all modules
-  - [ ] Create interface for TaskService
-  - [ ] Export complete TaskService
+- [x] Create unified TaskService in `task-index.ts`
+  - [x] Import functionality from all modules
+  - [x] Create interface for TaskService
+  - [x] Export complete TaskService
 
 ## Integration Testing
 - [ ] Ensure all tool handlers work with refactored service
