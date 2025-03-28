@@ -293,6 +293,22 @@ export class BaseClickUpService {
       });
     }
 
+    // Track request metadata
+    let requestMethod = 'unknown';
+    let requestPath = 'unknown';
+    let requestData: any = undefined;
+
+    // Set up interceptor to capture request details
+    const requestInterceptorId = this.client.interceptors.request.use(
+      (config) => {
+        // Capture request metadata
+        requestMethod = config.method?.toUpperCase() || 'unknown';
+        requestPath = config.url || 'unknown';
+        requestData = config.data;
+        return config;
+      }
+    );
+
     const startTime = Date.now();
     try {
       // Execute the request function
@@ -300,10 +316,15 @@ export class BaseClickUpService {
       
       // Debug log for successful requests with timing information
       const duration = Date.now() - startTime;
-      this.logger.debug(`Request completed successfully in ${duration}ms`);
+      this.logger.debug(`Request completed successfully in ${duration}ms`, {
+        method: requestMethod,
+        path: requestPath,
+        duration,
+        responseType: result ? typeof result : 'undefined'
+      });
       
       return result;
-        } catch (error) {
+    } catch (error) {
       // If we hit a rate limit, start processing the queue
       if (error instanceof ClickUpServiceError && error.code === ErrorCode.RATE_LIMIT) {
         this.logger.warn('Rate limit reached, switching to queue mode', {
@@ -326,13 +347,16 @@ export class BaseClickUpService {
               resolve(result);
             } catch (retryError) {
               reject(retryError);
-        }
-      });
-    });
+            }
+          });
+        });
       }
 
       // For other errors, just throw
       throw error;
+    } finally {
+      // Always remove the interceptor
+      this.client.interceptors.request.eject(requestInterceptorId);
     }
   }
 

@@ -58,7 +58,34 @@ export function log(level: 'trace' | 'debug' | 'info' | 'warn' | 'error', messag
   }
   
   const timestamp = new Date().toISOString();
-  const logMessage = `[${timestamp}] [PID:${pid}] ${level.toUpperCase()}: ${message}${data ? '\n' + JSON.stringify(data, null, 2) : ''}`;
+  
+  // Format the log message differently based on the level and data
+  let logMessage = `[${timestamp}] [PID:${pid}] ${level.toUpperCase()}: ${message}`;
+  
+  // Format data differently based on content and log level
+  if (data) {
+    // For debugging and trace levels, try to make the data more readable
+    if (level === 'debug' || level === 'trace') {
+      // If data is a simple object with few properties, format it inline
+      if (typeof data === 'object' && data !== null && !Array.isArray(data) && 
+          Object.keys(data).length <= 4 && Object.keys(data).every(k => 
+            typeof data[k] !== 'object' || data[k] === null)) {
+        const dataStr = Object.entries(data)
+          .map(([k, v]) => `${k}=${v === undefined ? 'undefined' : 
+            (v === null ? 'null' : 
+              (typeof v === 'string' ? `"${v}"` : v))}`)
+          .join(' ');
+        
+        logMessage += ` (${dataStr})`;
+      } else {
+        // For more complex data, keep the JSON format but on new lines
+        logMessage += '\n' + JSON.stringify(data, null, 2);
+      }
+    } else {
+      // For other levels, keep the original JSON format
+      logMessage += '\n' + JSON.stringify(data, null, 2);
+    }
+  }
 
   // When using stdio transport, log to stderr which is captured by host application
   console.error(logMessage);

@@ -173,17 +173,6 @@ export class TaskService extends BaseClickUpService {
   }
 
   /**
-   * Find a matching task by name using different matching strategies
-   * @param tasks List of tasks to search
-   * @param taskName Name to search for
-   * @returns Matching task or null
-   */
-  private findMatchingTask(tasks: ClickUpTask[], taskName: string): ClickUpTask | null {
-    // Use the shared isNameMatch utility function
-    return tasks.find(task => isNameMatch(task.name, taskName)) || null;
-  }
-  
-  /**
    * Create a new task in the specified list
    * @param listId The ID of the list to create the task in
    * @param taskData The data for the new task
@@ -365,7 +354,23 @@ export class TaskService extends BaseClickUpService {
     
     try {
       const tasks = await this.getTasks(listId);
-      return this.findMatchingTask(tasks, taskName);
+      // Find task by exact match first, then case-insensitive, then substring
+      // Exact match
+      let match = tasks.find(task => task.name === taskName);
+      if (match) return match;
+      
+      // Case-insensitive match
+      match = tasks.find(task => 
+        task.name.toLowerCase() === taskName.toLowerCase()
+      );
+      if (match) return match;
+      
+      // Substring match
+      match = tasks.find(task => 
+        task.name.toLowerCase().includes(taskName.toLowerCase())
+      );
+      
+      return match || null;
     } catch (error) {
       throw this.handleError(error, `Failed to find task by name: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -830,8 +835,8 @@ export class TaskService extends BaseClickUpService {
    * 
    * This method provides a single entry point for all task lookup operations:
    * - Direct lookup by task ID (regular or custom)
-   * - Lookup by task name within a specific list
-   * - Global lookup by task name across the entire workspace
+   *   - Lookup by task name within a specific list
+   *   - Global lookup by task name across the entire workspace
    * 
    * @param options Lookup options with the following parameters:
    *   - taskId: Optional task ID for direct lookup
@@ -947,7 +952,13 @@ export class TaskService extends BaseClickUpService {
             throw new Error(`Task "${taskName}" not found in list`);
           }
           
-          return includeFullDetails ? await this.getTask(foundTask.id) : foundTask;
+          // If includeFullDetails is true and we need context not already in the task,
+          // get full details, otherwise return what we already have
+          if (includeFullDetails && (!foundTask.list || !foundTask.list.name || !foundTask.status)) {
+            return await this.getTask(foundTask.id);
+          }
+          
+          return foundTask;
         }
         
         // Case 3b: Task name without list context - global lookup across workspace

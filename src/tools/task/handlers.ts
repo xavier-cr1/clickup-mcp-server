@@ -213,13 +213,67 @@ export async function duplicateTaskHandler(params) {
  * Handler for getting a task
  */
 export async function getTaskHandler(params) {
-  // Use the new unified findTasks method to handle all lookup scenarios
   try {
+    // Direct path for taskId - most efficient
+    if (params.taskId) {
+      const task = await taskService.getTask(params.taskId);
+      
+      // Add subtasks if requested
+      if (params.subtasks) {
+        const subtasks = await taskService.getSubtasks(task.id);
+        return { ...task, subtasks };
+      }
+      
+      return task;
+    }
+    
+    // Direct path for customTaskId - also efficient
+    if (params.customTaskId) {
+      const task = await taskService.getTaskByCustomId(params.customTaskId);
+      
+      // Add subtasks if requested
+      if (params.subtasks) {
+        const subtasks = await taskService.getSubtasks(task.id);
+        return { ...task, subtasks };
+      }
+      
+      return task;
+    }
+    
+    // Special optimized path for taskName + listName combination
+    if (params.taskName && params.listName) {
+      // First, get the list ID
+      const listId = await getListId(null, params.listName);
+      if (!listId) {
+        throw new Error(`List "${params.listName}" not found`);
+      }
+      
+      // Use the ClickUp API to get filtered tasks
+      // Need to get all tasks and filter on client side
+      // This is more efficient than the original approach because it's a dedicated path 
+      // that skips the global lookup framework entirely
+      const allTasks = await taskService.getTasks(listId);
+      
+      // Find the matching task
+      // Extract this to avoid dependency on internal isNameMatch implementation
+      const matchingTask = findTaskByName(allTasks, params.taskName);
+      
+      if (!matchingTask) {
+        throw new Error(`Task "${params.taskName}" not found in list "${params.listName}"`);
+      }
+      
+      // Add subtasks if requested
+      if (params.subtasks) {
+        const subtasks = await taskService.getSubtasks(matchingTask.id);
+        return { ...matchingTask, subtasks };
+      }
+      
+      return matchingTask;
+    }
+    
+    // Fallback to the original global lookup for all other cases
     const result = await taskService.findTasks({
-      taskId: params.taskId,
-      customTaskId: params.customTaskId,
       taskName: params.taskName,
-      listName: params.listName,
       allowMultipleMatches: true,
       useSmartDisambiguation: false,
       includeFullDetails: true,
@@ -254,6 +308,30 @@ export async function getTaskHandler(params) {
     // Pass along other formatted errors
     throw error;
   }
+}
+
+/**
+ * Helper function to find a task by name in an array of tasks
+ */
+function findTaskByName(tasks, name) {
+  if (!tasks || !Array.isArray(tasks) || !name) return null;
+  
+  // Try exact match first
+  let match = tasks.find(task => task.name === name);
+  if (match) return match;
+  
+  // Try case-insensitive match
+  match = tasks.find(task => 
+    task.name.toLowerCase() === name.toLowerCase()
+  );
+  if (match) return match;
+  
+  // Try fuzzy match - looking for name as substring
+  match = tasks.find(task => 
+    task.name.toLowerCase().includes(name.toLowerCase())
+  );
+  
+  return match || null;
 }
 
 /**
