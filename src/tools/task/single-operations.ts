@@ -20,7 +20,6 @@ import { parseDueDate } from '../utils.js';
 import { clickUpServices } from '../../services/shared.js';
 import { 
   formatTaskData,
-  resolveTaskIdWithValidation, 
   resolveListIdWithValidation,
   validateTaskUpdateData,
   validateTaskIdentification,

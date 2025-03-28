@@ -6,6 +6,14 @@
   - Set task start dates with natural language expressions (e.g., "now", "tomorrow at 9am")
   - Support for both creation and updates via `startDate` parameter
   - Proper time handling with `start_date_time` flag
+- Added Global Task Lookup feature:
+  - Find tasks by name across the entire workspace without specifying a list
+  - Smart disambiguation when multiple tasks share the same name
+  - Context-aware results showing list, folder, and space for each match
+  - Default selection of most recently updated task when multiple matches exist
+  - Backward compatible with list-specific lookups
+  - Applied to all task operations: get_task, update_task, delete_task, etc.
+  - Improved error messages with actionable information for disambiguation
 
 ## v0.6.2 (2025-03-27)
 

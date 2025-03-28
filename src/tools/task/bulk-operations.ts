@@ -15,9 +15,13 @@ import { parseDueDate } from '../utils.js';
 import { 
   validateBulkTasks, 
   parseBulkOptions,
-  resolveTaskIdWithValidation,
+  validateTaskIdentification,
+  validateListIdentification,
+  validateTaskUpdateData,
   resolveListIdWithValidation
 } from './utilities.js';
+import { getTaskId } from './handlers.js';
+import { BatchProcessingOptions } from '../../utils/concurrency-utils.js';
 
 // Initialize services
 const { task: taskService } = clickUpServices;
