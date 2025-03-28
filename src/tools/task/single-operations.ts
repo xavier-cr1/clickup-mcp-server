@@ -123,6 +123,10 @@ Notes:
         type: "string",
         description: "Optional due date. Supports Unix timestamps (ms) or natural language like '1 hour from now', 'tomorrow', 'next week', etc."
       },
+      startDate: {
+        type: "string",
+        description: "Optional start date. Supports Unix timestamps (ms) or natural language like 'now', 'start of today', etc."
+      },
       parent: {
         type: "string",
         description: "Optional ID of the parent task. When specified, this task will be created as a subtask of the specified parent task."
@@ -195,6 +199,10 @@ Notes:
       dueDate: {
         type: "string",
         description: "New due date. Supports both Unix timestamps (in milliseconds) and natural language expressions like '1 hour from now', 'tomorrow', 'next week', or '3 days from now'."
+      },
+      startDate: {
+        type: "string",
+        description: "New start date. Supports both Unix timestamps (in milliseconds) and natural language expressions."
       }
     },
     required: []

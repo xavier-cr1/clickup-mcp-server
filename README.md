@@ -6,7 +6,7 @@
 
 A Model Context Protocol (MCP) server for integrating ClickUp tasks with AI applications. This server allows AI agents to interact with ClickUp tasks, spaces, lists, and folders through a standardized protocol.
 
-> 🚧 **Status Update:** Rolling out v0.6.2 which will add Complete Tag Support including natural language tag color commands, Subtasks Support, Custom ID Support, and Logging Fixes
+> 🚧 **Status Update:** Rolling out v0.6.3 will add Complete Tag Support including natural language tag color commands, Subtasks Support, Custom ID Support, Start Date Support on Tasks, and Logging Fixes
 
 ## Setup
 
@@ -56,7 +56,7 @@ Or use this npx command:
 
 | 📝 Task Management | 🏷️ Tag Management |
 |----------------------------|----------------------------|
-| • Create, update, and delete tasks<br>• Move and duplicate tasks anywhere<br>• Support for single and bulk operations<br>• Set due dates with natural language<br>• Create and manage subtasks<br>• Add comments and attachments | • Create, update, and delete space tags<br>• Add and remove tags from tasks<br>• Use natural language color commands<br>• Automatic contrasting foreground colors<br>• View all space tags<br>• Tag-based task organization across workspace |
+| • Create, update, and delete tasks<br>• Move and duplicate tasks anywhere<br>• Support for single and bulk operations<br>• Set start/due dates with natural language<br>• Create and manage subtasks<br>• Add comments and attachments | • Create, update, and delete space tags<br>• Add and remove tags from tasks<br>• Use natural language color commands<br>• Automatic contrasting foreground colors<br>• View all space tags<br>• Tag-based task organization across workspace |
 | 🌳 **Workspace Organization** | ⚡ **Integration Features** |
 | • Navigate spaces, folders, and lists<br>• Create and manage folders<br>• Organize lists within spaces<br>• Create lists in folders<br>• View workspace hierarchy<br>• Efficient path navigation | • Name or ID-based lookups<br>• Case-insensitive matching<br>• Markdown formatting support<br>• Built-in rate limiting<br>• Error handling and validation<br>• Comprehensive API coverage |
 
@@ -65,12 +65,12 @@ Or use this npx command:
 | Tool | Description | Required Parameters |
 |------|-------------|-------------------|
 | [get_workspace_hierarchy](docs/api-reference.md#workspace-navigation) | Get workspace structure | None |
-| [create_task](docs/api-reference.md#task-management) | Create a task | `name`, (`listId`/`listName`), optional `parent` |
+| [create_task](docs/api-reference.md#task-management) | Create a task | `name`, (`listId`/`listName`) |
 | [create_bulk_tasks](docs/api-reference.md#task-management) | Create multiple tasks | `tasks[]` |
 | [update_task](docs/api-reference.md#task-management) | Modify task | `taskId`/`taskName` |
 | [update_bulk_tasks](docs/api-reference.md#task-management) | Update multiple tasks | `tasks[]` with IDs or names |
-| [get_tasks](docs/api-reference.md#task-management) | Get tasks from list | `listId`/`listName`, optional `subtasks` |
-| [get_task](docs/api-reference.md#task-management) | Get single task details | `taskId`/`taskName`, optional `subtasks` |
+| [get_tasks](docs/api-reference.md#task-management) | Get tasks from list | `listId`/`listName` |
+| [get_task](docs/api-reference.md#task-management) | Get single task details | `taskId`/`taskName` |
 | [get_workspace_tasks](docs/api-reference.md#task-management) | Get tasks with filtering | At least one filter (tags, list_ids, space_ids, etc.) |
 | [get_task_comments](docs/api-reference.md#task-management) | Get comments on a task | `taskId`/`taskName` |
 | [create_task_comment](docs/api-reference.md#task-management) | Add a comment to a task | `commentText`, (`taskId`/(`taskName`+`listName`)) |

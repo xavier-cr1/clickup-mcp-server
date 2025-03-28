@@ -21,10 +21,10 @@ This document provides detailed information about all available tools, their par
 | get_task_comments | Retrieve comments for a task | Either `taskId` or `taskName` | `listName`, `start`, `startId` |
 | create_task_comment | Add a comment to a task | `commentText` and either `taskId` or (`taskName` + `listName`) | `notifyAll`, `assignee` |
 | attach_task_file | Attach a file to a task | Either `taskId` or `taskName`, and EITHER `file_data` OR `file_url` | `file_name`, `chunk_*` parameters for large files |
-| create_task | Create a new task | `name` and either `listId` or `listName` | description, status, priority (1-4), dueDate, parent |
+| create_task | Create a new task | `name` and either `listId` or `listName` | description, status, priority (1-4), dueDate, startDate, parent |
 | create_bulk_tasks | Create multiple tasks | `tasks[]` | `listId` or `listName` |
-| update_task | Modify task properties | Either `taskId` or `taskName` | name, description, status, priority, dueDate |
-| update_bulk_tasks | Modify multiple tasks | `tasks[]` with task identifiers | Each task can have: name, description, status, priority, etc. |
+| update_task | Modify task properties | Either `taskId` or `taskName` | name, description, status, priority, dueDate, startDate |
+| update_bulk_tasks | Modify multiple tasks | `tasks[]` with task identifiers | Each task can have: name, description, status, priority, dueDate, startDate, etc. |
 | delete_task | Remove a task | `taskId` | `taskName`, `listName` |
 | delete_bulk_tasks | Remove multiple tasks | `tasks[]` with task identifiers | None |
 | move_task | Move task to another list | Either `taskId` or `taskName`, and either `listId` or `listName` | `sourceListName` |
@@ -43,6 +43,11 @@ This document provides detailed information about all available tools, their par
   - Retrieve subtasks with `subtasks: true` parameter on `get_task` or `get_tasks`
   - Create subtasks by setting `parent` parameter with parent task ID on `create_task`
   - Multi-level subtasks are supported (subtasks can have their own subtasks)
+- **Date Parameters**:
+  - `dueDate`: When the task is due (deadline)
+  - `startDate`: When work on the task should begin
+  - Both support natural language expressions (e.g., "now", "today", "tomorrow at 9am")
+  - Date ranges can be specified using `start of today` and `end of today`
 
 ### Examples
 
@@ -65,6 +70,37 @@ Add these requirements:
   "markdown_description": "## Requirements\n- OAuth2 support\n- JWT tokens\n- Refresh token flow",
   "priority": 1,
   "dueDate": 1703980800000
+}
+```
+
+#### Creating a Task with Start Date and Due Date
+**User Prompt:**
+```
+Create a task called "Database Migration" that starts tomorrow at 9am and is due by the end of the week.
+It should be in the "Backend Tasks" list.
+```
+
+**System Response:**
+```json
+{
+  "listName": "Backend Tasks",
+  "name": "Database Migration",
+  "startDate": "tomorrow at 9am",
+  "dueDate": "end of week"
+}
+```
+
+#### Updating a Task's Start Date
+**User Prompt:**
+```
+Change the start date of the "Database Migration" task to next Monday at 8am
+```
+
+**System Response:**
+```json
+{
+  "taskName": "Database Migration",
+  "startDate": "next Monday at 8am"
 }
 ```
 
@@ -194,6 +230,39 @@ Create these tasks in the "Sprint Backlog" list:
     {
       "name": "Update documentation",
       "priority": 4
+    }
+  ]
+}
+```
+
+#### Bulk Creating Tasks with Start and Due Dates
+**User Prompt:**
+```
+Create these tasks in the "Project X" list:
+1. Research - starts today, due in 3 days
+2. Design - starts after Research ends, due in a week from start
+3. Implementation - starts after Design, due in 2 weeks from start
+```
+
+**System Response:**
+```json
+{
+  "listName": "Project X",
+  "tasks": [
+    {
+      "name": "Research",
+      "startDate": "today",
+      "dueDate": "3 days from now"
+    },
+    {
+      "name": "Design",
+      "startDate": "4 days from now", 
+      "dueDate": "11 days from now"
+    },
+    {
+      "name": "Implementation",
+      "startDate": "12 days from now",
+      "dueDate": "26 days from now"
     }
   ]
 }
@@ -396,6 +465,38 @@ Update all the following tasks to high priority:
 }
 ```
 
+#### Bulk Updating Tasks with Start Dates
+**User Prompt:**
+```
+Update these tasks to have new start dates:
+1. "Research" should start now
+2. "Design" should start after "Research" is done (3 days from now)
+3. "Implementation" should start next week
+```
+
+**System Response:**
+```json
+{
+  "tasks": [
+    {
+      "taskName": "Research",
+      "listName": "Project X",
+      "startDate": "now"
+    },
+    {
+      "taskName": "Design",
+      "listName": "Project X",
+      "startDate": "3 days from now"
+    },
+    {
+      "taskName": "Implementation",
+      "listName": "Project X",
+      "startDate": "next week"
+    }
+  ]
+}
+```
+
 #### Bulk Moving Tasks
 **User Prompt:**
 ```
@@ -538,6 +639,35 @@ Create a subtask under "Project Planning" called "Schedule Team Meeting"
   "listName": "Development Tasks"
 }
 ```
+
+#### Natural Language Date Support
+
+The server supports a wide range of natural language date expressions:
+
+1. **Basic expressions**:
+   - "now" - current date and time
+   - "today" - end of current day
+   - "tomorrow" - end of tomorrow
+   - "next week" - end of next week
+   - "in 3 days" - 3 days from current time
+
+2. **Time-specific expressions**:
+   - "tomorrow at 9am"
+   - "next Monday at 2pm"
+   - "Friday at noon"
+
+3. **Range expressions**:
+   - "start of today" - beginning of current day (midnight)
+   - "end of today" - end of current day (23:59:59)
+   - "beginning of next week"
+   - "end of this month"
+
+4. **Relative expressions**:
+   - "30 minutes from now"
+   - "2 hours from now"
+   - "5 days after tomorrow"
+
+These expressions can be used with both `dueDate` and `startDate` parameters.
 
 ## List Management
 

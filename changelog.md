@@ -1,11 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Added start date support for tasks:
+  - Set task start dates with natural language expressions (e.g., "now", "tomorrow at 9am")
+  - Support for both creation and updates via `startDate` parameter
+  - Proper time handling with `start_date_time` flag
+
 ## v0.6.2 (2025-03-27)
 
 ### 🛠️ Bug Fixes
 - Fixed binary execution issue by adding proper shebang line to the main executable
-
-## Unreleased
 
 ### 🚀 New Features & Improvements
 - Added tag support with tools for:
@@ -27,6 +32,7 @@
     - `detailed`: Complete task information with all fields (default)
   - Automatic format selection based on response size (50,000 token threshold)
   - Optimized for handling large datasets efficiently
+
 
 ### 🔄 Repository Updates
 - Updated documentation to reflect new tool requirements and capabilities

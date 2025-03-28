@@ -87,7 +87,37 @@ export const handleGetTasks = createHandlerWrapper(getTasksHandler, (tasks) => (
   tasks,
   count: tasks.length
 }));
-export const handleUpdateTask = createHandlerWrapper(updateTaskHandler);
+export const handleUpdateTask = async (parameters: any) => {
+  try {
+    // Special handling for priority parameter
+    if (parameters.priority !== undefined) {
+      // Ensure priority is converted to a number if it's a valid value
+      if (parameters.priority === null) {
+        // null is valid for clearing priority
+      } else if (typeof parameters.priority === 'number' && [1, 2, 3, 4].includes(parameters.priority)) {
+        // Valid priority number, keep as is
+      } else if (typeof parameters.priority === 'string') {
+        // Try to convert string to number
+        const numPriority = parseInt(parameters.priority, 10);
+        if (!isNaN(numPriority) && [1, 2, 3, 4].includes(numPriority)) {
+          parameters.priority = numPriority;
+        } else if (parameters.priority === 'null') {
+          parameters.priority = null;
+        } else {
+          throw new Error(`Invalid priority value: ${parameters.priority}. Must be 1, 2, 3, 4, or null.`);
+        }
+      } else {
+        throw new Error(`Invalid priority value: ${parameters.priority}. Must be 1, 2, 3, 4, or null.`);
+      }
+    }
+    
+    // Proceed with normal handling
+    const result = await updateTaskHandler(parameters);
+    return sponsorService.createResponse(result, true);
+  } catch (error) {
+    return sponsorService.createErrorResponse(error, parameters);
+  }
+};
 export const handleMoveTask = createHandlerWrapper(moveTaskHandler);
 export const handleDuplicateTask = createHandlerWrapper(duplicateTaskHandler);
 export const handleDeleteTask = createHandlerWrapper(deleteTaskHandler, () => ({

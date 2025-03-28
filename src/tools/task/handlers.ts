@@ -8,7 +8,7 @@
  * and bulk operations. These handlers are used by the tool definitions.
  */
 
-import { ClickUpComment, ClickUpTask, TaskPriority, UpdateTaskData, TaskFilters, toTaskPriority } from '../../services/clickup/types.js';
+import { ClickUpComment, ClickUpTask, TaskPriority, UpdateTaskData, TaskFilters, toTaskPriority, CreateTaskData } from '../../services/clickup/types.js';
 import { clickUpServices } from '../../services/shared.js';
 import { BulkService } from '../../services/clickup/bulk.js';
 import { BatchResult } from '../../utils/concurrency-utils.js';
@@ -46,8 +46,19 @@ function buildUpdateData(params: any): UpdateTaskData {
   if (params.description !== undefined) updateData.description = params.description;
   if (params.markdown_description !== undefined) updateData.markdown_description = params.markdown_description;
   if (params.status !== undefined) updateData.status = params.status;
-  if (params.priority !== undefined) updateData.priority = toTaskPriority(params.priority);
-  if (params.dueDate !== undefined) updateData.due_date = parseDueDate(params.dueDate);
+  
+  // Skip toTaskPriority conversion since we're handling priority in the main handler
+  if (params.priority !== undefined) updateData.priority = params.priority;
+  
+  if (params.dueDate !== undefined) {
+    updateData.due_date = parseDueDate(params.dueDate);
+    updateData.due_date_time = true;
+  }
+  
+  if (params.startDate !== undefined) {
+    updateData.start_date = parseDueDate(params.startDate);
+    updateData.start_date_time = true;
+  }
   
   return updateData;
 }
@@ -102,7 +113,7 @@ async function mapTaskIds(tasks: any[]): Promise<string[]> {
  * Handler for creating a task
  */
 export async function createTaskHandler(params) {
-  const { name, description, markdown_description, status, dueDate, parent, tags } = params;
+  const { name, description, markdown_description, status, dueDate, startDate, parent, tags } = params;
   
   if (!name) throw new Error("Task name is required");
   
@@ -111,25 +122,45 @@ export async function createTaskHandler(params) {
 
   const listId = await getListId(params.listId, params.listName);
   
-  return await taskService.createTask(listId, {
+  const taskData: CreateTaskData = {
     name,
     description,
     markdown_description,
     status,
     priority,
-    due_date: dueDate ? parseDueDate(dueDate) : undefined,
     parent,
     tags
-  });
+  };
+  
+  // Add due date if specified
+  if (dueDate) {
+    taskData.due_date = parseDueDate(dueDate);
+    taskData.due_date_time = true;
+  }
+  
+  // Add start date if specified
+  if (startDate) {
+    taskData.start_date = parseDueDate(startDate);
+    taskData.start_date_time = true;
+  }
+  
+  return await taskService.createTask(listId, taskData);
 }
 
 /**
  * Handler for updating a task
  */
 export async function updateTaskHandler(params) {
+  console.log('Update Task Handler - Raw params:', JSON.stringify(params));
+  console.log('Update Task Handler - Priority type:', typeof params.priority, 'Value:', params.priority);
+  
   validateTaskUpdateData(params);
   const taskId = await getTaskId(params.taskId, params.taskName, params.listName);
-  return await taskService.updateTask(taskId, buildUpdateData(params));
+  
+  const updateData = buildUpdateData(params);
+  console.log('Update Task Handler - Update data:', JSON.stringify(updateData));
+  
+  return await taskService.updateTask(taskId, updateData);
 }
 
 /**

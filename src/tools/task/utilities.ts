@@ -49,7 +49,7 @@ export function formatTaskData(task: ClickUpTask, additional: any = {}) {
     parent: task.parent,
     priority: task.priority,
     due_date: task.due_date ? formatDueDate(Number(task.due_date)) : undefined,
-    start_date: task.start_date,
+    start_date: task.start_date ? formatDueDate(Number(task.start_date)) : undefined,
     time_estimate: task.time_estimate,
     time_spent: task.time_spent,
     custom_fields: task.custom_fields,
@@ -107,8 +107,12 @@ export function validateListIdentification(listId?: string, listName?: string): 
  * Validates task update data
  * Ensures at least one update field is provided
  */
-export function validateTaskUpdateData(updateData: UpdateTaskData): void {
-  const hasUpdates = Object.keys(updateData).length > 0;
+export function validateTaskUpdateData(updateData: any): void {
+  // Check if there are any valid update fields present
+  const hasUpdates = Object.keys(updateData).some(key => {
+    return ['name', 'description', 'markdown_description', 'status', 'priority', 'dueDate', 'startDate', 'taskId', 'taskName'].includes(key);
+  });
+  
   if (!hasUpdates) {
     throw new Error("At least one field to update must be provided");
   }
