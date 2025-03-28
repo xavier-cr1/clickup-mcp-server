@@ -69,10 +69,11 @@
     - [x] `task-index.ts`
 
 ## Core Module Implementation
-- [ ] Move basic CRUD operations to `task-core.ts`
-  - [ ] Extract constructor and initialization code
-  - [ ] Extract utility methods (handleError, buildTaskFilterParams)
-  - [ ] Extract core task operations (getTask, createTask, updateTask, deleteTask)
+- [x] Move basic CRUD operations to `task-core.ts`
+  - [x] Extract constructor and initialization code
+  - [x] Extract utility methods (handleError, buildTaskFilterParams)
+  - [x] Extract core task operations (getTask, createTask, updateTask, deleteTask)
+  - [x] Extract additional core operations (moveTask, duplicateTask, validateListExists)
   - [ ] Test core operations
 
 ## Search Module Implementation
