@@ -167,7 +167,7 @@ Requirements:
 - EITHER folderId OR (folderName + space information) is REQUIRED
 - When using folderName, you MUST provide EITHER spaceId OR spaceName
 
-⚠️ CRITICAL WARNING:
+Warning:
 - This action CANNOT be undone
 - All lists and tasks within the folder will also be permanently deleted
 - Using folderName is risky as names may not be unique across different spaces`,

@@ -66,7 +66,7 @@ export class SponsorService {
     if (this.isEnabled && includeSponsorMessage) {
       content.push({
         type: "text",
-        text: `⎯ Support this project by sponsoring the developer at ${this.sponsorUrl}`
+        text: `♥ Support this project by sponsoring the developer at ${this.sponsorUrl}`
       });
     }
     

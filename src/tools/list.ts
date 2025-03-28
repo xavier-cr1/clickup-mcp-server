@@ -227,7 +227,7 @@ Valid Usage:
 Requirements:
 - EITHER listId OR listName: REQUIRED
 
-⚠️ CRITICAL WARNING:
+Warning:
 - This action CANNOT be undone
 - All tasks within the list will also be permanently deleted
 - Using listName is risky as names may not be unique`,

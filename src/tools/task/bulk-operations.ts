@@ -244,7 +244,7 @@ Notes:
 - Configure batch size and concurrency via options for performance
 - All tasks will be moved to the same destination list
 
-⚠️ Warning:
+Warning:
 - Task statuses may reset if destination list has different status options
 - Using taskName without listName will fail as tasks may have identical names across lists`,
   inputSchema: {
@@ -292,7 +292,7 @@ Requirements:
 Notes:
 - Configure batch size and concurrency via options for performance
 
-⚠️ CRITICAL WARNING:
+Warning:
 - This action CANNOT be undone for any of the tasks
 - Using taskName without listName is dangerous as names may not be unique
 - Always provide listName when using taskName for safer targeting`,
