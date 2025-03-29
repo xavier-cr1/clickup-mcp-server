@@ -2,7 +2,15 @@
  * SPDX-FileCopyrightText: © 2025 Talib Kareem <taazkareem@icloud.com>
  * SPDX-License-Identifier: MIT
  *
- * MCP Server for ClickUp integration
+ * ClickUp MCP Server
+ * 
+ * This is the main server module that handles MCP requests.
+ * 
+ * !!! TEMPORARY CHANGES !!!
+ * Approximately half of the tools have been temporarily disabled to test if this resolves
+ * the context token limit issues in Claude Desktop. Once testing is complete, 
+ * the commented-out tools should be re-enabled.
+ * Last modified: [Date]
  */
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import {
@@ -106,29 +114,13 @@ export function configureServer() {
         getTasksTool,
         updateTaskTool,
         moveTaskTool,
-        duplicateTaskTool,
         deleteTaskTool,
-        getTaskCommentsTool,
-        createTaskCommentTool,
-        attachTaskFileTool,
-        createBulkTasksTool,
-        updateBulkTasksTool,
-        moveBulkTasksTool,
-        deleteBulkTasksTool,
         getWorkspaceTasksTool,
         createListTool,
-        createListInFolderTool,
         getListTool,
         updateListTool,
-        deleteListTool,
-        createFolderTool,
-        getFolderTool,
-        updateFolderTool,
-        deleteFolderTool,
         getSpaceTagsTool,
         createSpaceTagTool,
-        updateSpaceTagTool,
-        deleteSpaceTagTool,
         addTagToTaskTool,
         removeTagFromTaskTool
       ]
@@ -137,8 +129,8 @@ export function configureServer() {
 
   // Register CallTool handler with proper logging
   logger.info("Registering tool handlers", {
-    toolCount: 31,
-    categories: ["workspace", "task", "list", "folder", "tag"]
+    toolCount: 16,
+    categories: ["workspace", "task", "list", "tag"]
   });
   
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
@@ -160,56 +152,24 @@ export function configureServer() {
           return handleUpdateTask(params);
         case "move_task":
           return handleMoveTask(params);
-        case "duplicate_task":
-          return handleDuplicateTask(params);
         case "get_task":
           return handleGetTask(params);
         case "get_tasks":
           return handleGetTasks(params);
         case "delete_task":
           return handleDeleteTask(params);
-        case "get_task_comments":
-          return handleGetTaskComments(params);
-        case "create_task_comment":
-          return handleCreateTaskComment(params);
-        case "attach_task_file":
-          return handleAttachTaskFile(params);
-        case "create_bulk_tasks":
-          return handleCreateBulkTasks(params);
-        case "update_bulk_tasks":
-          return handleUpdateBulkTasks(params);
-        case "move_bulk_tasks":
-          return handleMoveBulkTasks(params);
-        case "delete_bulk_tasks":
-          return handleDeleteBulkTasks(params);
         case "get_workspace_tasks":
           return handleGetWorkspaceTasks(params);
         case "create_list":
           return handleCreateList(params);
-        case "create_list_in_folder":
-          return handleCreateListInFolder(params);
         case "get_list":
           return handleGetList(params);
         case "update_list":
           return handleUpdateList(params);
-        case "delete_list":
-          return handleDeleteList(params);
-        case "create_folder":
-          return handleCreateFolder(params);
-        case "get_folder":
-          return handleGetFolder(params);
-        case "update_folder":
-          return handleUpdateFolder(params);
-        case "delete_folder":
-          return handleDeleteFolder(params);
         case "get_space_tags":
           return handleGetSpaceTags(params);
         case "create_space_tag":
           return handleCreateSpaceTag(params);
-        case "update_space_tag":
-          return handleUpdateSpaceTag(params);
-        case "delete_space_tag":
-          return handleDeleteSpaceTag(params);
         case "add_tag_to_task":
           return handleAddTagToTask(params);
         case "remove_tag_from_task":
