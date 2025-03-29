@@ -486,11 +486,11 @@ export class TaskServiceCore extends BaseClickUpService {
   }
 
   /**
-   * Validate multiple tasks exist and cache the results
+   * Validate that multiple tasks exist
    * @param taskIds Array of task IDs to validate
-   * @returns Map of task IDs to validated tasks
+   * @returns Map of task IDs to task objects
    */
-  protected async validateTasksExist(taskIds: string[]): Promise<Map<string, ClickUpTask>> {
+  public async validateTasksExist(taskIds: string[]): Promise<Map<string, ClickUpTask>> {
     const results = new Map<string, ClickUpTask>();
     const toFetch: string[] = [];
 

@@ -540,7 +540,7 @@ export async function moveBulkTasksHandler(params) {
   const taskIds = await mapTaskIds(params.tasks);
   
   const result = await bulkService.moveTasks(
-    taskIds, 
+    taskIds.map(taskId => ({ taskId })), 
     targetListId, 
     parseBulkOptions(params.options)
   );
