@@ -77,7 +77,7 @@ const { workspace } = clickUpServices;
 export const server = new Server(
   {
     name: "clickup-mcp-server",
-    version: "0.6.4",
+    version: "0.6.5",
   },
   {
     capabilities: {
