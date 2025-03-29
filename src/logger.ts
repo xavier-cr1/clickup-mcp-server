@@ -5,7 +5,7 @@
  * Logger module for MCP Server
  * 
  * This module provides logging functionality for the server,
- * writing logs to both the console and a log file in the build folder.
+ * writing logs to only the log file to avoid interfering with JSON-RPC.
  */
 
 import { createWriteStream } from 'fs';
@@ -22,7 +22,8 @@ const pid = process.pid;
 // Create a write stream for logging - use a fixed filename in the build directory
 const logFileName = 'server.log';
 const logStream = createWriteStream(join(__dirname, logFileName), { flags: 'w' });
-console.error(`Logging to ${join(__dirname, logFileName)}`);
+// Write init message to log file only
+logStream.write(`Logging initialized to ${join(__dirname, logFileName)}\n`);
 
 // Use the configured log level from config.ts
 const configuredLevel = config.logLevel;
@@ -40,7 +41,7 @@ export function isLevelEnabled(level: LogLevel): boolean {
 }
 
 /**
- * Log function that writes to both console and file
+ * Log function that writes only to file to avoid interfering with JSON-RPC
  * @param level Log level (trace, debug, info, warn, error)
  * @param message Message to log
  * @param data Optional data to include in log
@@ -87,10 +88,7 @@ export function log(level: 'trace' | 'debug' | 'info' | 'warn' | 'error', messag
     }
   }
 
-  // When using stdio transport, log to stderr which is captured by host application
-  console.error(logMessage);
-
-  // Write to file
+  // Write to file only, not to stderr which would interfere with JSON-RPC
   logStream.write(logMessage + '\n');
 }
 
