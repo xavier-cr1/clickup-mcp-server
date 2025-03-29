@@ -7,21 +7,27 @@
  * Enhanced implementation for bulk operations that leverages the existing single-operation methods.
  * This approach reduces code duplication while offering powerful concurrency management.
  */
-import { ClickUpServiceError, ErrorCode } from './base.js';
-import { TaskService } from './task/index.js';
-import { CreateTaskData, ClickUpTask, UpdateTaskData } from './types.js';
-import { BatchProcessingOptions, BatchResult, processBatch } from '../../utils/concurrency-utils.js';
 import { Logger } from '../../logger.js';
+import { TaskService } from './task/index.js';
+import { ClickUpTask, CreateTaskData, UpdateTaskData } from './types.js';
+import { BatchProcessingOptions, BatchResult, processBatch } from '../../utils/concurrency-utils.js';
+import { ClickUpServiceError, ErrorCode } from './base.js';
+import { clickUpServices } from '../shared.js';
+import { findListIDByName } from '../../tools/list.js';
 
 // Create logger instance
 const logger = new Logger('BulkService');
 
 /**
- * Service for handling bulk operations in ClickUp
+ * Service for performing bulk operations in ClickUp
  */
 export class BulkService {
   private taskService: TaskService;
 
+  /**
+   * Create a new bulk service
+   * @param taskService ClickUp Task Service instance
+   */
   constructor(taskService: TaskService) {
     this.taskService = taskService;
     logger.info('BulkService initialized');
@@ -78,6 +84,89 @@ export class BulkService {
   }
 
   /**
+   * Find task by name within a specific list
+   */
+  private async findTaskInList(taskName: string, listName: string): Promise<string> {
+    try {
+      // First get the list ID using the global lookup utility
+      const listInfo = await findListIDByName(clickUpServices.workspace, listName);
+      if (!listInfo) {
+        throw new ClickUpServiceError(
+          `List "${listName}" not found`,
+          ErrorCode.NOT_FOUND
+        );
+      }
+      
+      logger.info(`List "${listName}" resolved to ID: ${listInfo.id}`);
+      
+      // Get tasks from the list using the resolved ID
+      const taskList = await this.taskService.getTasks(listInfo.id);
+      
+      // Find the task by name - first try exact match
+      let matchingTask = taskList.find(t => t.name === taskName);
+      
+      // If no exact match, try case-insensitive match
+      if (!matchingTask) {
+        matchingTask = taskList.find(t => 
+          t.name.toLowerCase() === taskName.toLowerCase()
+        );
+        
+        // If still no match, try substring match as a fallback
+        if (!matchingTask) {
+          matchingTask = taskList.find(t => 
+            t.name.toLowerCase().includes(taskName.toLowerCase()) ||
+            taskName.toLowerCase().includes(t.name.toLowerCase())
+          );
+        }
+      }
+      
+      if (!matchingTask) {
+        throw new ClickUpServiceError(
+          `Task "${taskName}" not found in list "${listName}"`,
+          ErrorCode.NOT_FOUND
+        );
+      }
+      
+      logger.info(`Task "${taskName}" found with ID: ${matchingTask.id}`);
+      return matchingTask.id;
+    } catch (error) {
+      // Enhance the error message
+      if (error instanceof ClickUpServiceError) {
+        throw error;
+      }
+      throw new ClickUpServiceError(
+        `Error finding task "${taskName}" in list "${listName}": ${error instanceof Error ? error.message : String(error)}`,
+        ErrorCode.UNKNOWN
+      );
+    }
+  }
+
+  /**
+   * Resolve task ID using provided identifiers
+   */
+  private async resolveTaskId(task: { taskId?: string; taskName?: string; listName?: string; customTaskId?: string }): Promise<string> {
+    const { taskId, taskName, listName, customTaskId } = task;
+
+    if (taskId) {
+      return taskId;
+    }
+
+    if (customTaskId) {
+      const resolvedTask = await this.taskService.getTaskByCustomId(customTaskId);
+      return resolvedTask.id;
+    }
+
+    if (taskName && listName) {
+      return await this.findTaskInList(taskName, listName);
+    }
+
+    throw new ClickUpServiceError(
+      'Invalid task identification. Provide either taskId, customTaskId, or both taskName and listName',
+      ErrorCode.INVALID_PARAMETER
+    );
+  }
+
+  /**
    * Update multiple tasks
    * @param tasks Array of tasks to update with their new data
    * @param options Optional batch processing settings
@@ -90,44 +179,12 @@ export class BulkService {
     logger.info('Starting bulk update operation', { taskCount: tasks.length });
     
     try {
-      // Extract all task IDs that need validation
-      const taskIds = tasks
-        .map(task => task.taskId)
-        .filter((id): id is string => !!id);
-
-      // Validate all tasks exist in parallel
-      if (taskIds.length > 0) {
-        await this.taskService.validateTasksExist(taskIds);
-      }
-
-      // Process updates in batches
       return await processBatch(
         tasks,
         async (task) => {
           const { taskId, taskName, listName, customTaskId, ...updateData } = task;
-          
-          if (taskId) {
-            return await this.taskService.updateTask(taskId, updateData);
-          } else if (customTaskId) {
-            const resolvedTask = await this.taskService.getTaskByCustomId(customTaskId);
-            return await this.taskService.updateTask(resolvedTask.id, updateData);
-          } else if (taskName && listName) {
-            // For tasks identified by name, we need to resolve the ID first
-            const taskList = await this.taskService.getTasks(listName);
-            const matchingTask = taskList.find(t => t.name === taskName);
-            if (!matchingTask) {
-              throw new ClickUpServiceError(
-                `Task "${taskName}" not found in list "${listName}"`,
-                ErrorCode.NOT_FOUND
-              );
-            }
-            return await this.taskService.updateTask(matchingTask.id, updateData);
-          } else {
-            throw new ClickUpServiceError(
-              'Invalid task identification. Provide either taskId, customTaskId, or both taskName and listName',
-              ErrorCode.INVALID_PARAMETER
-            );
-          }
+          const resolvedTaskId = await this.resolveTaskId({ taskId, taskName, listName, customTaskId });
+          return await this.taskService.updateTask(resolvedTaskId, updateData);
         },
         options
       );
@@ -140,7 +197,7 @@ export class BulkService {
   /**
    * Move multiple tasks to a different list
    * @param tasks Array of tasks to move (each with taskId or taskName + listName)
-   * @param targetListId ID of the destination list
+   * @param targetListId ID of the destination list or list name
    * @param options Optional batch processing settings
    * @returns Array of moved tasks
    */
@@ -152,45 +209,32 @@ export class BulkService {
     logger.info('Starting bulk move operation', { taskCount: tasks.length, targetListId });
     
     try {
-      // First validate the destination list exists
-      await this.taskService.validateListExists(targetListId);
-
-      // Extract all task IDs that need validation
-      const taskIds = tasks
-        .map(task => task.taskId)
-        .filter((id): id is string => !!id);
-
-      // Validate all tasks exist in parallel
-      if (taskIds.length > 0) {
-        await this.taskService.validateTasksExist(taskIds);
+      // Determine if targetListId is actually an ID or a name
+      let resolvedTargetListId = targetListId;
+      
+      // If the targetListId doesn't match the pattern of a list ID (usually just numbers),
+      // assume it's a list name and try to resolve it
+      if (!/^\d+$/.test(targetListId)) {
+        logger.info(`Target list appears to be a name: "${targetListId}", attempting to resolve`);
+        const listInfo = await findListIDByName(clickUpServices.workspace, targetListId);
+        if (!listInfo) {
+          throw new ClickUpServiceError(
+            `Target list "${targetListId}" not found`,
+            ErrorCode.NOT_FOUND
+          );
+        }
+        resolvedTargetListId = listInfo.id;
+        logger.info(`Resolved target list to ID: ${resolvedTargetListId}`);
       }
 
-      // Process moves in batches
+      // Validate the destination list exists
+      await this.taskService.validateListExists(resolvedTargetListId);
+
       return await processBatch(
         tasks,
         async (task) => {
-          if (task.taskId) {
-            return await this.taskService.moveTask(task.taskId, targetListId);
-          } else if (task.customTaskId) {
-            const resolvedTask = await this.taskService.getTaskByCustomId(task.customTaskId);
-            return await this.taskService.moveTask(resolvedTask.id, targetListId);
-          } else if (task.taskName && task.listName) {
-            // For tasks identified by name, we need to resolve the ID first
-            const taskList = await this.taskService.getTasks(task.listName);
-            const matchingTask = taskList.find(t => t.name === task.taskName);
-            if (!matchingTask) {
-              throw new ClickUpServiceError(
-                `Task "${task.taskName}" not found in list "${task.listName}"`,
-                ErrorCode.NOT_FOUND
-              );
-            }
-            return await this.taskService.moveTask(matchingTask.id, targetListId);
-          } else {
-            throw new ClickUpServiceError(
-              'Invalid task identification. Provide either taskId, customTaskId, or both taskName and listName',
-              ErrorCode.INVALID_PARAMETER
-            );
-          }
+          const resolvedTaskId = await this.resolveTaskId(task);
+          return await this.taskService.moveTask(resolvedTaskId, resolvedTargetListId);
         },
         options
       );
@@ -201,46 +245,29 @@ export class BulkService {
   }
 
   /**
-   * Delete multiple tasks efficiently
-   * 
-   * @param taskIds Array of task IDs to delete
+   * Delete multiple tasks
+   * @param tasks Array of tasks to delete (each with taskId or taskName + listName)
    * @param options Batch processing options
    * @returns Results containing successful and failed deletions
    */
   async deleteTasks(
-    taskIds: string[],
+    tasks: { taskId?: string; taskName?: string; listName?: string; customTaskId?: string }[],
     options?: BatchProcessingOptions
-  ): Promise<BatchResult<string>> {
-    logger.info(`Deleting ${taskIds.length} tasks`, {
-      batchSize: options?.batchSize,
-      concurrency: options?.concurrency
-    });
-
+  ): Promise<BatchResult<void>> {
+    logger.info('Starting bulk delete operation', { taskCount: tasks.length });
+    
     try {
       return await processBatch(
-        taskIds,
-        async (taskId, index) => {
-          logger.debug(`Deleting task ${index + 1}/${taskIds.length}`, {
-            taskId
-          });
-          
-          // Reuse the single-task delete method
-          await this.taskService.deleteTask(taskId);
-          return taskId; // Return the ID for successful deletions
+        tasks,
+        async (task) => {
+          const resolvedTaskId = await this.resolveTaskId(task);
+          await this.taskService.deleteTask(resolvedTaskId);
         },
         options
       );
-      } catch (error) {
-      logger.error(`Failed to delete tasks in bulk`, {
-        taskCount: taskIds.length,
-        error: error instanceof Error ? error.message : String(error)
-      });
-
-      throw new ClickUpServiceError(
-        `Failed to delete tasks in bulk: ${error instanceof Error ? error.message : String(error)}`,
-        error instanceof ClickUpServiceError ? error.code : ErrorCode.UNKNOWN,
-        { taskCount: taskIds.length }
-      );
+    } catch (error) {
+      logger.error('Bulk delete operation failed', error);
+      throw error;
     }
   }
 }

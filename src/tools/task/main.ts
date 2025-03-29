@@ -56,6 +56,9 @@ import {
 import { clickUpServices } from '../../services/shared.js';
 const { task: taskService } = clickUpServices;
 
+import { BatchResult } from '../../utils/concurrency-utils.js';
+import { ClickUpTask } from '../../services/clickup/types.js';
+
 //=============================================================================
 // HANDLER WRAPPER UTILITY
 //=============================================================================
@@ -141,22 +144,40 @@ export const handleCreateTaskComment = createHandlerWrapper(createTaskCommentHan
 // BULK TASK OPERATIONS - HANDLER IMPLEMENTATIONS
 //=============================================================================
 
-export const handleCreateBulkTasks = createHandlerWrapper(createBulkTasksHandler, (tasks) => ({
-  tasks,
-  count: tasks.length
+export const handleCreateBulkTasks = createHandlerWrapper(createBulkTasksHandler, (result: BatchResult<ClickUpTask>) => ({
+  successful: result.successful,
+  failed: result.failed,
+  count: result.totals.total,
+  success_count: result.totals.success,
+  failure_count: result.totals.failure,
+  errors: result.failed.map(f => f.error)
 }));
-export const handleUpdateBulkTasks = createHandlerWrapper(updateBulkTasksHandler, (tasks) => ({
-  tasks,
-  count: tasks.length
+
+export const handleUpdateBulkTasks = createHandlerWrapper(updateBulkTasksHandler, (result: BatchResult<ClickUpTask>) => ({
+  successful: result.successful,
+  failed: result.failed,
+  count: result.totals.total,
+  success_count: result.totals.success,
+  failure_count: result.totals.failure,
+  errors: result.failed.map(f => f.error)
 }));
-export const handleMoveBulkTasks = createHandlerWrapper(moveBulkTasksHandler, (tasks) => ({
-  tasks,
-  count: tasks.length
+
+export const handleMoveBulkTasks = createHandlerWrapper(moveBulkTasksHandler, (result: BatchResult<ClickUpTask>) => ({
+  successful: result.successful,
+  failed: result.failed,
+  count: result.totals.total,
+  success_count: result.totals.success,
+  failure_count: result.totals.failure,
+  errors: result.failed.map(f => f.error)
 }));
-export const handleDeleteBulkTasks = createHandlerWrapper(deleteBulkTasksHandler, (results) => ({
-  success: true,
-  count: results.length,
-  results
+
+export const handleDeleteBulkTasks = createHandlerWrapper(deleteBulkTasksHandler, (result: BatchResult<void>) => ({
+  successful: result.successful,
+  failed: result.failed,
+  count: result.totals.total,
+  success_count: result.totals.success,
+  failure_count: result.totals.failure,
+  errors: result.failed.map(f => f.error)
 }));
 
 //=============================================================================
@@ -174,24 +195,101 @@ export const handleGetWorkspaceTasks = createHandlerWrapper(
 //=============================================================================
 
 // Tool definitions with their handler mappings
-export const taskTools = [
-  // Single task operations
-  { definition: createTaskTool, handler: handleCreateTask },
-  { definition: getTaskTool, handler: handleGetTask },
-  { definition: getTasksTool, handler: handleGetTasks },
-  { definition: updateTaskTool, handler: handleUpdateTask },
-  { definition: moveTaskTool, handler: handleMoveTask },
-  { definition: duplicateTaskTool, handler: handleDuplicateTask },
-  { definition: deleteTaskTool, handler: handleDeleteTask },
-  { definition: getTaskCommentsTool, handler: handleGetTaskComments },
-  { definition: createTaskCommentTool, handler: handleCreateTaskComment },
-  
-  // Bulk task operations
-  { definition: createBulkTasksTool, handler: handleCreateBulkTasks },
-  { definition: updateBulkTasksTool, handler: handleUpdateBulkTasks },
-  { definition: moveBulkTasksTool, handler: handleMoveBulkTasks },
-  { definition: deleteBulkTasksTool, handler: handleDeleteBulkTasks },
-  
-  // Team task operations
-  { definition: getWorkspaceTasksTool, handler: handleGetWorkspaceTasks }
+export const tools = [
+  { 
+    definition: createTaskTool, 
+    handler: createTaskHandler
+  },
+  { 
+    definition: updateTaskTool, 
+    handler: updateTaskHandler
+  },
+  { 
+    definition: moveTaskTool, 
+    handler: moveTaskHandler
+  },
+  { 
+    definition: duplicateTaskTool, 
+    handler: duplicateTaskHandler
+  },
+  { 
+    definition: getTaskTool, 
+    handler: getTaskHandler
+  },
+  { 
+    definition: getTasksTool, 
+    handler: getTasksHandler
+  },
+  { 
+    definition: getTaskCommentsTool, 
+    handler: getTaskCommentsHandler
+  },
+  { 
+    definition: createTaskCommentTool, 
+    handler: createTaskCommentHandler
+  },
+  { 
+    definition: deleteTaskTool, 
+    handler: deleteTaskHandler
+  },
+  { 
+    definition: getWorkspaceTasksTool, 
+    handler: getWorkspaceTasksHandler
+  },
+  { 
+    definition: createBulkTasksTool, 
+    handler: async (params: any) => {
+      const result = await createBulkTasksHandler(params) as BatchResult<ClickUpTask>;
+      return {
+        successful: result.successful,
+        failed: result.failed,
+        count: result.totals.total,
+        success_count: result.totals.success,
+        failure_count: result.totals.failure,
+        errors: result.failed.map(f => f.error)
+      };
+    }
+  },
+  { 
+    definition: updateBulkTasksTool, 
+    handler: async (params: any) => {
+      const result = await updateBulkTasksHandler(params) as BatchResult<ClickUpTask>;
+      return {
+        successful: result.successful,
+        failed: result.failed,
+        count: result.totals.total,
+        success_count: result.totals.success,
+        failure_count: result.totals.failure,
+        errors: result.failed.map(f => f.error)
+      };
+    }
+  },
+  { 
+    definition: moveBulkTasksTool, 
+    handler: async (params: any) => {
+      const result = await moveBulkTasksHandler(params) as BatchResult<ClickUpTask>;
+      return {
+        successful: result.successful,
+        failed: result.failed,
+        count: result.totals.total,
+        success_count: result.totals.success,
+        failure_count: result.totals.failure,
+        errors: result.failed.map(f => f.error)
+      };
+    }
+  },
+  { 
+    definition: deleteBulkTasksTool, 
+    handler: async (params: any) => {
+      const result = await deleteBulkTasksHandler(params) as BatchResult<void>;
+      return {
+        successful: result.successful,
+        failed: result.failed,
+        count: result.totals.total,
+        success_count: result.totals.success,
+        failure_count: result.totals.failure,
+        errors: result.failed.map(f => f.error)
+      };
+    }
+  }
 ];

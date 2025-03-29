@@ -476,91 +476,98 @@ export async function getWorkspaceTasksHandler(
 /**
  * Handler for creating multiple tasks
  */
-export async function createBulkTasksHandler(params) {
-  validateBulkTasks(params.tasks);
-  const listId = await getListId(params.listId, params.listName);
-  
-  // Process tasks - prepare data for each task
-  const tasks = params.tasks.map(task => {
-    const processedTask = { ...task };
-    
+export async function createBulkTasksHandler(params: any) {
+  const { tasks, listId, listName, options } = params;
+
+  // Validate tasks array
+  validateBulkTasks(tasks, 'create');
+
+  // Validate and resolve list ID
+  const targetListId = await resolveListIdWithValidation(listId, listName);
+
+  // Format tasks for creation
+  const formattedTasks: CreateTaskData[] = tasks.map(task => {
+    const taskData: CreateTaskData = {
+      name: task.name,
+      description: task.description,
+      markdown_description: task.markdown_description,
+      status: task.status,
+      priority: toTaskPriority(task.priority),
+      tags: task.tags,
+      custom_fields: task.custom_fields
+    };
+
+    // Add due date if specified
     if (task.dueDate) {
-      processedTask.due_date = parseDueDate(task.dueDate);
-      delete processedTask.dueDate;
+      taskData.due_date = parseDueDate(task.dueDate);
+      taskData.due_date_time = true;
     }
-    
-    // Make sure custom_fields is preserved in the processed task
-    if (task.custom_fields) {
-      processedTask.custom_fields = task.custom_fields;
+
+    // Add start date if specified
+    if (task.startDate) {
+      taskData.start_date = parseDueDate(task.startDate);
+      taskData.start_date_time = true;
     }
-    
-    return processedTask;
+
+    return taskData;
   });
 
-  const result = await bulkService.createTasks(
-    listId, 
-    tasks, 
-    parseBulkOptions(params.options)
-  );
-  
-  return result.successful;
+  // Parse bulk options
+  const bulkOptions = parseBulkOptions(options);
+
+  // Create tasks - pass arguments in correct order: listId, tasks, options
+  return await bulkService.createTasks(targetListId, formattedTasks, bulkOptions);
 }
 
 /**
  * Handler for updating multiple tasks
  */
-export async function updateBulkTasksHandler(params) {
-  validateBulkTasks(params.tasks);
-  
-  const updates = await Promise.all(params.tasks.map(async (task) => {
-    validateTaskUpdateData(task);
-    const taskId = await getTaskId(task.taskId, task.taskName, task.listName);
-    return { id: taskId, data: buildUpdateData(task) };
-  }));
+export async function updateBulkTasksHandler(params: any) {
+  const { tasks, options } = params;
 
-  const result = await bulkService.updateTasks(
-    updates, 
-    parseBulkOptions(params.options)
-  );
-  
-  return result.successful;
+  // Validate tasks array
+  validateBulkTasks(tasks, 'update');
+
+  // Parse bulk options
+  const bulkOptions = parseBulkOptions(options);
+
+  // Update tasks
+  return await bulkService.updateTasks(tasks, bulkOptions);
 }
 
 /**
  * Handler for moving multiple tasks
  */
-export async function moveBulkTasksHandler(params) {
-  validateBulkTasks(params.tasks);
-  
-  if (!params.targetListId && !params.targetListName) {
-    throw new Error("Either targetListId or targetListName must be provided");
-  }
+export async function moveBulkTasksHandler(params: any) {
+  const { tasks, targetListId, targetListName, options } = params;
 
-  const targetListId = await getListId(params.targetListId, params.targetListName);
-  const taskIds = await mapTaskIds(params.tasks);
-  
-  const result = await bulkService.moveTasks(
-    taskIds.map(taskId => ({ taskId })), 
-    targetListId, 
-    parseBulkOptions(params.options)
-  );
-  
-  return result.successful;
+  // Validate tasks array
+  validateBulkTasks(tasks, 'move');
+
+  // Validate and resolve target list ID
+  const resolvedTargetListId = await resolveListIdWithValidation(targetListId, targetListName);
+
+  // Parse bulk options
+  const bulkOptions = parseBulkOptions(options);
+
+  // Move tasks
+  return await bulkService.moveTasks(tasks, resolvedTargetListId, bulkOptions);
 }
 
 /**
  * Handler for deleting multiple tasks
  */
-export async function deleteBulkTasksHandler(params) {
-  validateBulkTasks(params.tasks);
-  const taskIds = await mapTaskIds(params.tasks);
-  
-  await bulkService.deleteTasks(
-    taskIds, 
-    parseBulkOptions(params.options)
-  );
-  
-  return taskIds.map(() => true);
+export async function deleteBulkTasksHandler(params: any) {
+  const { tasks, options } = params;
+
+  // Validate tasks array
+  validateBulkTasks(tasks, 'delete');
+
+  // Parse bulk options
+  const bulkOptions = parseBulkOptions(options);
+
+  // Delete tasks
+  return await bulkService.deleteTasks(tasks, bulkOptions);
 }
 
 /**

@@ -171,31 +171,39 @@ export const updateTaskTool = {
   description: `Purpose: Modify properties of an existing task.
 
 Valid Usage:
-1. Use taskId alone (preferred if available)
-2. Use taskName + listName
+1. Use taskId alone (preferred) - works with both regular and custom IDs
+2. Use taskName alone (will search across all lists)
+3. Use taskName + listName (for faster, targeted search)
 
 Requirements:
 - At least one update field (name, description, status, priority, dueDate) must be provided
-- When using taskName, listName is REQUIRED
+- EITHER taskId OR taskName: REQUIRED
+- listName: Optional, but recommended when using taskName
 
 Notes:
+- The tool automatically searches for tasks using smart name matching
+- When only taskName is provided, it searches across all lists
+- Adding listName narrows the search to a specific list for better performance
 - Only specified fields will be updated
-- Using taskId is more reliable than taskName
-- You can set custom field values using the custom_fields parameter (array of {id, value} objects)`,
+- Custom fields can be set using the custom_fields parameter (array of {id, value} objects)
+
+Warning:
+- Using taskName without listName may match multiple tasks
+- If multiple matches are found, the operation will fail with a disambiguation error`,
   inputSchema: {
     type: "object",
     properties: {
       taskId: {
         type: "string",
-        description: "ID of the task to update (preferred). Works with both regular task IDs (9 characters) and custom IDs with uppercase prefixes (like 'DEV-1234')."
+        description: "ID of task to update (preferred). Works with both regular task IDs (9 characters) and custom IDs with uppercase prefixes (like 'DEV-1234')."
       },
       taskName: {
         type: "string",
-        description: "Name of the task to update. Only use this if you don't have taskId. When using this parameter, you MUST also provide listName."
+        description: "Name of task to update. The tool will search for tasks with this name across all lists unless listName is specified."
       },
       listName: {
         type: "string",
-        description: "Name of the list containing the task. REQUIRED when using taskName."
+        description: "Optional: Name of list containing the task. Providing this narrows the search to a specific list, improving performance and reducing ambiguity."
       },
       name: {
         type: "string",
@@ -385,8 +393,7 @@ Note:
         type: "boolean",
         description: "Whether to include subtasks in the response. Set to true to retrieve full details of all subtasks."
       }
-    },
-    required: []
+    }
   }
 };
 
@@ -551,12 +558,23 @@ export const deleteTaskTool = {
 
 Valid Usage:
 1. Use taskId alone (preferred and safest)
-2. Use taskName + optional listName
+2. Use taskName alone (will search across all lists)
+3. Use taskName + listName (for faster, targeted search)
+
+Requirements:
+- EITHER taskId OR taskName: REQUIRED
+- listName: Optional, but recommended when using taskName
+
+Notes:
+- The tool automatically searches for tasks using smart name matching
+- When only taskName is provided, it searches across all lists
+- Adding listName narrows the search to a specific list for better performance
+- Supports both regular task IDs and custom IDs (like 'DEV-1234')
 
 Warning:
 - This action CANNOT be undone
-- Using taskName is risky as names may not be unique
-- Provide listName when using taskName for more precise targeting`,
+- Using taskName without listName may match multiple tasks
+- If multiple matches are found, the operation will fail with a disambiguation error`,
   inputSchema: {
     type: "object",
     properties: {
@@ -566,11 +584,11 @@ Warning:
       },
       taskName: {
         type: "string",
-        description: "Name of task to delete. Use with extreme caution as names may not be unique."
+        description: "Name of task to delete. The tool will search for tasks with this name across all lists unless listName is specified."
       },
       listName: {
         type: "string",
-        description: "Name of list containing the task. Helps ensure correct task deletion when using taskName."
+        description: "Optional: Name of list containing the task. Providing this narrows the search to a specific list, improving performance and reducing ambiguity."
       }
     }
   }

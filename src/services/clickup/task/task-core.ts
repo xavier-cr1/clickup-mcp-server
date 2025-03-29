@@ -332,7 +332,7 @@ export class TaskServiceCore extends BaseClickUpService {
   }
 
   /**
-   * Move a task to a different list
+   * Move a task to another list
    * @param taskId The ID of the task to move
    * @param destinationListId The ID of the list to move the task to
    * @returns The updated task
@@ -342,65 +342,26 @@ export class TaskServiceCore extends BaseClickUpService {
     this.logOperation('moveTask', { taskId, destinationListId, operation: 'start' });
     
     try {
-      // First, get both the task and list info in parallel
-      const [task, listResult] = await Promise.all([
+      // First, get task and validate destination list
+      const [sourceTask, _] = await Promise.all([
         this.validateTaskExists(taskId),
-        this.validateListExists(destinationListId).then(() => this.listService.getList(destinationListId))
+        this.validateListExists(destinationListId)
       ]);
 
-      const originalTask = task;
-      const destinationList = listResult;
-
-      // Log parallel request timing
-      const parallelRequestTime = Date.now() - startTime;
-      this.logOperation('moveTask', { 
-        taskId, 
-        destinationListId, 
-        operation: 'parallel_requests_complete',
-        timing: { parallelRequestTime }
-      });
-
-      const currentStatus = originalTask.status?.status;
-      const availableStatuses = destinationList.statuses?.map(s => s.status) || [];
-
-      // Enhanced status mapping logic
-      let newStatus = currentStatus;
-      if (currentStatus && availableStatuses.length > 0) {
-        // Only map status if current status isn't available in destination list
-        if (!availableStatuses.includes(currentStatus)) {
-          // Try to find a similar status
-          const similarStatus = availableStatuses.find(s => 
-            s.toLowerCase().includes(currentStatus.toLowerCase()) ||
-            currentStatus.toLowerCase().includes(s.toLowerCase())
-          );
-          
-          // If no similar status found, use the first available status
-          newStatus = similarStatus || availableStatuses[0];
-          
-          this.logger.debug('Status mapping', {
-            original: currentStatus,
-            mapped: newStatus,
-            available: availableStatuses
-          });
-        }
-      }
-
-      // Make the move request
-      const movedTask = await this.makeRequest(async () => {
-        const response = await this.client.post<ClickUpTask>(
-          `/task/${taskId}`,
-          {
-            list: destinationListId,
-            status: newStatus
-          }
-        );
-        return response.data;
-      });
-
-      // Cache the moved task
-      this.validationCache.tasks.set(taskId, {
+      // Extract task data for creating the new task
+      const taskData = this.extractTaskData(sourceTask);
+      
+      // Create the task in the new list
+      const newTask = await this.createTask(destinationListId, taskData);
+      
+      // Delete the original task
+      await this.deleteTask(taskId);
+      
+      // Update the cache
+      this.validationCache.tasks.delete(taskId);
+      this.validationCache.tasks.set(newTask.id, {
         validatedAt: Date.now(),
-        task: movedTask
+        task: newTask
       });
 
       const totalTime = Date.now() - startTime;
@@ -408,26 +369,18 @@ export class TaskServiceCore extends BaseClickUpService {
         taskId, 
         destinationListId, 
         operation: 'complete',
-        timing: { 
-          totalTime,
-          parallelRequestTime,
-          moveOperationTime: totalTime - parallelRequestTime
-        },
-        statusMapping: {
-          original: currentStatus,
-          new: newStatus,
-          wasMapped: currentStatus !== newStatus
-        }
+        timing: { totalTime },
+        newTaskId: newTask.id
       });
 
-      return movedTask;
+      return newTask;
     } catch (error) {
       // Log failure
       this.logOperation('moveTask', { 
         taskId, 
         destinationListId, 
         operation: 'failed',
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         timing: { totalTime: Date.now() - startTime }
       });
       throw this.handleError(error, 'Failed to move task');

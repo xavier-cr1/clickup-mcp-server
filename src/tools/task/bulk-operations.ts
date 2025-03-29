@@ -95,17 +95,17 @@ export const createBulkTasksTool = {
   description: `Purpose: Create multiple tasks in a list efficiently.
 
 Valid Usage:
-1. An array of tasks with required properties + listId (preferred)
-2. An array of tasks with required properties + listName
+1. Provide listId + array of tasks (preferred)
+2. Provide listName + array of tasks
 
 Requirements:
 - tasks: REQUIRED (array of tasks, each with at least a name)
 - EITHER listId OR listName: REQUIRED
+- All tasks will be created in the specified list
 
 Notes:
 - Configure batch size and concurrency via options for performance
 - Each task should have a name with emoji prefix
-- All tasks will be created in the same list
 - Custom fields can be set for each task using the custom_fields property (array of {id, value} objects)`,
   inputSchema: {
     type: "object",
@@ -176,37 +176,7 @@ Notes:
         type: "string",
         description: "Name of list for new tasks. Only use if you don't have listId."
       },
-      options: {
-        description: "Processing options (or JSON string representing options)",
-        oneOf: [
-          {
-            type: "object",
-            description: "Optional processing settings",
-            properties: {
-              batchSize: {
-                type: "number",
-                description: "Tasks per batch (default: 10)"
-              },
-              concurrency: {
-                type: "number",
-                description: "Parallel operations (default: 3)"
-              },
-              continueOnError: {
-                type: "boolean",
-                description: "Continue if some tasks fail"
-              },
-              retryCount: {
-                type: "number",
-                description: "Retry attempts for failures"
-              }
-            }
-          },
-          {
-            type: "string",
-            description: "JSON string representing options. Will be parsed automatically."
-          }
-        ]
-      }
+      options: bulkOptionsSchema
     },
     required: ["tasks"]
   }
@@ -232,7 +202,10 @@ Notes:
 - Only specified fields will be updated for each task
 - Configure batch size and concurrency via options for performance
 - Each task can have different fields to update
-- Custom fields can be updated using the custom_fields property (array of {id, value} objects)`,
+- Custom fields can be updated using the custom_fields property (array of {id, value} objects)
+
+Warning:
+- Using taskName without listName will fail as tasks may have identical names across lists`,
   inputSchema: {
     type: "object",
     properties: {
@@ -242,7 +215,22 @@ Notes:
         items: {
           type: "object",
           properties: {
-            ...taskIdentifierSchema,
+            taskId: {
+              type: "string",
+              description: "Task ID (preferred). Works with both regular task IDs (9 characters) and custom IDs with uppercase prefixes (like 'DEV-1234')."
+            },
+            taskName: {
+              type: "string",
+              description: "Task name. Requires listName when used."
+            },
+            listName: {
+              type: "string",
+              description: "REQUIRED with taskName: List containing the task."
+            },
+            customTaskId: {
+              type: "string",
+              description: "Custom task ID (e.g., 'DEV-1234'). Only use if you want to explicitly force custom ID lookup. In most cases, use taskId which auto-detects ID format."
+            },
             name: {
               type: "string",
               description: "New name with emoji prefix"
@@ -288,37 +276,7 @@ Notes:
           }
         }
       },
-      options: {
-        description: "Processing options (or JSON string representing options)",
-        oneOf: [
-          {
-            type: "object",
-            description: "Optional processing settings",
-            properties: {
-              batchSize: {
-                type: "number",
-                description: "Tasks per batch (default: 10)"
-              },
-              concurrency: {
-                type: "number",
-                description: "Parallel operations (default: 3)"
-              },
-              continueOnError: {
-                type: "boolean",
-                description: "Continue if some tasks fail"
-              },
-              retryCount: {
-                type: "number",
-                description: "Retry attempts for failures"
-              }
-            }
-          },
-          {
-            type: "string",
-            description: "JSON string representing options. Will be parsed automatically."
-          }
-        ]
-      }
+      options: bulkOptionsSchema
     },
     required: ["tasks"]
   }
@@ -356,7 +314,22 @@ Warning:
         items: {
           type: "object",
           properties: {
-            ...taskIdentifierSchema
+            taskId: {
+              type: "string",
+              description: "Task ID (preferred). Works with both regular task IDs (9 characters) and custom IDs with uppercase prefixes (like 'DEV-1234')."
+            },
+            taskName: {
+              type: "string",
+              description: "Task name. Requires listName when used."
+            },
+            listName: {
+              type: "string",
+              description: "REQUIRED with taskName: List containing the task."
+            },
+            customTaskId: {
+              type: "string",
+              description: "Custom task ID (e.g., 'DEV-1234'). Only use if you want to explicitly force custom ID lookup. In most cases, use taskId which auto-detects ID format."
+            }
           }
         }
       },
@@ -405,7 +378,22 @@ Warning:
         items: {
           type: "object",
           properties: {
-            ...taskIdentifierSchema
+            taskId: {
+              type: "string",
+              description: "Task ID (preferred). Works with both regular task IDs (9 characters) and custom IDs with uppercase prefixes (like 'DEV-1234')."
+            },
+            taskName: {
+              type: "string",
+              description: "Task name. Requires listName when used."
+            },
+            listName: {
+              type: "string",
+              description: "REQUIRED with taskName: List containing the task."
+            },
+            customTaskId: {
+              type: "string",
+              description: "Custom task ID (e.g., 'DEV-1234'). Only use if you want to explicitly force custom ID lookup. In most cases, use taskId which auto-detects ID format."
+            }
           }
         }
       },

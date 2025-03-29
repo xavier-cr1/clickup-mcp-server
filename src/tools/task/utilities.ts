@@ -140,12 +140,35 @@ export function validateTaskUpdateData(updateData: any): void {
 }
 
 /**
- * Validate bulk operation tasks array
+ * Validate bulk task array and task identification
+ * @param tasks Array of tasks to validate
+ * @param operation The bulk operation type ('create', 'update', 'move', 'delete')
  */
-export function validateBulkTasks(tasks: any[]): void {
-  if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
-    throw new Error('You must provide a non-empty array of tasks');
+export function validateBulkTasks(tasks: any[], operation: 'create' | 'update' | 'move' | 'delete' = 'update') {
+  if (!Array.isArray(tasks) || tasks.length === 0) {
+    throw new Error("tasks must be a non-empty array");
   }
+
+  tasks.forEach((task, index) => {
+    if (!task || typeof task !== 'object') {
+      throw new Error(`Task at index ${index} must be an object`);
+    }
+
+    // Skip task identification validation for create operations
+    if (operation === 'create') {
+      return;
+    }
+
+    // For bulk operations, require listName when using taskName
+    if (task.taskName && !task.listName) {
+      throw new Error(`Task at index ${index} using taskName must also provide listName`);
+    }
+
+    // At least one identifier is required for non-create operations
+    if (!task.taskId && !task.taskName && !task.customTaskId) {
+      throw new Error(`Task at index ${index} must provide either taskId, taskName + listName, or customTaskId`);
+    }
+  });
 }
 
 /**
