@@ -1,4 +1,4 @@
-name: Build and Publish
+name: Build, Tag and Publish
 
 on:
   # Only run this workflow manually, not automatically on push
@@ -13,10 +13,6 @@ on:
           - patch
           - minor
           - major
-      release_notes:
-        description: 'Release notes for this version'
-        required: false
-        type: string
 
 jobs:
   build-and-publish:
@@ -61,8 +57,6 @@ jobs:
         run: |
           sed -i "s/version: \"${{ steps.package_version.outputs.current_version }}\"/version: \"${{ steps.new_version.outputs.new_version }}\"/g" src/server.ts
       
-      # Automatic changelog generation removed - manual updates preferred
-      
       - name: Commit all version changes
         run: |
           git add package.json package-lock.json src/server.ts
@@ -78,34 +72,4 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       
       - name: Push changes
-        run: git push --follow-tags
-      
-      - name: Extract release notes from file
-        id: extract_notes
-        run: |
-          if [ -f "release-notes.md" ]; then
-            # If release-notes.md exists, use it for the GitHub release
-            NOTES=$(cat release-notes.md)
-          elif [ ! -z "${{ github.event.inputs.release_notes }}" ]; then
-            # If release notes were provided as input, use those
-            NOTES="${{ github.event.inputs.release_notes }}"
-          else
-            # Otherwise use a simple format
-            NOTES="## v${{ steps.new_version.outputs.new_version }} ($(date +'%Y-%m-%d'))\n\nSee [changelog.md](https://github.com/taazkareem/clickup-mcp-server/blob/main/changelog.md) for details."
-          fi
-          # Properly escape the content for GitHub Actions output
-          NOTES="${NOTES//'%'/'%25'}"
-          NOTES="${NOTES//$'\n'/'%0A'}"
-          NOTES="${NOTES//$'\r'/'%0D'}"
-          echo "release_notes=$NOTES" >> $GITHUB_OUTPUT
-      
-      - name: Create GitHub Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ steps.new_version.outputs.new_version }}
-          release_name: v${{ steps.new_version.outputs.new_version }}
-          body: ${{ steps.extract_notes.outputs.release_notes }}
-          draft: false
-          prerelease: false 
+        run: git push --follow-tags 
