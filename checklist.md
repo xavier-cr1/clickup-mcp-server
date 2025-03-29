@@ -56,7 +56,11 @@
     - `getTaskDetails` extends: getTaskSummaries
     - Several methods depend on: handleError, buildTaskFilterParams, validateListExists
     - `duplicateTask` depends on: getTask, extractTaskData, createTask
-  - [ ] Identify unused or redundant methods
+  - [x] Identify unused or redundant methods
+    - Redundant: getTaskSummaries and getTaskDetails could be consolidated
+    - Keep: extractPriorityValue (used in core and search)
+    - Keep: extractTaskData (essential for task duplication)
+    - Clean up: Remove duplicate implementations from old task.ts after refactor
 
 ## Directory Structure
 - [x] Create directory structure for modular task service
@@ -74,27 +78,47 @@
   - [x] Extract utility methods (handleError, buildTaskFilterParams)
   - [x] Extract core task operations (getTask, createTask, updateTask, deleteTask)
   - [x] Extract additional core operations (moveTask, duplicateTask, validateListExists)
-  - [ ] Test core operations
+  - [x] Test core operations
+    - Note: Potential optimization for parallel folder/list requests
 
 ## Search Module Implementation
 - [x] Move search functionality to `task-search.ts`
   - [x] Extract findTaskByName method
   - [x] Extract findTasks method
   - [x] Extract getTaskSummaries and getTaskDetails methods
-  - [ ] Optimize search functionality
-  - [ ] Test search operations
+  - [x] Optimize search functionality
+  - [x] Test search operations
+    - Note: Potential optimization for task validation caching
 
 ## Attachments Module Implementation
-- [ ] Move attachment functionality to `task-attachments.ts`
-  - [ ] Extract uploadTaskAttachment method
-  - [ ] Extract uploadTaskAttachmentFromUrl method
-  - [ ] Test attachment operations
+- [x] Move attachment functionality to `task-attachments.ts`
+  - [x] Extract uploadTaskAttachment method
+  - [x] Extract uploadTaskAttachmentFromUrl method
+  - [x] Test attachment operations
+    - Tested: base64, URL, and local file uploads
 
 ## Comments Module Implementation
-- [ ] Move comment functionality to `task-comments.ts`
-  - [ ] Extract getTaskComments method
-  - [ ] Extract createTaskComment method
-  - [ ] Test comment operations
+- [x] Move comment functionality to `task-comments.ts`
+  - [x] Extract getTaskComments method
+  - [x] Extract createTaskComment method
+  - [x] Test comment operations
+
+## Tag Module Implementation
+- [x] Move tag functionality to `task-tags.ts`
+  - [x] Extract addTagToTask method
+  - [x] Extract removeTagFromTask method
+  - [x] Extract getTaskTags method
+  - [x] Implement updateTaskTags method
+  - [x] Test tag operations
+
+## Custom Fields Module Implementation
+- [x] Move custom fields functionality to `task-custom-fields.ts`
+  - [x] Implement setCustomFieldValue method
+  - [x] Implement setCustomFieldValues method
+  - [x] Implement getCustomFieldValues method
+  - [x] Implement getCustomFieldValue method
+  - [x] Fix error handling and imports
+  - [x] Test custom fields operations
 
 ## Index Module Implementation
 - [x] Create unified TaskService in `task-index.ts`
@@ -103,17 +127,8 @@
   - [x] Export complete TaskService
 
 ## Integration Testing
-- [ ] Ensure all tool handlers work with refactored service
-  - [ ] Test all task operations using the MCP tools
-  - [ ] Verify logging is working correctly
-  - [ ] Check error handling
+- [x] Ensure all tool handlers work with refactored service
+  - [x] Test all task operations using the MCP tools
+  - [x] Verify logging is working correctly
+  - [x] Check error handling
 
-## Code Cleanup
-- [ ] Remove deprecated or unused methods
-- [ ] Improve code documentation
-- [ ] Add unit tests for new modules
-
-## Final Steps
-- [ ] Update import paths in other files
-- [ ] Create pull request
-- [ ] Document changes in changelog
