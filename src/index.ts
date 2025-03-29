@@ -26,36 +26,25 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { configureServer, server } from "./server.js";
 import { clickUpServices } from "./services/shared.js";
-import { info, error, debug, warn } from "./logger.js";
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { info, error } from "./logger.js";
 import config from "./config.js";
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
 
-const execAsync = promisify(exec);
+// Get directory name for module paths
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
-/**
- * Check if another instance of the server is already running
- * @returns Boolean indicating if this is the only instance
- */
-async function checkSingleInstance(): Promise<boolean> {
-  try {
-    const { stdout } = await execAsync(`ps aux | grep "node.*clickup-mcp-server" | grep -v grep | wc -l`);
-    const instanceCount = parseInt(stdout.trim(), 10);
-    
-    // If there's more than one instance (including this one), warn and exit
-    if (instanceCount > 1) {
-      error(`Multiple server instances detected (${instanceCount}). This may cause issues.`);
-      info("Use 'pkill -9 -f clickup-mcp-server' to kill all instances before starting a new one.");
-      return false;
-    }
-    
-    return true;
-  } catch (err) {
-    error("Failed to check for other running instances", err);
-    // Continue execution even if check fails
-    return true;
-  }
-}
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  error("Uncaught Exception", { message: err.message, stack: err.stack });
+  process.exit(1);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  error("Unhandled Rejection", { reason });
+  process.exit(1);
+});
 
 /**
  * Application entry point that configures and starts the MCP server.
@@ -63,12 +52,6 @@ async function checkSingleInstance(): Promise<boolean> {
 async function main() {
   try {
     info("Starting ClickUp MCP Server...");
-    
-    // Check if we're the only instance
-    const isSingleInstance = await checkSingleInstance();
-    if (!isSingleInstance) {
-      warn("Continuing startup despite multiple instances detected");
-    }
     
     // Log essential information about the environment
     info("Server environment", {
@@ -89,13 +72,13 @@ async function main() {
     
     info("Server startup complete - ready to handle requests");
   } catch (err) {
-    error("Error during server startup", err);
+    error("Error during server startup", { message: err.message, stack: err.stack });
     process.exit(1);
   }
 }
 
 main().catch((err) => {
-  error("Unhandled server error", err);
+  error("Unhandled server error", { message: err.message, stack: err.stack });
   process.exit(1);
 });
 
