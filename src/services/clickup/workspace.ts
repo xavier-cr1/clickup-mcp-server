@@ -132,8 +132,12 @@ export class WorkspaceService extends BaseClickUpService {
     try {
       // If we have the hierarchy in memory and not forcing refresh, return it
       if (this.workspaceHierarchy && !forceRefresh) {
+        this.logger.debug('Returning cached workspace hierarchy');
         return this.workspaceHierarchy;
       }
+
+      const startTime = Date.now();
+      this.logger.info('Starting workspace hierarchy fetch');
 
       // Start building the workspace tree
       const workspaceTree: WorkspaceTree = {
@@ -145,58 +149,112 @@ export class WorkspaceService extends BaseClickUpService {
       };
 
       // Get all spaces
+      const spacesStartTime = Date.now();
       const spaces = await this.getSpaces();
+      const spacesTime = Date.now() - spacesStartTime;
+      this.logger.info(`Fetched ${spaces.length} spaces in ${spacesTime}ms`);
 
-      // Process each space
-      for (const space of spaces) {
-        const spaceNode: WorkspaceNode = {
-          id: space.id,
-          name: space.name,
-          type: 'space',
-          children: []
-        };
+      // Process spaces in batches to respect rate limits
+      const batchSize = 3; // Process 3 spaces at a time
+      const spaceNodes: WorkspaceNode[] = [];
+      let totalFolders = 0;
+      let totalLists = 0;
 
-        // Get folders for the space
-        const folders = await this.getFoldersInSpace(space.id);
-        for (const folder of folders) {
-          const folderNode: WorkspaceNode = {
-            id: folder.id,
-            name: folder.name,
-            type: 'folder',
-            parentId: space.id,
+      for (let i = 0; i < spaces.length; i += batchSize) {
+        const batchStartTime = Date.now();
+        const spaceBatch = spaces.slice(i, i + batchSize);
+        this.logger.debug(`Processing space batch ${i / batchSize + 1} of ${Math.ceil(spaces.length / batchSize)} (${spaceBatch.length} spaces)`);
+
+        const batchNodes = await Promise.all(spaceBatch.map(async (space) => {
+          const spaceStartTime = Date.now();
+          const spaceNode: WorkspaceNode = {
+            id: space.id,
+            name: space.name,
+            type: 'space',
             children: []
           };
 
-          // Get lists in the folder
-          const listsInFolder = await this.getListsInFolder(folder.id);
-          for (const list of listsInFolder) {
-            folderNode.children?.push({
-              id: list.id,
-              name: list.name,
-              type: 'list',
-              parentId: folder.id
-            });
+          // Fetch initial space data
+          const [folders, listsInSpace] = await Promise.all([
+            this.getFoldersInSpace(space.id),
+            this.getListsInSpace(space.id)
+          ]);
+
+          totalFolders += folders.length;
+          totalLists += listsInSpace.length;
+
+          // Process folders in smaller batches
+          const folderBatchSize = 5; // Process 5 folders at a time
+          const folderNodes: WorkspaceNode[] = [];
+
+          for (let j = 0; j < folders.length; j += folderBatchSize) {
+            const folderBatchStartTime = Date.now();
+            const folderBatch = folders.slice(j, j + folderBatchSize);
+            const batchFolderNodes = await Promise.all(folderBatch.map(async (folder) => {
+              const folderNode: WorkspaceNode = {
+                id: folder.id,
+                name: folder.name,
+                type: 'folder',
+                parentId: space.id,
+                children: []
+              };
+
+              // Get lists in the folder
+              const listsInFolder = await this.getListsInFolder(folder.id);
+              totalLists += listsInFolder.length;
+              folderNode.children = listsInFolder.map(list => ({
+                id: list.id,
+                name: list.name,
+                type: 'list',
+                parentId: folder.id
+              }));
+
+              return folderNode;
+            }));
+
+            folderNodes.push(...batchFolderNodes);
+            const folderBatchTime = Date.now() - folderBatchStartTime;
+            this.logger.debug(`Processed folder batch in space ${space.name} in ${folderBatchTime}ms (${folderBatch.length} folders)`);
           }
 
-          spaceNode.children?.push(folderNode);
-        }
+          // Add folder nodes to space
+          spaceNode.children?.push(...folderNodes);
 
-        // Get lists directly in the space (not in any folder)
-        const listsInSpace = await this.getListsInSpace(space.id);
-        this.logger.debug(`Adding ${listsInSpace.length} lists directly to space ${space.name} (${space.id})`);
-        
-        for (const list of listsInSpace) {
-          this.logger.debug(`Adding list directly to space: ${list.name} (${list.id})`);
-          spaceNode.children?.push({
+          // Add folderless lists to space
+          this.logger.debug(`Adding ${listsInSpace.length} lists directly to space ${space.name}`);
+          
+          const listNodes = listsInSpace.map(list => ({
             id: list.id,
             name: list.name,
-            type: 'list',
+            type: 'list' as const,
             parentId: space.id
-          });
-        }
+          }));
 
-        workspaceTree.root.children.push(spaceNode);
+          spaceNode.children?.push(...listNodes);
+
+          const spaceTime = Date.now() - spaceStartTime;
+          this.logger.info(`Processed space ${space.name} in ${spaceTime}ms (${folders.length} folders, ${listsInSpace.length} lists)`);
+
+          return spaceNode;
+        }));
+
+        spaceNodes.push(...batchNodes);
+        const batchTime = Date.now() - batchStartTime;
+        this.logger.info(`Processed space batch in ${batchTime}ms (${spaceBatch.length} spaces)`);
       }
+
+      // Add all space nodes to the workspace tree
+      workspaceTree.root.children.push(...spaceNodes);
+
+      const totalTime = Date.now() - startTime;
+      this.logger.info('Workspace hierarchy fetch completed', {
+        duration: totalTime,
+        spaces: spaces.length,
+        folders: totalFolders,
+        lists: totalLists,
+        averageTimePerSpace: totalTime / spaces.length,
+        averageTimePerNode: totalTime / (spaces.length + totalFolders + totalLists)
+      });
 
       // Store the hierarchy for later use
       this.workspaceHierarchy = workspaceTree;

@@ -86,7 +86,8 @@ Requirements:
 Notes:
 - For multiple tasks, use create_bulk_tasks instead
 - Reuse list IDs from previous responses when possible to avoid redundant lookups
-- To create a subtask, set the parent parameter to the ID of the parent task`,
+- To create a subtask, set the parent parameter to the ID of the parent task
+- Custom fields can be set using the custom_fields parameter (array of {id, value} objects)`,
   inputSchema: {
     type: "object",
     properties: {
@@ -136,6 +137,27 @@ Notes:
           type: "string"
         },
         description: "Optional array of tag names to assign to the task. The tags must already exist in the space."
+      },
+      custom_fields: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            id: {
+              type: "string",
+              description: "ID of the custom field"
+            },
+            value: {
+              description: "Value for the custom field. Type depends on the field type."
+            }
+          },
+          required: ["id", "value"]
+        },
+        description: "Optional array of custom field values to set on the task. Each object must have an 'id' and 'value' property."
+      },
+      check_required_custom_fields: {
+        type: "boolean",
+        description: "Optional flag to check if all required custom fields are set before saving the task."
       }
     }
   }
@@ -158,7 +180,8 @@ Requirements:
 
 Notes:
 - Only specified fields will be updated
-- Using taskId is more reliable than taskName`,
+- Using taskId is more reliable than taskName
+- You can set custom field values using the custom_fields parameter (array of {id, value} objects)`,
   inputSchema: {
     type: "object",
     properties: {
@@ -202,9 +225,25 @@ Notes:
       startDate: {
         type: "string",
         description: "New start date. Supports both Unix timestamps (in milliseconds) and natural language expressions."
+      },
+      custom_fields: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            id: {
+              type: "string",
+              description: "ID of the custom field"
+            },
+            value: {
+              description: "Value for the custom field. Type depends on the field type."
+            }
+          },
+          required: ["id", "value"]
+        },
+        description: "Optional array of custom field values to set on the task. Each object must have an 'id' and 'value' property."
       }
-    },
-    required: []
+    }
   }
 };
 
