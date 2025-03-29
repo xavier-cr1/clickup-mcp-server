@@ -29,6 +29,21 @@ export class TaskServiceCore extends BaseClickUpService {
   protected listService: ListService;
   protected workspaceService: WorkspaceService | null = null;
   
+  // Cache for validated tasks and lists
+  private validationCache = {
+    tasks: new Map<string, {
+      validatedAt: number;
+      task: ClickUpTask;
+    }>(),
+    lists: new Map<string, {
+      validatedAt: number;
+      valid: boolean;
+    }>()
+  };
+  
+  // Cache TTL in milliseconds (5 minutes)
+  private readonly CACHE_TTL = 5 * 60 * 1000;
+
   constructor(
     apiKey: string, 
     teamId: string, 
@@ -308,7 +323,8 @@ export class TaskServiceCore extends BaseClickUpService {
       
       return {
         success: true,
-        message: `Task ${taskId} deleted successfully`
+        data: undefined,
+        error: undefined
       };
     } catch (error) {
       throw this.handleError(error, `Failed to delete task ${taskId}`);
@@ -318,45 +334,126 @@ export class TaskServiceCore extends BaseClickUpService {
   /**
    * Move a task to a different list
    * @param taskId The ID of the task to move
-   * @param destinationListId The ID of the destination list
-   * @returns The moved task
+   * @param destinationListId The ID of the list to move the task to
+   * @returns The updated task
    */
   async moveTask(taskId: string, destinationListId: string): Promise<ClickUpTask> {
-    this.logOperation('moveTask', { taskId, destinationListId });
+    const startTime = Date.now();
+    this.logOperation('moveTask', { taskId, destinationListId, operation: 'start' });
     
     try {
-      return await this.makeRequest(async () => {
+      // First, get both the task and list info in parallel
+      const [task, listResult] = await Promise.all([
+        this.validateTaskExists(taskId),
+        this.validateListExists(destinationListId).then(() => this.listService.getList(destinationListId))
+      ]);
+
+      const originalTask = task;
+      const destinationList = listResult;
+
+      // Log parallel request timing
+      const parallelRequestTime = Date.now() - startTime;
+      this.logOperation('moveTask', { 
+        taskId, 
+        destinationListId, 
+        operation: 'parallel_requests_complete',
+        timing: { parallelRequestTime }
+      });
+
+      const currentStatus = originalTask.status?.status;
+      const availableStatuses = destinationList.statuses?.map(s => s.status) || [];
+
+      // Enhanced status mapping logic
+      let newStatus = currentStatus;
+      if (currentStatus && availableStatuses.length > 0) {
+        // Only map status if current status isn't available in destination list
+        if (!availableStatuses.includes(currentStatus)) {
+          // Try to find a similar status
+          const similarStatus = availableStatuses.find(s => 
+            s.toLowerCase().includes(currentStatus.toLowerCase()) ||
+            currentStatus.toLowerCase().includes(s.toLowerCase())
+          );
+          
+          // If no similar status found, use the first available status
+          newStatus = similarStatus || availableStatuses[0];
+          
+          this.logger.debug('Status mapping', {
+            original: currentStatus,
+            mapped: newStatus,
+            available: availableStatuses
+          });
+        }
+      }
+
+      // Make the move request
+      const movedTask = await this.makeRequest(async () => {
         const response = await this.client.post<ClickUpTask>(
-          `/task/${taskId}/move_to_list/${destinationListId}`,
-          {}
+          `/task/${taskId}`,
+          {
+            list: destinationListId,
+            status: newStatus
+          }
         );
         return response.data;
       });
+
+      // Cache the moved task
+      this.validationCache.tasks.set(taskId, {
+        validatedAt: Date.now(),
+        task: movedTask
+      });
+
+      const totalTime = Date.now() - startTime;
+      this.logOperation('moveTask', { 
+        taskId, 
+        destinationListId, 
+        operation: 'complete',
+        timing: { 
+          totalTime,
+          parallelRequestTime,
+          moveOperationTime: totalTime - parallelRequestTime
+        },
+        statusMapping: {
+          original: currentStatus,
+          new: newStatus,
+          wasMapped: currentStatus !== newStatus
+        }
+      });
+
+      return movedTask;
     } catch (error) {
-      throw this.handleError(error, `Failed to move task ${taskId} to list ${destinationListId}`);
+      // Log failure
+      this.logOperation('moveTask', { 
+        taskId, 
+        destinationListId, 
+        operation: 'failed',
+        error: error.message,
+        timing: { totalTime: Date.now() - startTime }
+      });
+      throw this.handleError(error, 'Failed to move task');
     }
   }
 
   /**
    * Duplicate a task, optionally to a different list
    * @param taskId The ID of the task to duplicate
-   * @param listId Optional ID of the list to duplicate the task to (uses original list if omitted)
-   * @returns The new duplicate task
+   * @param listId Optional ID of list to create duplicate in (defaults to same list)
+   * @returns The duplicated task
    */
   async duplicateTask(taskId: string, listId?: string): Promise<ClickUpTask> {
     this.logOperation('duplicateTask', { taskId, listId });
     
     try {
-      // First, get the original task details
-      const originalTask = await this.getTask(taskId);
+      // Get source task and validate destination list if provided
+      const [sourceTask, _] = await Promise.all([
+        this.validateTaskExists(taskId),
+        listId ? this.validateListExists(listId) : Promise.resolve()
+      ]);
+
+      // Create duplicate in specified list or original list
+      const targetListId = listId || sourceTask.list.id;
+      const taskData = this.extractTaskData(sourceTask);
       
-      // Extract task data (name, description, etc.)
-      const taskData = this.extractTaskData(originalTask);
-      
-      // Determine which list to create the task in
-      const targetListId = listId || originalTask.list.id;
-      
-      // Create a duplicate task in the target list
       return await this.createTask(targetListId, taskData);
     } catch (error) {
       throw this.handleError(error, `Failed to duplicate task ${taskId}`);
@@ -364,17 +461,107 @@ export class TaskServiceCore extends BaseClickUpService {
   }
 
   /**
-   * Validate that a list exists
+   * Validate a task exists and cache the result
+   * @param taskId The ID of the task to validate
+   * @returns The validated task
+   */
+  protected async validateTaskExists(taskId: string): Promise<ClickUpTask> {
+    // Check cache first
+    const cached = this.validationCache.tasks.get(taskId);
+    if (cached && Date.now() - cached.validatedAt < this.CACHE_TTL) {
+      this.logger.debug('Using cached task validation', { taskId });
+      return cached.task;
+    }
+
+    // Not in cache or expired, fetch task
+    const task = await this.getTask(taskId);
+    
+    // Cache the validation result
+    this.validationCache.tasks.set(taskId, {
+      validatedAt: Date.now(),
+      task
+    });
+
+    return task;
+  }
+
+  /**
+   * Validate multiple tasks exist and cache the results
+   * @param taskIds Array of task IDs to validate
+   * @returns Map of task IDs to validated tasks
+   */
+  protected async validateTasksExist(taskIds: string[]): Promise<Map<string, ClickUpTask>> {
+    const results = new Map<string, ClickUpTask>();
+    const toFetch: string[] = [];
+
+    // Check cache first
+    for (const taskId of taskIds) {
+      const cached = this.validationCache.tasks.get(taskId);
+      if (cached && Date.now() - cached.validatedAt < this.CACHE_TTL) {
+        results.set(taskId, cached.task);
+      } else {
+        toFetch.push(taskId);
+      }
+    }
+
+    if (toFetch.length > 0) {
+      // Fetch uncached tasks in parallel batches
+      const batchSize = 5;
+      for (let i = 0; i < toFetch.length; i += batchSize) {
+        const batch = toFetch.slice(i, i + batchSize);
+        const tasks = await Promise.all(
+          batch.map(id => this.getTask(id))
+        );
+
+        // Cache and store results
+        tasks.forEach((task, index) => {
+          const taskId = batch[index];
+          this.validationCache.tasks.set(taskId, {
+            validatedAt: Date.now(),
+            task
+          });
+          results.set(taskId, task);
+        });
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Validate a list exists and cache the result
    * @param listId The ID of the list to validate
-   * @throws Error if list doesn't exist
    */
   async validateListExists(listId: string): Promise<void> {
-    this.logOperation('validateListExists', { listId });
-    
+    // Check cache first
+    const cached = this.validationCache.lists.get(listId);
+    if (cached && Date.now() - cached.validatedAt < this.CACHE_TTL) {
+      this.logger.debug('Using cached list validation', { listId });
+      if (!cached.valid) {
+        throw new ClickUpServiceError(
+          `List ${listId} does not exist`,
+          ErrorCode.NOT_FOUND
+        );
+      }
+      return;
+    }
+
     try {
       await this.listService.getList(listId);
+      
+      // Cache the successful validation
+      this.validationCache.lists.set(listId, {
+        validatedAt: Date.now(),
+        valid: true
+      });
     } catch (error) {
-      throw this.handleError(error, `List ${listId} not found or inaccessible`);
+      // Cache the failed validation
+      this.validationCache.lists.set(listId, {
+        validatedAt: Date.now(),
+        valid: false
+      });
+      throw error;
     }
   }
 }
+

@@ -2,26 +2,35 @@
  * SPDX-FileCopyrightText: © 2025 Talib Kareem <taazkareem@icloud.com>
  * SPDX-License-Identifier: MIT
  *
- * ClickUp Task Service - Main Entry Point
+ * ClickUp Task Service - Module Exports
  * 
- * This file serves as the main entry point for the TaskService.
- * It imports and combines the individual modules to create a unified TaskService class.
+ * Exports all task-related functionality:
+ * - Core task operations (CRUD)
+ * - Task searching and filtering
+ * - Task comments
+ * - File attachments
+ * - Task tags
+ * - Custom fields
  */
 
-import { TaskServiceCore } from './task-core.js';
-import { TaskServiceSearch } from './task-search.js';
+// Export the main TaskService class
+export { TaskService } from './task-service.js';
 
-// Import other modules as they are implemented
-// import { TaskServiceAttachments } from './task-attachments.js';
-// import { TaskServiceComments } from './task-comments.js';
+// Export all component services
+export { TaskServiceCore } from './task-core.js';
+export { TaskServiceSearch } from './task-search.js';
+export { TaskServiceAttachments } from './task-attachments.js';
+export { TaskServiceComments } from './task-comments.js';
+export { TaskServiceTags } from './task-tags.js';
+export { TaskServiceCustomFields } from './task-custom-fields.js';
 
-/**
- * TaskService class that combines functionality from all task-related modules
- */
-export class TaskService extends TaskServiceSearch {
-  // The inheritance chain ensures that all methods from the base classes are available
-  // TaskServiceCore -> TaskServiceSearch -> TaskService
-}
+// Export types and interfaces from all modules
+export * from './task-core.js';
+export * from './task-search.js';
+export * from './task-attachments.js';
+export * from './task-comments.js';
+export * from './task-tags.js';
+export * from './task-custom-fields.js';
 
-// Re-export types that might be useful for consumers
-export * from '../types.js'; 
+// Re-export TaskService as the default export
+export { TaskService as default } from './task-service.js'; 
