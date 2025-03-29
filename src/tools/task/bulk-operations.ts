@@ -105,18 +105,11 @@ Requirements:
 Notes:
 - Configure batch size and concurrency via options for performance
 - Each task should have a name with emoji prefix
-- All tasks will be created in the same list`,
+- All tasks will be created in the same list
+- Custom fields can be set for each task using the custom_fields property (array of {id, value} objects)`,
   inputSchema: {
     type: "object",
     properties: {
-      listId: {
-        type: "string",
-        description: "ID of list for new tasks (preferred). Use this instead of listName if you have it."
-      },
-      listName: {
-        type: "string",
-        description: "Name of list for new tasks. Only use if you don't have listId."
-      },
       tasks: {
         type: "array",
         description: "Array of tasks to create. Each task must have at least a name.",
@@ -153,19 +146,74 @@ Notes:
                 type: "string"
               },
               description: "Optional array of tag names to assign to the task. The tags must already exist in the space."
+            },
+            custom_fields: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  id: {
+                    type: "string",
+                    description: "ID of the custom field"
+                  },
+                  value: {
+                    description: "Value for the custom field. Type depends on the field type."
+                  }
+                },
+                required: ["id", "value"]
+              },
+              description: "Optional array of custom field values to set on the task."
             }
           },
           required: ["name"]
         }
       },
-      options: bulkOptionsSchema
+      listId: {
+        type: "string",
+        description: "ID of list for new tasks (preferred). Use this instead of listName if you have it."
+      },
+      listName: {
+        type: "string",
+        description: "Name of list for new tasks. Only use if you don't have listId."
+      },
+      options: {
+        description: "Processing options (or JSON string representing options)",
+        oneOf: [
+          {
+            type: "object",
+            description: "Optional processing settings",
+            properties: {
+              batchSize: {
+                type: "number",
+                description: "Tasks per batch (default: 10)"
+              },
+              concurrency: {
+                type: "number",
+                description: "Parallel operations (default: 3)"
+              },
+              continueOnError: {
+                type: "boolean",
+                description: "Continue if some tasks fail"
+              },
+              retryCount: {
+                type: "number",
+                description: "Retry attempts for failures"
+              }
+            }
+          },
+          {
+            type: "string",
+            description: "JSON string representing options. Will be parsed automatically."
+          }
+        ]
+      }
     },
     required: ["tasks"]
   }
 };
 
 /**
- * Tool definition for updating multiple tasks at once
+ * Tool definition for updating multiple tasks efficiently
  */
 export const updateBulkTasksTool = {
   name: "update_bulk_tasks",
@@ -183,7 +231,8 @@ Requirements:
 Notes:
 - Only specified fields will be updated for each task
 - Configure batch size and concurrency via options for performance
-- Each task can have different fields to update`,
+- Each task can have different fields to update
+- Custom fields can be updated using the custom_fields property (array of {id, value} objects)`,
   inputSchema: {
     type: "object",
     properties: {
@@ -218,11 +267,58 @@ Notes:
             dueDate: {
               type: "string",
               description: "New due date. Supports Unix timestamps (in milliseconds) and natural language expressions like '1 hour from now', 'tomorrow', etc."
+            },
+            custom_fields: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  id: {
+                    type: "string",
+                    description: "ID of the custom field"
+                  },
+                  value: {
+                    description: "Value for the custom field. Type depends on the field type."
+                  }
+                },
+                required: ["id", "value"]
+              },
+              description: "Optional array of custom field values to set on the task."
             }
           }
         }
       },
-      options: bulkOptionsSchema
+      options: {
+        description: "Processing options (or JSON string representing options)",
+        oneOf: [
+          {
+            type: "object",
+            description: "Optional processing settings",
+            properties: {
+              batchSize: {
+                type: "number",
+                description: "Tasks per batch (default: 10)"
+              },
+              concurrency: {
+                type: "number",
+                description: "Parallel operations (default: 3)"
+              },
+              continueOnError: {
+                type: "boolean",
+                description: "Continue if some tasks fail"
+              },
+              retryCount: {
+                type: "number",
+                description: "Retry attempts for failures"
+              }
+            }
+          },
+          {
+            type: "string",
+            description: "JSON string representing options. Will be parsed automatically."
+          }
+        ]
+      }
     },
     required: ["tasks"]
   }

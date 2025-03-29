@@ -22,7 +22,7 @@ import {
   resolveListIdWithValidation,
   formatTaskData
 } from './utilities.js';
-import { TaskService } from '../../services/clickup/task.js';
+import { TaskService } from '../../services/clickup/task/index.js';
 import { ExtendedTaskFilters } from '../../services/clickup/types.js';
 
 // Use shared services instance
@@ -57,6 +57,11 @@ function buildUpdateData(params: any): UpdateTaskData {
   if (params.startDate !== undefined) {
     updateData.start_date = parseDueDate(params.startDate);
     updateData.start_date_time = true;
+  }
+  
+  // Handle custom fields if provided
+  if (params.custom_fields !== undefined) {
+    updateData.custom_fields = params.custom_fields;
   }
   
   return updateData;
@@ -136,7 +141,18 @@ async function mapTaskIds(tasks: any[]): Promise<string[]> {
  * Handler for creating a task
  */
 export async function createTaskHandler(params) {
-  const { name, description, markdown_description, status, dueDate, startDate, parent, tags } = params;
+  const { 
+    name, 
+    description, 
+    markdown_description, 
+    status, 
+    dueDate, 
+    startDate, 
+    parent, 
+    tags,
+    custom_fields,
+    check_required_custom_fields
+  } = params;
   
   if (!name) throw new Error("Task name is required");
   
@@ -152,7 +168,9 @@ export async function createTaskHandler(params) {
     status,
     priority,
     parent,
-    tags
+    tags,
+    custom_fields,
+    check_required_custom_fields
   };
   
   // Add due date if specified
@@ -469,6 +487,11 @@ export async function createBulkTasksHandler(params) {
     if (task.dueDate) {
       processedTask.due_date = parseDueDate(task.dueDate);
       delete processedTask.dueDate;
+    }
+    
+    // Make sure custom_fields is preserved in the processed task
+    if (task.custom_fields) {
+      processedTask.custom_fields = task.custom_fields;
     }
     
     return processedTask;
