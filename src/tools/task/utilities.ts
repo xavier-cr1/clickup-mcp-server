@@ -117,11 +117,25 @@ export function validateListIdentification(listId?: string, listName?: string): 
 export function validateTaskUpdateData(updateData: any): void {
   // Check if there are any valid update fields present
   const hasUpdates = Object.keys(updateData).some(key => {
-    return ['name', 'description', 'markdown_description', 'status', 'priority', 'dueDate', 'startDate', 'taskId', 'taskName'].includes(key);
+    return ['name', 'description', 'markdown_description', 'status', 'priority', 
+            'dueDate', 'startDate', 'taskId', 'taskName', 'custom_fields'].includes(key);
   });
   
   if (!hasUpdates) {
     throw new Error("At least one field to update must be provided");
+  }
+  
+  // Validate custom_fields if provided
+  if (updateData.custom_fields) {
+    if (!Array.isArray(updateData.custom_fields)) {
+      throw new Error("custom_fields must be an array");
+    }
+    
+    for (const field of updateData.custom_fields) {
+      if (!field.id || field.value === undefined) {
+        throw new Error("Each custom field must have both id and value properties");
+      }
+    }
   }
 }
 

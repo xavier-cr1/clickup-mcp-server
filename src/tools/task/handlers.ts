@@ -22,7 +22,7 @@ import {
   resolveListIdWithValidation,
   formatTaskData
 } from './utilities.js';
-import { TaskService } from '../../services/clickup/task.js';
+import { TaskService } from '../../services/clickup/task/index.js';
 import { ExtendedTaskFilters } from '../../services/clickup/types.js';
 
 // Use shared services instance
@@ -57,6 +57,11 @@ function buildUpdateData(params: any): UpdateTaskData {
   if (params.startDate !== undefined) {
     updateData.start_date = parseDueDate(params.startDate);
     updateData.start_date_time = true;
+  }
+  
+  // Handle custom fields if provided
+  if (params.custom_fields !== undefined) {
+    updateData.custom_fields = params.custom_fields;
   }
   
   return updateData;
@@ -136,7 +141,18 @@ async function mapTaskIds(tasks: any[]): Promise<string[]> {
  * Handler for creating a task
  */
 export async function createTaskHandler(params) {
-  const { name, description, markdown_description, status, dueDate, startDate, parent, tags } = params;
+  const { 
+    name, 
+    description, 
+    markdown_description, 
+    status, 
+    dueDate, 
+    startDate, 
+    parent, 
+    tags,
+    custom_fields,
+    check_required_custom_fields
+  } = params;
   
   if (!name) throw new Error("Task name is required");
   
@@ -152,7 +168,9 @@ export async function createTaskHandler(params) {
     status,
     priority,
     parent,
-    tags
+    tags,
+    custom_fields,
+    check_required_custom_fields
   };
   
   // Add due date if specified
@@ -213,13 +231,67 @@ export async function duplicateTaskHandler(params) {
  * Handler for getting a task
  */
 export async function getTaskHandler(params) {
-  // Use the new unified findTasks method to handle all lookup scenarios
   try {
+    // Direct path for taskId - most efficient
+    if (params.taskId) {
+      const task = await taskService.getTask(params.taskId);
+      
+      // Add subtasks if requested
+      if (params.subtasks) {
+        const subtasks = await taskService.getSubtasks(task.id);
+        return { ...task, subtasks };
+      }
+      
+      return task;
+    }
+    
+    // Direct path for customTaskId - also efficient
+    if (params.customTaskId) {
+      const task = await taskService.getTaskByCustomId(params.customTaskId);
+      
+      // Add subtasks if requested
+      if (params.subtasks) {
+        const subtasks = await taskService.getSubtasks(task.id);
+        return { ...task, subtasks };
+      }
+      
+      return task;
+    }
+    
+    // Special optimized path for taskName + listName combination
+    if (params.taskName && params.listName) {
+      // First, get the list ID
+      const listId = await getListId(null, params.listName);
+      if (!listId) {
+        throw new Error(`List "${params.listName}" not found`);
+      }
+      
+      // Use the ClickUp API to get filtered tasks
+      // Need to get all tasks and filter on client side
+      // This is more efficient than the original approach because it's a dedicated path 
+      // that skips the global lookup framework entirely
+      const allTasks = await taskService.getTasks(listId);
+      
+      // Find the matching task
+      // Extract this to avoid dependency on internal isNameMatch implementation
+      const matchingTask = findTaskByName(allTasks, params.taskName);
+      
+      if (!matchingTask) {
+        throw new Error(`Task "${params.taskName}" not found in list "${params.listName}"`);
+      }
+      
+      // Add subtasks if requested
+      if (params.subtasks) {
+        const subtasks = await taskService.getSubtasks(matchingTask.id);
+        return { ...matchingTask, subtasks };
+      }
+      
+      return matchingTask;
+    }
+    
+    // Fallback to the original global lookup for all other cases
     const result = await taskService.findTasks({
-      taskId: params.taskId,
-      customTaskId: params.customTaskId,
       taskName: params.taskName,
-      listName: params.listName,
       allowMultipleMatches: true,
       useSmartDisambiguation: false,
       includeFullDetails: true,
@@ -254,6 +326,30 @@ export async function getTaskHandler(params) {
     // Pass along other formatted errors
     throw error;
   }
+}
+
+/**
+ * Helper function to find a task by name in an array of tasks
+ */
+function findTaskByName(tasks, name) {
+  if (!tasks || !Array.isArray(tasks) || !name) return null;
+  
+  // Try exact match first
+  let match = tasks.find(task => task.name === name);
+  if (match) return match;
+  
+  // Try case-insensitive match
+  match = tasks.find(task => 
+    task.name.toLowerCase() === name.toLowerCase()
+  );
+  if (match) return match;
+  
+  // Try fuzzy match - looking for name as substring
+  match = tasks.find(task => 
+    task.name.toLowerCase().includes(name.toLowerCase())
+  );
+  
+  return match || null;
 }
 
 /**
@@ -391,6 +487,11 @@ export async function createBulkTasksHandler(params) {
     if (task.dueDate) {
       processedTask.due_date = parseDueDate(task.dueDate);
       delete processedTask.dueDate;
+    }
+    
+    // Make sure custom_fields is preserved in the processed task
+    if (task.custom_fields) {
+      processedTask.custom_fields = task.custom_fields;
     }
     
     return processedTask;

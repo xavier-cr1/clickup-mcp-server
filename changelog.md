@@ -15,6 +15,20 @@
   - Applied to all task operations: get_task, update_task, delete_task, etc.
   - Improved error messages with actionable information for disambiguation
 
+### 🚀 Performance Optimizations
+- Implemented parallel request optimization for task operations:
+  - Parallel validation of tasks and lists in move operations
+  - Concurrent processing of task and list data
+- Added task validation caching:
+  - 5-minute TTL cache for task and list validations
+  - Reduced redundant API calls in bulk operations
+  - Optimized cache updates after successful operations
+- Enhanced workspace hierarchy fetching:
+  - Implemented batched space processing (3 spaces at a time)
+  - Added batched folder processing (5 folders at a time)
+  - Improved rate limit compliance with controlled concurrency
+  - Added detailed performance logging and metrics
+
 ## v0.6.2 (2025-03-27)
 
 ### 🛠️ Bug Fixes
