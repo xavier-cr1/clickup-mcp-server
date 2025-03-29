@@ -32,15 +32,11 @@ export const getSpaceTagsTool = {
   description: `Purpose: Get all tags available in a ClickUp space.
 
 Valid Usage:
-1. Provide spaceId (preferred if available)
-2. Provide spaceName (will be resolved to a space ID)
+1. Provide spaceId (preferred)
+2. Provide spaceName
 
 Requirements:
-- EITHER spaceId OR spaceName is REQUIRED
-
-Notes:
-- Tags are defined at the space level in ClickUp
-- You need to know the available tags before adding them to tasks`,
+- Space identification: EITHER spaceId OR spaceName REQUIRED`,
   inputSchema: {
     type: "object",
     properties: {
@@ -64,18 +60,15 @@ export const createSpaceTagTool = {
   description: `Purpose: Create a new tag in a ClickUp space.
 
 Valid Usage:
-1. Provide spaceId (preferred if available)
-2. Provide spaceName (will be resolved to a space ID)
+1. Provide spaceId + tagName (preferred)
+2. Provide spaceName + tagName
 
 Requirements:
 - tagName: REQUIRED
-- EITHER spaceId OR spaceName: REQUIRED
+- Space identification: EITHER spaceId OR spaceName REQUIRED
 
 Notes:
-- New tag will be available for all tasks in the space
-- You can specify background and foreground colors in HEX format (e.g., #FF0000)
-- You can also provide a color command (e.g., "blue tag") to automatically generate colors
-- After creating a tag, you can add it to tasks using add_tag_to_task`,
+- Specify colors with HEX values or natural language command`,
   inputSchema: {
     type: "object",
     properties: {

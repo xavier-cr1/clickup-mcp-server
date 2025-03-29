@@ -15,27 +15,20 @@ import { TaskFilters } from '../../services/clickup/types.js';
  */
 export const getWorkspaceTasksTool = {
   name: "get_workspace_tasks",
-  description: `Purpose: Retrieve tasks from across the entire workspace with powerful filtering options, including tag-based filtering.
+  description: `Purpose: Retrieve tasks from across the entire workspace with filtering.
 
 Valid Usage:
-1. Apply any combination of filters (tags, lists, folders, spaces, statuses, etc.)
-2. Use pagination to manage large result sets
+1. Apply any combination of filters (tags, lists, statuses, etc.)
+2. Use pagination for large result sets
 
 Requirements:
-- At least one filter parameter is REQUIRED (tags, list_ids, folder_ids, space_ids, statuses, assignees, or date filters)
-- Pagination parameters (page, order_by, reverse) alone are not considered filters
+- At least one filter parameter REQUIRED (tags, list_ids, statuses, etc.)
 
 Notes:
-- Provides workspace-wide task access (unlike get_tasks which only searches in one list)
-- Returns complete task details including descriptions, assignees, custom fields, and all metadata
-- Tag filtering is especially useful for cross-list organization (e.g., "project-x", "blocker", "needs-review")
-- Combine multiple filters to narrow down your search scope
-- Use pagination for large result sets
-- Use the detail_level parameter to control the amount of data returned:
-  - "summary": Returns lightweight task data (name, status, list, tags)
-  - "detailed": Returns complete task data with all fields (DEFAULT if not specified)
-- Responses exceeding 50,000 tokens automatically switch to summary format to avoid hitting LLM token limits
-`,
+- Searches across all lists in the workspace
+- Tag filtering allows cross-list organization
+- Set detail_level=summary for lightweight responses
+- detail_level=detailed (default) returns complete data`,
   parameters: {
     type: 'object',
     properties: {
