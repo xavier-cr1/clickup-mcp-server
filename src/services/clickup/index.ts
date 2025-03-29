@@ -21,14 +21,14 @@ export * from './types.js';
 
 // Export service modules
 export { WorkspaceService } from './workspace.js';
-export { TaskService } from './task.js';
+export { TaskService } from './task/index.js';
 export { ListService } from './list.js';
 export { FolderService } from './folder.js';
 export { ClickUpTagService } from './tag.js';
 
 // Import service classes for the factory function
 import { WorkspaceService } from './workspace.js';
-import { TaskService } from './task.js';
+import { TaskService } from './task/index.js';
 import { ListService } from './list.js';
 import { FolderService } from './folder.js';
 import { ClickUpTagService } from './tag.js';
