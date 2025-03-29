@@ -7,10 +7,8 @@
  * This is the main server module that handles MCP requests.
  * 
  * !!! TEMPORARY CHANGES !!!
- * Approximately half of the tools have been temporarily disabled to test if this resolves
- * the context token limit issues in Claude Desktop. Once testing is complete, 
- * the commented-out tools should be re-enabled.
- * Last modified: [Date]
+ * Testing with 19 tools (previously 16) to determine tool limit for Claude Desktop.
+ * Last modified: [Current Date]
  */
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import {
@@ -122,14 +120,17 @@ export function configureServer() {
         getSpaceTagsTool,
         createSpaceTagTool,
         addTagToTaskTool,
-        removeTagFromTaskTool
+        removeTagFromTaskTool,
+        duplicateTaskTool,
+        createTaskCommentTool,
+        deleteListTool
       ]
     };
   });
 
   // Register CallTool handler with proper logging
   logger.info("Registering tool handlers", {
-    toolCount: 16,
+    toolCount: 19,
     categories: ["workspace", "task", "list", "tag"]
   });
   
@@ -152,12 +153,16 @@ export function configureServer() {
           return handleUpdateTask(params);
         case "move_task":
           return handleMoveTask(params);
+        case "duplicate_task":
+          return handleDuplicateTask(params);
         case "get_task":
           return handleGetTask(params);
         case "get_tasks":
           return handleGetTasks(params);
         case "delete_task":
           return handleDeleteTask(params);
+        case "create_task_comment":
+          return handleCreateTaskComment(params);
         case "get_workspace_tasks":
           return handleGetWorkspaceTasks(params);
         case "create_list":
@@ -166,6 +171,8 @@ export function configureServer() {
           return handleGetList(params);
         case "update_list":
           return handleUpdateList(params);
+        case "delete_list":
+          return handleDeleteList(params);
         case "get_space_tags":
           return handleGetSpaceTags(params);
         case "create_space_tag":
