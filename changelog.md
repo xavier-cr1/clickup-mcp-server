@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.6.3 (2025-03-28)
+## v0.6.4 (2025-03-28)
 
 - Added start date support for tasks:
   - Set task start dates with natural language expressions (e.g., "now", "tomorrow at 9am")
