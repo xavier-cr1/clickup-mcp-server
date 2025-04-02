@@ -42,7 +42,7 @@ export const parseLogLevel = (levelStr: string | undefined): LogLevel => {
     case 'WARN': return LogLevel.WARN;
     case 'ERROR': return LogLevel.ERROR;
     default:
-      // Don't use console.error as it interferes with JSON-RPC communication
+      console.error(`Invalid LOG_LEVEL: ${levelStr}, defaulting to ERROR`);
       return LogLevel.ERROR;
   }
 };
@@ -63,7 +63,8 @@ const configuration: Config = {
   logLevel: parseLogLevel(envArgs.logLevel || process.env.LOG_LEVEL)
 };
 
-// Don't log to console as it interferes with JSON-RPC communication
+// Log the configured log level (but only to console to avoid circular dependency)
+console.debug(`Log level set to: ${LogLevel[configuration.logLevel]}`);
 
 // Validate only the required variables are present
 const requiredVars = ['clickupApiKey', 'clickupTeamId'];
