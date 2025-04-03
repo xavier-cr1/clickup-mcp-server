@@ -38,6 +38,9 @@ const bulkService = new BulkService(taskService);
 // Create a logger instance for task handlers
 const logger = new Logger('TaskHandlers');
 
+// Token limit constant for workspace tasks
+const WORKSPACE_TASKS_TOKEN_LIMIT = 50000;
+
 // Cache for task context between sequential operations
 const taskContextCache = new Map<string, { id: string, timestamp: number }>();
 const TASK_CONTEXT_TTL = 5 * 60 * 1000; // 5 minutes
@@ -572,6 +575,50 @@ export async function createTaskCommentHandler(params) {
 }
 
 /**
+ * Estimate tokens for a task response
+ * This is a simplified estimation - adjust based on actual token counting needs
+ */
+function estimateTaskResponseTokens(task: ClickUpTask): number {
+  // Base estimation for task structure
+  let tokenCount = 0;
+  
+  // Core fields
+  tokenCount += (task.name?.length || 0) / 4; // Approximate tokens for name
+  tokenCount += (task.description?.length || 0) / 4; // Approximate tokens for description
+  tokenCount += (task.text_content?.length || 0) / 4; // Use text_content instead of markdown_description
+  
+  // Status and other metadata
+  tokenCount += 5; // Basic metadata fields
+  
+  // Custom fields
+  if (task.custom_fields) {
+    tokenCount += Object.keys(task.custom_fields).length * 10; // Rough estimate per custom field
+  }
+  
+  // Add overhead for JSON structure
+  tokenCount *= 1.1;
+  
+  return Math.ceil(tokenCount);
+}
+
+/**
+ * Check if response would exceed token limit
+ */
+function wouldExceedTokenLimit(response: any): boolean {
+  if (!response.tasks?.length) return false;
+  
+  // Calculate total estimated tokens
+  const totalTokens = response.tasks.reduce((sum: number, task: ClickUpTask) => 
+    sum + estimateTaskResponseTokens(task), 0
+  );
+  
+  // Add overhead for response structure
+  const estimatedTotal = totalTokens * 1.1;
+  
+  return estimatedTotal > WORKSPACE_TASKS_TOKEN_LIMIT;
+}
+
+/**
  * Handler for getting workspace tasks with filtering
  */
 export async function getWorkspaceTasksHandler(
@@ -626,6 +673,19 @@ export async function getWorkspaceTasksHandler(
 
     // Get tasks with adaptive response format support
     const response = await taskService.getWorkspaceTasks(filters);
+
+    // Check token limit at handler level
+    if (params.detail_level !== 'summary' && wouldExceedTokenLimit(response)) {
+      logger.info('Response would exceed token limit, fetching summary format instead');
+      
+      // Refetch with summary format
+      const summaryResponse = await taskService.getWorkspaceTasks({
+        ...filters,
+        detail_level: 'summary'
+      });
+      
+      return summaryResponse;
+    }
 
     // Return the response without adding the redundant _note field
     return response;
