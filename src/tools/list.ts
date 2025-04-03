@@ -22,19 +22,7 @@ import { sponsorService } from '../utils/sponsor-service.js';
  */
 export const createListTool = {
   name: "create_list",
-  description: `Purpose: Create a new list directly in a ClickUp space (not in a folder).
-
-Valid Usage:
-1. Provide spaceId + list name (preferred)
-2. Provide spaceName + list name
-
-Requirements:
-- name: REQUIRED
-- EITHER spaceId OR spaceName: REQUIRED
-
-Notes:
-- For creating lists inside folders, use create_list_in_folder instead
-- Optional fields include content, dueDate, priority, assignee, and status`,
+  description: `Creates a list in a ClickUp space. Use spaceId (preferred) or spaceName + list name. Name is required. For lists in folders, use create_list_in_folder. Optional: content, dueDate, priority, assignee, status.`,
   inputSchema: {
     type: "object",
     properties: {
@@ -80,21 +68,7 @@ Notes:
  */
 export const createListInFolderTool = {
   name: "create_list_in_folder",
-  description: `Purpose: Create a new list within a ClickUp folder.
-
-Valid Usage:
-1. Provide folderId + list name (preferred)
-2. Provide folderName + (spaceId OR spaceName) + list name
-
-Requirements:
-- name: REQUIRED
-- EITHER folderId OR (folderName + space information): REQUIRED
-- When using folderName, EITHER spaceId OR spaceName is REQUIRED
-
-Notes:
-- Folder names may not be unique across spaces, which is why space information
-  is required when using folderName
-- Optional fields include content and status`,
+  description: `Creates a list in a ClickUp folder. Use folderId (preferred) or folderName + space info + list name. Name is required. When using folderName, spaceId/spaceName required as folder names may not be unique. Optional: content, status.`,
   inputSchema: {
     type: "object",
     properties: {
@@ -136,18 +110,7 @@ Notes:
  */
 export const getListTool = {
   name: "get_list",
-  description: `Purpose: Retrieve details about a specific ClickUp list.
-
-Valid Usage:
-1. Provide listId (preferred)
-2. Provide listName
-
-Requirements:
-- EITHER listId OR listName: REQUIRED
-
-Notes:
-- Using listId is more reliable as list names might not be unique
-- Returns list details including name, content, and space information`,
+  description: `Gets details of a ClickUp list. Use listId (preferred) or listName. Returns list details including name, content, and space info. ListId more reliable as names may not be unique.`,
   inputSchema: {
     type: "object",
     properties: {
@@ -169,19 +132,7 @@ Notes:
  */
 export const updateListTool = {
   name: "update_list",
-  description: `Purpose: Update an existing ClickUp list's properties.
-
-Valid Usage:
-1. Provide listId + update fields (preferred)
-2. Provide listName + update fields
-
-Requirements:
-- EITHER listId OR listName: REQUIRED
-- At least one field to update (name, content, or status): REQUIRED
-
-Notes:
-- Using listId is more reliable as list names might not be unique
-- Only specified fields will be updated`,
+  description: `Updates a ClickUp list. Use listId (preferred) or listName + at least one update field (name/content/status). ListId more reliable as names may not be unique. Only specified fields updated.`,
   inputSchema: {
     type: "object",
     properties: {
@@ -215,19 +166,7 @@ Notes:
  */
 export const deleteListTool = {
   name: "delete_list",
-  description: `Purpose: Permanently delete a ClickUp list and all its tasks.
-
-Valid Usage:
-1. Provide listId (preferred and safest)
-2. Provide listName
-
-Requirements:
-- EITHER listId OR listName: REQUIRED
-
-Warning:
-- This action CANNOT be undone
-- All tasks within the list will also be permanently deleted
-- Using listName is risky as names may not be unique`,
+  description: `PERMANENTLY deletes a ClickUp list and all its tasks. Use listId (preferred/safest) or listName. WARNING: Cannot be undone, all tasks will be deleted, listName risky if not unique.`,
   inputSchema: {
     type: "object",
     properties: {

@@ -24,19 +24,7 @@ const { folder: folderService, workspace: workspaceService } = clickUpServices;
  */
 export const createFolderTool = {
   name: "create_folder",
-  description: `Purpose: Create a new folder in a ClickUp space for organizing related lists.
-
-Valid Usage:
-1. Provide spaceId (preferred) + folder name
-2. Provide spaceName + folder name
-
-Requirements:
-- name: REQUIRED
-- EITHER spaceId OR spaceName: REQUIRED
-
-Notes:
-- After creating a folder, you can add lists to it using create_list_in_folder
-- Use override_statuses to set folder-specific statuses`,
+  description: `Creates folder in ClickUp space. Use spaceId (preferred) or spaceName + folder name. Optional: override_statuses for folder-specific statuses. Use create_list_in_folder to add lists after creation.`,
   inputSchema: {
     type: "object",
     properties: {
@@ -62,22 +50,11 @@ Notes:
 };
 
 /**
- * Tool definition for getting folder details
+ * Tool definition for retrieving folder details
  */
 export const getFolderTool = {
   name: "get_folder",
-  description: `Purpose: Retrieve details about a specific folder including name, status, and metadata.
-
-Valid Usage:
-1. Use folderId alone (preferred)
-2. Use folderName + (spaceId or spaceName)
-
-Requirements:
-- EITHER folderId OR (folderName + space information) is REQUIRED
-- When using folderName, you MUST provide EITHER spaceId OR spaceName
-
-Notes:
-- Helps you understand folder structure before creating or updating lists`,
+  description: `Gets folder details. Use folderId (preferred) or folderName + (spaceId/spaceName). Helps understand folder structure before creating/updating lists.`,
   inputSchema: {
     type: "object",
     properties: {
@@ -107,19 +84,7 @@ Notes:
  */
 export const updateFolderTool = {
   name: "update_folder",
-  description: `Purpose: Modify an existing folder's properties.
-
-Valid Usage:
-1. Use folderId alone (preferred)
-2. Use folderName + (spaceId or spaceName)
-
-Requirements:
-- At least one update field (name or override_statuses) must be provided
-- EITHER folderId OR (folderName + space information) is REQUIRED
-- When using folderName, you MUST provide EITHER spaceId OR spaceName
-
-Notes:
-- Changes apply immediately to all lists within the folder`,
+  description: `Updates folder properties. Use folderId (preferred) or folderName + (spaceId/spaceName). At least one update field (name/override_statuses) required. Changes apply to all lists in folder.`,
   inputSchema: {
     type: "object",
     properties: {
@@ -157,20 +122,7 @@ Notes:
  */
 export const deleteFolderTool = {
   name: "delete_folder",
-  description: `Purpose: PERMANENTLY DELETE a folder and all its contents.
-
-Valid Usage:
-1. Use folderId alone (preferred and safest)
-2. Use folderName + (spaceId or spaceName)
-
-Requirements:
-- EITHER folderId OR (folderName + space information) is REQUIRED
-- When using folderName, you MUST provide EITHER spaceId OR spaceName
-
-Warning:
-- This action CANNOT be undone
-- All lists and tasks within the folder will also be permanently deleted
-- Using folderName is risky as names may not be unique across different spaces`,
+  description: `PERMANENTLY deletes folder and all contents. Use folderId (preferred/safest) or folderName + (spaceId/spaceName). WARNING: Cannot be undone, all lists/tasks deleted, folderName risky if not unique.`,
   inputSchema: {
     type: "object",
     properties: {

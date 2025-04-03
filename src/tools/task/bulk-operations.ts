@@ -92,21 +92,7 @@ const taskIdentifierSchema = {
  */
 export const createBulkTasksTool = {
   name: "create_bulk_tasks",
-  description: `Purpose: Create multiple tasks in a list efficiently.
-
-Valid Usage:
-1. Provide listId + array of tasks (preferred)
-2. Provide listName + array of tasks
-
-Requirements:
-- tasks: REQUIRED (array of tasks, each with at least a name)
-- EITHER listId OR listName: REQUIRED
-- All tasks will be created in the specified list
-
-Notes:
-- Configure batch size and concurrency via options for performance
-- Each task should have a name with emoji prefix
-- Custom fields can be set for each task using the custom_fields property (array of {id, value} objects)`,
+  description: `Creates multiple tasks in one list. Use listId (preferred) or listName + array of tasks (each needs name). Configure batch size/concurrency via options. Tasks can have custom fields as {id, value} array.`,
   inputSchema: {
     type: "object",
     properties: {
@@ -183,29 +169,11 @@ Notes:
 };
 
 /**
- * Tool definition for updating multiple tasks efficiently
+ * Tool definition for updating multiple tasks
  */
 export const updateBulkTasksTool = {
   name: "update_bulk_tasks",
-  description: `Purpose: Update multiple tasks efficiently in a single operation.
-
-Valid Usage:
-1. For each task, provide taskId (preferred)
-2. For each task, provide taskName + listName
-
-Requirements:
-- tasks: REQUIRED (array of tasks to update)
-- For each task entry, EITHER taskId OR (taskName + listName) is REQUIRED
-- At least one update field per task (name, description, status, priority, dueDate)
-
-Notes:
-- Only specified fields will be updated for each task
-- Configure batch size and concurrency via options for performance
-- Each task can have different fields to update
-- Custom fields can be updated using the custom_fields property (array of {id, value} objects)
-
-Warning:
-- Using taskName without listName will fail as tasks may have identical names across lists`,
+  description: `Updates multiple tasks efficiently. For each task: use taskId (preferred) or taskName + listName. At least one update field per task. Configure batch size/concurrency via options. WARNING: taskName without listName will fail.`,
   inputSchema: {
     type: "object",
     properties: {
@@ -283,28 +251,11 @@ Warning:
 };
 
 /**
- * Tool definition for moving multiple tasks at once
+ * Tool definition for moving multiple tasks
  */
 export const moveBulkTasksTool = {
   name: "move_bulk_tasks",
-  description: `Purpose: Move multiple tasks to a different list efficiently.
-
-Valid Usage:
-1. For each task, provide taskId + target list (preferred)
-2. For each task, provide taskName + listName + target list
-
-Requirements:
-- tasks: REQUIRED (array of tasks to move)
-- EITHER targetListId OR targetListName: REQUIRED
-- For each task entry, EITHER taskId OR (taskName + listName) is REQUIRED
-
-Notes:
-- Configure batch size and concurrency via options for performance
-- All tasks will be moved to the same destination list
-
-Warning:
-- Task statuses may reset if destination list has different status options
-- Using taskName without listName will fail as tasks may have identical names across lists`,
+  description: `Moves multiple tasks to one list. For each task: use taskId (preferred) or taskName + listName. Target list: use targetListId/Name. Configure batch size/concurrency via options. WARNING: Task statuses may reset, taskName needs listName.`,
   inputSchema: {
     type: "object",
     properties: {
@@ -348,27 +299,11 @@ Warning:
 };
 
 /**
- * Tool definition for deleting multiple tasks at once
+ * Tool definition for deleting multiple tasks
  */
 export const deleteBulkTasksTool = {
   name: "delete_bulk_tasks",
-  description: `Purpose: PERMANENTLY DELETE multiple tasks at once.
-
-Valid Usage:
-1. For each task, provide taskId (preferred and safest)
-2. For each task, provide taskName + listName
-
-Requirements:
-- tasks: REQUIRED (array of tasks to delete)
-- For each task entry, EITHER taskId OR (taskName + listName) is REQUIRED
-
-Notes:
-- Configure batch size and concurrency via options for performance
-
-Warning:
-- This action CANNOT be undone for any of the tasks
-- Using taskName without listName is dangerous as names may not be unique
-- Always provide listName when using taskName for safer targeting`,
+  description: `PERMANENTLY deletes multiple tasks. For each task: use taskId (preferred/safest) or taskName + listName. Configure batch size/concurrency via options. WARNING: Cannot be undone, taskName without listName is dangerous.`,
   inputSchema: {
     type: "object",
     properties: {

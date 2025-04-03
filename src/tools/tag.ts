@@ -29,22 +29,11 @@ const { task: taskService } = clickUpServices;
 //=============================================================================
 
 /**
- * Tool definition for getting tags in a space
+ * Tool definition for getting space tags
  */
 export const getSpaceTagsTool = {
   name: "get_space_tags",
-  description: `Purpose: Get all tags available in a ClickUp space.
-
-Valid Usage:
-1. Provide spaceId (preferred if available)
-2. Provide spaceName (will be resolved to a space ID)
-
-Requirements:
-- EITHER spaceId OR spaceName is REQUIRED
-
-Notes:
-- Tags are defined at the space level in ClickUp
-- You need to know the available tags before adding them to tasks`,
+  description: `Gets all tags in a ClickUp space. Use spaceId (preferred) or spaceName. Tags are defined at space level - check available tags before adding to tasks.`,
   inputSchema: {
     type: "object",
     properties: {
@@ -211,26 +200,7 @@ Warning:
  */
 export const addTagToTaskTool = {
   name: "add_tag_to_task",
-  description: `Purpose: Add an existing tag to a ClickUp task.
-
-Valid Usage:
-1. Provide taskId (preferred if available)
-2. Provide taskName (optionally with listName for disambiguation)
-
-Requirements:
-- tagName: REQUIRED
-- EITHER taskId OR customTaskId OR taskName: REQUIRED
-- The tag MUST exist in the space containing the task before calling this tool
-
-Warning:
-- The operation will fail if the tag does not exist in the space
-- Always use get_space_tags first to verify the tag exists
-- If the tag doesn't exist, create it using create_space_tag before adding it to the task
-- If multiple tasks have the same name, provide listName to disambiguate
-
-Notes:
-- Use get_space_tags to see available tags
-- Use create_space_tag to create a new tag if needed`,
+  description: `Adds existing tag to task. Use taskId (preferred) or taskName + optional listName. Tag must exist in space (use get_space_tags to verify, create_space_tag if needed). WARNING: Will fail if tag doesn't exist.`,
   inputSchema: {
     type: "object",
     properties: {
@@ -264,20 +234,7 @@ Notes:
  */
 export const removeTagFromTaskTool = {
   name: "remove_tag_from_task",
-  description: `Purpose: Remove a tag from a ClickUp task.
-
-Valid Usage:
-1. Provide taskId (preferred if available)
-2. Provide taskName (optionally with listName for disambiguation)
-
-Requirements:
-- tagName: REQUIRED
-- EITHER taskId OR customTaskId OR taskName: REQUIRED
-
-Notes:
-- This only removes the association between the tag and task
-- The tag will still exist in the space
-- If multiple tasks have the same name, provide listName to disambiguate`,
+  description: `Removes tag from task. Use taskId (preferred) or taskName + optional listName. Only removes tag-task association, tag remains in space. For multiple tasks, provide listName to disambiguate.`,
   inputSchema: {
     type: "object",
     properties: {

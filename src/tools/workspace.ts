@@ -25,18 +25,7 @@ const { workspace: workspaceService } = clickUpServices;
  */
 export const workspaceHierarchyTool: Tool = {
   name: 'get_workspace_hierarchy',
-  description: `Purpose: Retrieve the complete workspace hierarchy including spaces, folders, and lists.
-
-Valid Usage:
-1. Call without parameters to get the full hierarchy
-
-Requirements:
-- No parameters required
-
-Notes:
-- Returns a tree structure showing all spaces, folders, and lists
-- Each item includes its name and ID
-- Use this to navigate the workspace and understand its organization`,
+  description: `Gets complete workspace hierarchy (spaces, folders, lists). No parameters needed. Returns tree structure with names and IDs for navigation.`,
   inputSchema: {
     type: 'object',
     properties: {}

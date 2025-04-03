@@ -56,42 +56,7 @@ setInterval(() => {
  */
 export const attachTaskFileTool = {
   name: "attach_task_file",
-  description: `Purpose: Attaches a file to a ClickUp task.
-
-Valid Usage:
-1. Use taskId alone (preferred) - works with both regular and custom IDs
-2. Use taskName alone (will search across all lists)
-3. Use taskName + listName (for faster, targeted search)
-
-File Source Options:
-1. Upload from base64: Provide file_data + file_name
-2. Upload from URL: Provide file_url starting with http:// or https://
-3. Upload from local file: Provide file_url as absolute path (starting with / or drive letter)
-4. For large files: Use chunk_* parameters for advanced chunked uploading
-
-Requirements:
-- EITHER taskId OR taskName: REQUIRED
-- listName: Optional, but recommended when using taskName
-- File Source: ONE of the following is REQUIRED:
-  - file_data + file_name
-  - file_url (web URL or local path)
-  - chunk_session (for continuing chunked upload)
-
-Notes:
-- The tool automatically searches for tasks using smart name matching
-- When only taskName is provided, it searches across all lists
-- Adding listName narrows the search to a specific list for better performance
-- The system automatically selects the best upload method based on file size and source:
-  - Base64 method: Limited to 10MB due to encoding overhead
-  - URL method: Works for files hosted online
-  - Local file method: Works with absolute paths only
-  - Large files: Automatically uses chunked uploading
-
-Warning:
-- Using taskName without listName may match multiple tasks
-- If multiple matches are found, the operation will fail with a disambiguation error
-- For local files, relative paths are not supported
-- Base64 uploads over 10MB will automatically switch to chunked upload mode`,
+  description: `Attaches file to task. Use taskId (preferred) or taskName + optional listName. File sources: 1) base64 + filename (≤10MB), 2) URL (http/https), 3) local path (absolute), 4) chunked for large files. WARNING: taskName without listName may match multiple tasks.`,
   inputSchema: {
     type: "object",
     properties: {

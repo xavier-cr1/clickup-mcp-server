@@ -73,21 +73,7 @@ const handleOperationError = (operation: string, error: any) => {
  */
 export const createTaskTool = {
   name: "create_task",
-  description: `Purpose: Create a single task in a ClickUp list.
-
-Valid Usage:
-1. Provide listId (preferred if available)
-2. Provide listName (system will look up the list ID)
-
-Requirements:
-- name: REQUIRED
-- EITHER listId OR listName: REQUIRED
-
-Notes:
-- For multiple tasks, use create_bulk_tasks instead
-- Reuse list IDs from previous responses when possible to avoid redundant lookups
-- To create a subtask, set the parent parameter to the ID of the parent task
-- Custom fields can be set using the custom_fields parameter (array of {id, value} objects)`,
+  description: `Creates a single task in a ClickUp list. Use listId (preferred) or listName. Required: name + list info. For multiple tasks use create_bulk_tasks. Can create subtasks via parent param. Supports custom fields as array of {id, value}.`,
   inputSchema: {
     type: "object",
     properties: {
@@ -168,28 +154,7 @@ Notes:
  */
 export const updateTaskTool = {
   name: "update_task",
-  description: `Purpose: Modify properties of an existing task.
-
-Valid Usage:
-1. Use taskId alone (preferred) - works with both regular and custom IDs
-2. Use taskName alone (will search across all lists)
-3. Use taskName + listName (for faster, targeted search)
-
-Requirements:
-- At least one update field (name, description, status, priority, dueDate) must be provided
-- EITHER taskId OR taskName: REQUIRED
-- listName: Optional, but recommended when using taskName
-
-Notes:
-- The tool automatically searches for tasks using smart name matching
-- When only taskName is provided, it searches across all lists
-- Adding listName narrows the search to a specific list for better performance
-- Only specified fields will be updated
-- Custom fields can be set using the custom_fields parameter (array of {id, value} objects)
-
-Warning:
-- Using taskName without listName may match multiple tasks
-- If multiple matches are found, the operation will fail with a disambiguation error`,
+  description: `Updates task properties. Use taskId (preferred) or taskName + optional listName. At least one update field required. Custom fields supported as array of {id, value}. WARNING: Using taskName without listName may match multiple tasks.`,
   inputSchema: {
     type: "object",
     properties: {
@@ -260,19 +225,7 @@ Warning:
  */
 export const moveTaskTool = {
   name: "move_task",
-  description: `Purpose: Move a task to a different list.
-
-Valid Usage:
-1. Use taskId + (listId OR listName) - preferred
-2. Use taskName + sourceListName + (listId OR listName)
-
-Requirements:
-- Destination list: EITHER listId OR listName REQUIRED
-- When using taskName, sourceListName is REQUIRED
-
-Warning:
-- Task statuses may reset if destination list has different status options
-- System cannot find a task by name without knowing which list to search in`,
+  description: `Moves task to different list. Use taskId + (listId/listName) preferred, or taskName + sourceListName + (listId/listName). WARNING: Task statuses may reset if destination list has different status options.`,
   inputSchema: {
     type: "object",
     properties: {
@@ -306,21 +259,7 @@ Warning:
  */
 export const duplicateTaskTool = {
   name: "duplicate_task",
-  description: `Purpose: Create a copy of a task in the same or different list.
-
-Valid Usage:
-1. Use taskId + optional (listId OR listName) - preferred
-2. Use taskName + sourceListName + optional (listId OR listName)
-
-Requirements:
-- When using taskName, sourceListName is REQUIRED
-
-Notes:
-- The duplicate preserves the original task's properties
-- If no destination list specified, uses same list as original task
-
-Warning:
-- System cannot find a task by name without knowing which list to search in`,
+  description: `Creates copy of task in same/different list. Use taskId + optional (listId/listName), or taskName + sourceListName + optional (listId/listName). Preserves original properties. Default: same list as original.`,
   inputSchema: {
     type: "object",
     properties: {
@@ -350,28 +289,11 @@ Warning:
 };
 
 /**
- * Tool definition for retrieving a task
+ * Tool definition for retrieving task details
  */
 export const getTaskTool = {
   name: "get_task",
-  description: `Purpose: Retrieve detailed information about a specific task.
-
-Valid Usage:
-1. Use taskId alone (preferred) - works with both regular and custom IDs (like "DEV-1234")
-2. Use taskName alone (will search across all lists in the workspace)
-3. Use taskName + listName (for faster, targeted search)
-4. Use customTaskId for explicit custom ID lookup
-
-Requirements:
-- EITHER taskId OR taskName OR customTaskId: REQUIRED
-- listName: Optional, but recommended when using taskName for faster and more precise lookup
-
-Note:
-- When using just taskName, the system performs a global search across all lists
-- Task names are most unique within a specific list, so providing listName increases reliability
-- Regular task IDs are always 9 characters long (e.g., "86b394eqa")
-- Custom IDs have an uppercase prefix followed by a hyphen and number (e.g., "DEV-1234")
-- Set subtasks=true to include all subtasks in the response`,
+  description: `Gets task details by taskId (works with regular/custom IDs) or taskName. For taskName search, provide listName for faster lookup. Set subtasks=true to include all subtask details.`,
   inputSchema: {
     type: "object",
     properties: {
@@ -463,16 +385,7 @@ Notes:
  */
 export const getTaskCommentsTool = {
   name: "get_task_comments",
-  description: `Purpose: Retrieve comments for a ClickUp task.
-
-Valid Usage:
-1. Use taskId (preferred)
-2. Use taskName + optional listName
-
-Notes:
-- If using taskName, providing listName helps locate the correct task
-- Task names may not be unique across different lists
-- Use start and startId parameters for pagination through comments`,
+  description: `Gets task comments. Use taskId (preferred) or taskName + optional listName. Use start/startId params for pagination. Task names may not be unique across lists.`,
   inputSchema: {
     type: "object",
     properties: {
@@ -505,20 +418,7 @@ Notes:
  */
 export const createTaskCommentTool = {
   name: "create_task_comment",
-  description: `Purpose: Create a comment on a ClickUp task.
-
-Valid Usage:
-1. Use taskId (preferred)
-2. Use taskName + listName
-
-Requirements:
-- EITHER taskId OR (taskName + listName) is REQUIRED
-- commentText is REQUIRED
-
-Notes:
-- When using taskName, providing listName helps locate the correct task
-- Set notifyAll to true to send notifications to all task assignees
-- Use assignee to assign the comment to a specific user (optional)`,
+  description: `Creates task comment. Use taskId (preferred) or taskName + listName. Required: commentText. Optional: notifyAll to notify assignees, assignee to assign comment.`,
   inputSchema: {
     type: "object",
     properties: {
@@ -556,27 +456,7 @@ Notes:
  */
 export const deleteTaskTool = {
   name: "delete_task",
-  description: `Purpose: PERMANENTLY DELETE a task.
-
-Valid Usage:
-1. Use taskId alone (preferred and safest)
-2. Use taskName alone (will search across all lists)
-3. Use taskName + listName (for faster, targeted search)
-
-Requirements:
-- EITHER taskId OR taskName: REQUIRED
-- listName: Optional, but recommended when using taskName
-
-Notes:
-- The tool automatically searches for tasks using smart name matching
-- When only taskName is provided, it searches across all lists
-- Adding listName narrows the search to a specific list for better performance
-- Supports both regular task IDs and custom IDs (like 'DEV-1234')
-
-Warning:
-- This action CANNOT be undone
-- Using taskName without listName may match multiple tasks
-- If multiple matches are found, the operation will fail with a disambiguation error`,
+  description: `PERMANENTLY deletes task. Use taskId (preferred/safest) or taskName + optional listName. WARNING: Cannot be undone. Using taskName without listName may match multiple tasks.`,
   inputSchema: {
     type: "object",
     properties: {
