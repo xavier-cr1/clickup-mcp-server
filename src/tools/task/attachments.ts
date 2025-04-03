@@ -27,9 +27,13 @@ import {
 } from './attachments.types.js';
 import { validateTaskIdentification } from './utilities.js';
 import { sponsorService } from '../../utils/sponsor-service.js';
+import { Logger } from '../../logger.js';
 
 // Use shared services instance
 const { task: taskService } = clickUpServices;
+
+// Create a logger instance for attachments
+const logger = new Logger('TaskAttachments');
 
 // Session storage for chunked uploads (in-memory for demonstration)
 const chunkSessions = new Map<string, ChunkSession>();
@@ -42,7 +46,7 @@ setInterval(() => {
   for (const [token, session] of chunkSessions.entries()) {
     if (now - session.timestamp > expired) {
       chunkSessions.delete(token);
-      console.log(`Cleaned up expired upload session: ${token}`);
+      logger.debug(`Cleaned up expired upload session: ${token}`);
     }
   }
 }, 3600 * 1000); // Check every hour
@@ -188,12 +192,12 @@ async function attachTaskFileHandler(params: any): Promise<any> {
     // CASE 2: URL-based upload or local file path
     if (file_url) {
       // Check if it's a local file path
-      console.log(`Checking if path is local: ${file_url}`);
+      logger.debug(`Checking if path is local: ${file_url}`);
       if (file_url.startsWith('/') || /^[A-Za-z]:\\/.test(file_url)) {
-        console.log(`Detected as local path, proceeding to handle: ${file_url}`);
+        logger.debug(`Detected as local path, proceeding to handle: ${file_url}`);
         return await handleLocalFileUpload(resolvedTaskId, file_url, file_name);
       } else if (file_url.startsWith('http://') || file_url.startsWith('https://')) {
-        console.log(`Detected as URL, proceeding with URL upload: ${file_url}`);
+        logger.debug(`Detected as URL, proceeding with URL upload: ${file_url}`);
         return await handleUrlUpload(resolvedTaskId, file_url, file_name, auth_header);
       } else {
         throw new Error(`Invalid file_url format: "${file_url}". The file_url parameter must be either an absolute file path (starting with / or drive letter) or a web URL (starting with http:// or https://)`);
@@ -221,7 +225,7 @@ async function attachTaskFileHandler(params: any): Promise<any> {
     
     throw new Error("Invalid parameters: Unable to determine upload method");
   } catch (error) {
-    console.error(`Error attaching file to task:`, error);
+    logger.error(`Error attaching file to task:`, error);
     throw error;
   }
 }
@@ -394,7 +398,7 @@ async function handleLocalFileUpload(taskId: string, filePath: string, fileName:
     const fs = await import('fs');
     const path = await import('path');
     
-    console.log(`Processing absolute file path: ${filePath}`);
+    logger.debug(`Processing absolute file path: ${filePath}`);
     
     // Normalize the path to prevent directory traversal attacks
     const normalizedPath = path.normalize(filePath);
@@ -417,7 +421,7 @@ async function handleLocalFileUpload(taskId: string, filePath: string, fileName:
     const fileBuffer = fs.readFileSync(normalizedPath);
     const fileSize = fileBuffer.length;
     
-    console.log(`Successfully read file: ${extractedFileName} (${fileSize} bytes)`);
+    logger.debug(`Successfully read file: ${extractedFileName} (${fileSize} bytes)`);
     
     // Choose upload method based on file size
     if (fileSize > 10 * 1024 * 1024) {

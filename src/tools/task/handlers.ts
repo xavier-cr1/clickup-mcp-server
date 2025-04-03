@@ -27,12 +27,16 @@ import { ExtendedTaskFilters } from '../../services/clickup/types.js';
 import { findListIDByName } from '../list.js';
 import { workspaceService } from '../../services/shared.js';
 import { isNameMatch } from '../../utils/resolver-utils.js';
+import { Logger } from '../../logger.js';
 
 // Use shared services instance
 const { task: taskService, list: listService } = clickUpServices;
 
 // Create a bulk service instance that uses the task service
 const bulkService = new BulkService(taskService);
+
+// Create a logger instance for task handlers
+const logger = new Logger('TaskHandlers');
 
 // Cache for task context between sequential operations
 const taskContextCache = new Map<string, { id: string, timestamp: number }>();
@@ -175,7 +179,7 @@ async function findTask(params: {
     
     // Fallback to searching all lists for taskName-only case
     if (taskName) {
-      console.log(`Searching all lists for task: "${taskName}"`);
+      logger.debug(`Searching all lists for task: "${taskName}"`);
       
       // Get workspace hierarchy which contains all lists
       const hierarchy = await workspaceService.getWorkspaceHierarchy();
@@ -200,12 +204,12 @@ async function findTask(params: {
           const tasks = await taskService.getTasks(listId);
           const matchingTask = findTaskByName(tasks, taskName);
           if (matchingTask) {
-            console.log(`Found task "${matchingTask.name}" (ID: ${matchingTask.id}) in list with ID "${listId}"`);
+            logger.debug(`Found task "${matchingTask.name}" (ID: ${matchingTask.id}) in list with ID "${listId}"`);
             return matchingTask;
           }
           return null;
         } catch (error) {
-          console.warn(`Error searching list ${listId}: ${error.message}`);
+          logger.warn(`Error searching list ${listId}: ${error.message}`);
           return null;
         }
       });
@@ -480,9 +484,6 @@ export async function updateTaskHandler(
 
   // Validate update data
   validateTaskUpdateData(updateData);
-
-  // Log operation parameters
-  console.info('Updating task', { taskId, taskName, listName, customTaskId, updateData });
 
   try {
     // Get the task ID using global lookup

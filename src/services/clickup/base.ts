@@ -77,6 +77,24 @@ interface RateLimitHeaders {
 }
 
 /**
+ * Helper function to safely parse JSON
+ * @param data Data to parse
+ * @param fallback Optional fallback value if parsing fails
+ * @returns Parsed JSON or fallback value
+ */
+function safeJsonParse(data: any, fallback: any = undefined): any {
+  if (typeof data !== 'string') {
+    return data;
+  }
+  
+  try {
+    return JSON.parse(data);
+  } catch (error) {
+    return fallback;
+  }
+}
+
+/**
  * Base ClickUp service class that handles common functionality
  */
 export class BaseClickUpService {
@@ -115,7 +133,20 @@ export class BaseClickUpService {
         'Authorization': apiKey,
         'Content-Type': 'application/json'
       },
-      timeout: this.timeout
+      timeout: this.timeout,
+      transformResponse: [
+        // Add custom response transformer to handle both JSON and text responses
+        (data: any) => {
+          if (!data) return data;
+          
+          // If it's already an object, return as is
+          if (typeof data !== 'string') return data;
+          
+          // Try to parse as JSON, fall back to raw text if parsing fails
+          const parsed = safeJsonParse(data, null);
+          return parsed !== null ? parsed : data;
+        }
+      ]
     });
 
     this.logger.debug(`Initialized ${className}`, { teamId, baseUrl });
@@ -156,7 +187,7 @@ export class BaseClickUpService {
       path,
       status,
       method: error.config?.method?.toUpperCase() || 'UNKNOWN',
-      requestData: error.config?.data ? JSON.parse(error.config.data) : undefined
+      requestData: error.config?.data ? safeJsonParse(error.config.data, error.config.data) : undefined
     };
 
     // Pick the appropriate error code based on status

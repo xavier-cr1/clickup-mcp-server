@@ -15,6 +15,10 @@ import {
   WorkspaceTree, 
   WorkspaceNode
 } from './types.js';
+import { Logger } from '../../logger.js';
+
+// Create a logger instance for workspace service
+const logger = new Logger('WorkspaceService');
 
 /**
  * Service for workspace-related operations
@@ -45,8 +49,7 @@ export class WorkspaceService extends BaseClickUpService {
    * @returns - A standardized ClickUpServiceError
    */
   private handleError(error: any, message?: string): ClickUpServiceError {
-    // Log the error for debugging
-    console.error('WorkspaceService error:', error);
+    logger.error('WorkspaceService error:', error);
     
     // If the error is already a ClickUpServiceError, return it
     if (error instanceof ClickUpServiceError) {
@@ -132,12 +135,12 @@ export class WorkspaceService extends BaseClickUpService {
     try {
       // If we have the hierarchy in memory and not forcing refresh, return it
       if (this.workspaceHierarchy && !forceRefresh) {
-        this.logger.debug('Returning cached workspace hierarchy');
+        logger.debug('Returning cached workspace hierarchy');
         return this.workspaceHierarchy;
       }
 
       const startTime = Date.now();
-      this.logger.info('Starting workspace hierarchy fetch');
+      logger.info('Starting workspace hierarchy fetch');
 
       // Start building the workspace tree
       const workspaceTree: WorkspaceTree = {
@@ -152,7 +155,7 @@ export class WorkspaceService extends BaseClickUpService {
       const spacesStartTime = Date.now();
       const spaces = await this.getSpaces();
       const spacesTime = Date.now() - spacesStartTime;
-      this.logger.info(`Fetched ${spaces.length} spaces in ${spacesTime}ms`);
+      logger.info(`Fetched ${spaces.length} spaces in ${spacesTime}ms`);
 
       // Process spaces in batches to respect rate limits
       const batchSize = 3; // Process 3 spaces at a time
@@ -163,7 +166,7 @@ export class WorkspaceService extends BaseClickUpService {
       for (let i = 0; i < spaces.length; i += batchSize) {
         const batchStartTime = Date.now();
         const spaceBatch = spaces.slice(i, i + batchSize);
-        this.logger.debug(`Processing space batch ${i / batchSize + 1} of ${Math.ceil(spaces.length / batchSize)} (${spaceBatch.length} spaces)`);
+        logger.debug(`Processing space batch ${i / batchSize + 1} of ${Math.ceil(spaces.length / batchSize)} (${spaceBatch.length} spaces)`);
 
         const batchNodes = await Promise.all(spaceBatch.map(async (space) => {
           const spaceStartTime = Date.now();
@@ -214,14 +217,14 @@ export class WorkspaceService extends BaseClickUpService {
 
             folderNodes.push(...batchFolderNodes);
             const folderBatchTime = Date.now() - folderBatchStartTime;
-            this.logger.debug(`Processed folder batch in space ${space.name} in ${folderBatchTime}ms (${folderBatch.length} folders)`);
+            logger.debug(`Processed folder batch in space ${space.name} in ${folderBatchTime}ms (${folderBatch.length} folders)`);
           }
 
           // Add folder nodes to space
           spaceNode.children?.push(...folderNodes);
 
           // Add folderless lists to space
-          this.logger.debug(`Adding ${listsInSpace.length} lists directly to space ${space.name}`);
+          logger.debug(`Adding ${listsInSpace.length} lists directly to space ${space.name}`);
           
           const listNodes = listsInSpace.map(list => ({
             id: list.id,
@@ -233,21 +236,21 @@ export class WorkspaceService extends BaseClickUpService {
           spaceNode.children?.push(...listNodes);
 
           const spaceTime = Date.now() - spaceStartTime;
-          this.logger.info(`Processed space ${space.name} in ${spaceTime}ms (${folders.length} folders, ${listsInSpace.length} lists)`);
+          logger.info(`Processed space ${space.name} in ${spaceTime}ms (${folders.length} folders, ${listsInSpace.length} lists)`);
 
           return spaceNode;
         }));
 
         spaceNodes.push(...batchNodes);
         const batchTime = Date.now() - batchStartTime;
-        this.logger.info(`Processed space batch in ${batchTime}ms (${spaceBatch.length} spaces)`);
+        logger.info(`Processed space batch in ${batchTime}ms (${spaceBatch.length} spaces)`);
       }
 
       // Add all space nodes to the workspace tree
       workspaceTree.root.children.push(...spaceNodes);
 
       const totalTime = Date.now() - startTime;
-      this.logger.info('Workspace hierarchy fetch completed', {
+      logger.info('Workspace hierarchy fetch completed', {
         duration: totalTime,
         spaces: spaces.length,
         folders: totalFolders,
@@ -359,7 +362,7 @@ export class WorkspaceService extends BaseClickUpService {
       // The /space/{space_id}/list endpoint already returns folderless lists only
       const lists = await this.getFolderlessLists(spaceId);
       
-      this.logger.debug(`Found ${lists.length} folderless lists in space ${spaceId}`);
+      logger.debug(`Found ${lists.length} folderless lists in space ${spaceId}`);
       
       // Return all lists without filtering since the API already returns folderless lists
       return lists;

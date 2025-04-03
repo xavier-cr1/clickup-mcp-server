@@ -194,31 +194,57 @@ export class TaskServiceCore extends BaseClickUpService {
     
     try {
       return await this.makeRequest(async () => {
-        const response = await this.client.post<ClickUpTask>(
+        const response = await this.client.post<ClickUpTask | string>(
           `/list/${listId}/task`,
           taskData
         );
-        return response.data;
+        
+        // Handle both JSON and text responses
+        const data = response.data;
+        if (typeof data === 'string') {
+          // If we got a text response, try to extract task ID from common patterns
+          const idMatch = data.match(/task.*?(\w{9})/i);
+          if (idMatch) {
+            // If we found an ID, fetch the full task details
+            return await this.getTask(idMatch[1]);
+          }
+          throw new ClickUpServiceError(
+            'Received unexpected text response from API',
+            ErrorCode.UNKNOWN,
+            data
+          );
+        }
+        
+        return data;
       });
     } catch (error) {
-      throw this.handleError(error, `Failed to create task in list ${listId}`);
+      throw this.handleError(error, 'Failed to create task');
     }
   }
 
   /**
-   * Get a specific task by ID
+   * Get a task by its ID
    * @param taskId The ID of the task to retrieve
-   * @returns The task details
+   * @returns The task
    */
   async getTask(taskId: string): Promise<ClickUpTask> {
     this.logOperation('getTask', { taskId });
     
     try {
       return await this.makeRequest(async () => {
-        const response = await this.client.get<ClickUpTask>(
-          `/task/${taskId}`
-        );
-        return response.data;
+        const response = await this.client.get<ClickUpTask>(`/task/${taskId}`);
+        
+        // Handle both JSON and text responses
+        const data = response.data;
+        if (typeof data === 'string') {
+          throw new ClickUpServiceError(
+            'Received unexpected text response from API',
+            ErrorCode.UNKNOWN,
+            data
+          );
+        }
+        
+        return data;
       });
     } catch (error) {
       throw this.handleError(error, `Failed to get task ${taskId}`);
@@ -226,10 +252,10 @@ export class TaskServiceCore extends BaseClickUpService {
   }
 
   /**
-   * Get all tasks in a list with optional filtering
+   * Get all tasks in a list
    * @param listId The ID of the list to get tasks from
    * @param filters Optional filters to apply
-   * @returns List of tasks matching the filters
+   * @returns Array of tasks
    */
   async getTasks(listId: string, filters: TaskFilters = {}): Promise<ClickUpTask[]> {
     this.logOperation('getTasks', { listId, filters });
@@ -237,15 +263,25 @@ export class TaskServiceCore extends BaseClickUpService {
     try {
       return await this.makeRequest(async () => {
         const params = this.buildTaskFilterParams(filters);
-        
         const response = await this.client.get<TasksResponse>(
-          `/list/${listId}/task?${params.toString()}`
+          `/list/${listId}/task`,
+          { params }
         );
         
-        return response.data.tasks;
+        // Handle both JSON and text responses
+        const data = response.data;
+        if (typeof data === 'string') {
+          throw new ClickUpServiceError(
+            'Received unexpected text response from API',
+            ErrorCode.UNKNOWN,
+            data
+          );
+        }
+        
+        return Array.isArray(data) ? data : data.tasks || [];
       });
     } catch (error) {
-      throw this.handleError(error, `Failed to get tasks from list ${listId}`);
+      throw this.handleError(error, `Failed to get tasks for list ${listId}`);
     }
   }
 
@@ -304,11 +340,28 @@ export class TaskServiceCore extends BaseClickUpService {
     
     try {
       return await this.makeRequest(async () => {
-        const response = await this.client.put<ClickUpTask>(
+        const response = await this.client.put<ClickUpTask | string>(
           `/task/${taskId}`,
           updateData
         );
-        return response.data;
+        
+        // Handle both JSON and text responses
+        const data = response.data;
+        if (typeof data === 'string') {
+          // If we got a text response, try to extract task ID from common patterns
+          const idMatch = data.match(/task.*?(\w{9})/i);
+          if (idMatch) {
+            // If we found an ID, fetch the full task details
+            return await this.getTask(idMatch[1]);
+          }
+          throw new ClickUpServiceError(
+            'Received unexpected text response from API',
+            ErrorCode.UNKNOWN,
+            data
+          );
+        }
+        
+        return data;
       });
     } catch (error) {
       throw this.handleError(error, `Failed to update task ${taskId}`);

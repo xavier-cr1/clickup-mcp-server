@@ -7,6 +7,11 @@
  * This module provides utilities for handling dates, timestamps, and due date parsing.
  */
 
+import { Logger } from '../logger.js';
+
+// Create a logger instance for date utilities
+const logger = new Logger('DateUtils');
+
 /**
  * Get a timestamp for a relative time
  * 
@@ -210,8 +215,8 @@ export function parseDueDate(dateString: string): number | undefined {
     // If all parsing fails, return undefined
     return undefined;
   } catch (error) {
-    console.warn(`Failed to parse due date: ${dateString}`, error);
-    return undefined;
+    logger.warn(`Failed to parse due date: ${dateString}`, error);
+    throw new Error(`Invalid date format: ${dateString}`);
   }
 }
 
@@ -239,8 +244,8 @@ export function formatDueDate(timestamp: number | null | undefined): string | un
       hour12: true
     }).replace(' at', ',');
   } catch (error) {
-    console.warn(`Failed to format due date: ${timestamp}`, error);
-    return undefined;
+    logger.warn(`Failed to format due date: ${timestamp}`, error);
+    throw new Error(`Invalid timestamp: ${timestamp}`);
   }
 }
 
