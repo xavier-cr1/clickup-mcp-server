@@ -164,22 +164,77 @@ export class ClickUpTagService extends BaseClickUpService {
    * Add a tag to a task
    * @param taskId - ID of the task
    * @param tagName - Name of the tag to add
-   * @returns Promise with success status
+   * @returns Promise with success status and tag data
    */
   async addTagToTask(
     taskId: string,
     tagName: string
-  ): Promise<ServiceResponse<void>> {
+  ): Promise<ServiceResponse<{ tagAdded: boolean }>> {
     try {
       this.logger.debug(`Adding tag "${tagName}" to task: ${taskId}`);
       
+      // First get the task to get its space ID
+      const taskResponse = await this.client.get<any>(`/task/${taskId}`);
+      if (!taskResponse.data?.space?.id) {
+        return {
+          success: false,
+          error: {
+            message: 'Could not determine space ID from task',
+            code: 'SPACE_NOT_FOUND'
+          }
+        };
+      }
+
+      // Get space tags to verify tag exists
+      const spaceId = taskResponse.data.space.id;
+      const spaceTags = await this.getSpaceTags(spaceId);
+      
+      if (!spaceTags.success || !spaceTags.data) {
+        return {
+          success: false,
+          error: {
+            message: 'Failed to verify tag existence in space',
+            code: 'TAG_VERIFICATION_FAILED',
+            details: spaceTags.error
+          }
+        };
+      }
+
+      // Check if tag exists
+      const tagExists = spaceTags.data.some(tag => tag.name === tagName);
+      if (!tagExists) {
+        return {
+          success: false,
+          error: {
+            message: `Tag "${tagName}" does not exist in the space`,
+            code: 'TAG_NOT_FOUND'
+          }
+        };
+      }
+
       // Encode the tag name in the URL
       const encodedTagName = encodeURIComponent(tagName);
       
+      // Add the tag
       await this.client.post(`/task/${taskId}/tag/${encodedTagName}`, {});
       
+      // Verify the tag was added by getting the task again
+      const verifyResponse = await this.client.get<any>(`/task/${taskId}`);
+      const tagAdded = verifyResponse.data?.tags?.some(tag => tag.name === tagName) ?? false;
+
+      if (!tagAdded) {
+        return {
+          success: false,
+          error: {
+            message: 'Tag addition failed verification',
+            code: 'TAG_VERIFICATION_FAILED'
+          }
+        };
+      }
+      
       return {
-        success: true
+        success: true,
+        data: { tagAdded: true }
       };
     } catch (error) {
       this.logger.error(`Failed to add tag "${tagName}" to task: ${taskId}`, error);

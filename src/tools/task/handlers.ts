@@ -22,14 +22,46 @@ import {
   resolveListIdWithValidation,
   formatTaskData
 } from './utilities.js';
-import { TaskService } from '../../services/clickup/task/index.js';
+import { TaskService } from '../../services/clickup/task/task-service.js';
 import { ExtendedTaskFilters } from '../../services/clickup/types.js';
+import { findListIDByName } from '../list.js';
+import { workspaceService } from '../../services/shared.js';
+import { isNameMatch } from '../../utils/resolver-utils.js';
 
 // Use shared services instance
 const { task: taskService, list: listService } = clickUpServices;
 
 // Create a bulk service instance that uses the task service
 const bulkService = new BulkService(taskService);
+
+// Cache for task context between sequential operations
+const taskContextCache = new Map<string, { id: string, timestamp: number }>();
+const TASK_CONTEXT_TTL = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Store task context for sequential operations
+ */
+function storeTaskContext(taskName: string, taskId: string) {
+  taskContextCache.set(taskName, {
+    id: taskId,
+    timestamp: Date.now()
+  });
+}
+
+/**
+ * Get cached task context if valid
+ */
+function getCachedTaskContext(taskName: string): string | null {
+  const context = taskContextCache.get(taskName);
+  if (!context) return null;
+  
+  if (Date.now() - context.timestamp > TASK_CONTEXT_TTL) {
+    taskContextCache.delete(taskName);
+    return null;
+  }
+  
+  return context.id;
+}
 
 //=============================================================================
 // SHARED UTILITY FUNCTIONS
@@ -68,34 +100,262 @@ function buildUpdateData(params: any): UpdateTaskData {
 }
 
 /**
- * Resolves a task ID from various input formats
- * Smart disambiguation is used for task name lookups
- * 
- * @param taskId Direct task ID
- * @param taskName Task name to search for
- * @param listName List name for context
- * @param customTaskId Custom task ID (prefixed format) 
- * @returns Resolved task ID
+ * Core function to find a task by ID or name
+ * This consolidates all task lookup logic in one place for consistency
  */
-export async function getTaskId(taskId?: string, taskName?: string, listName?: string, customTaskId?: string): Promise<string> {
-  validateTaskIdentification(taskId, taskName, listName, customTaskId, true);
+async function findTask(params: {
+  taskId?: string,
+  taskName?: string,
+  listName?: string,
+  customTaskId?: string,
+  requireId?: boolean,
+  includeSubtasks?: boolean
+}) {
+  const { taskId, taskName, listName, customTaskId, requireId = false, includeSubtasks = false } = params;
+
+  // Validate that we have enough information to identify a task
+  const validationResult = validateTaskIdentification(
+    { taskId, taskName, listName, customTaskId },
+    { requireTaskId: requireId, useGlobalLookup: true }
+  );
   
-  const result = await taskService.findTasks({
-    taskId,
-    customTaskId,
-    taskName,
-    listName,
-    allowMultipleMatches: false,
-    useSmartDisambiguation: true,
-    includeFullDetails: false,
-    includeListContext: false
-  });
-  
-  if (result && !Array.isArray(result)) {
-    return result.id;
+  if (!validationResult.isValid) {
+    throw new Error(validationResult.errorMessage);
   }
   
-  throw new Error("Task not found");
+  try {
+    // Direct path for taskId - most efficient
+    if (taskId) {
+      const task = await taskService.getTask(taskId);
+      
+      // Add subtasks if requested
+      if (includeSubtasks) {
+        const subtasks = await taskService.getSubtasks(task.id);
+        return { task, subtasks };
+      }
+      
+      return { task };
+    }
+    
+    // Direct path for customTaskId - also efficient
+    if (customTaskId) {
+      const task = await taskService.getTaskByCustomId(customTaskId);
+      
+      // Add subtasks if requested
+      if (includeSubtasks) {
+        const subtasks = await taskService.getSubtasks(task.id);
+        return { task, subtasks };
+      }
+      
+      return { task };
+    }
+    
+    // Special optimized path for taskName + listName combination
+    if (taskName && listName) {
+      const listId = await resolveListIdWithValidation(null, listName);
+      
+      // Get all tasks in the list
+      const allTasks = await taskService.getTasks(listId);
+      
+      // Find the task that matches the name
+      const matchingTask = findTaskByName(allTasks, taskName);
+      
+      if (!matchingTask) {
+        throw new Error(`Task "${taskName}" not found in list "${listName}"`);
+      }
+      
+      // Add subtasks if requested
+      if (includeSubtasks) {
+        const subtasks = await taskService.getSubtasks(matchingTask.id);
+        return { task: matchingTask, subtasks };
+      }
+      
+      return { task: matchingTask };
+    }
+    
+    // Fallback to searching all lists for taskName-only case
+    if (taskName) {
+      console.log(`Searching all lists for task: "${taskName}"`);
+      
+      // Get workspace hierarchy which contains all lists
+      const hierarchy = await workspaceService.getWorkspaceHierarchy();
+      
+      // Extract all list IDs from the hierarchy
+      const listIds: string[] = [];
+      const extractListIds = (node: any) => {
+        if (node.type === 'list') {
+          listIds.push(node.id);
+        }
+        if (node.children) {
+          node.children.forEach(extractListIds);
+        }
+      };
+      
+      // Start from the root's children
+      hierarchy.root.children.forEach(extractListIds);
+      
+      // Search through each list
+      const searchPromises = listIds.map(async (listId) => {
+        try {
+          const tasks = await taskService.getTasks(listId);
+          const matchingTask = findTaskByName(tasks, taskName);
+          if (matchingTask) {
+            console.log(`Found task "${matchingTask.name}" (ID: ${matchingTask.id}) in list with ID "${listId}"`);
+            return matchingTask;
+          }
+          return null;
+        } catch (error) {
+          console.warn(`Error searching list ${listId}: ${error.message}`);
+          return null;
+        }
+      });
+      
+      // Wait for all searches to complete
+      const results = await Promise.all(searchPromises);
+      
+      // Filter out null results and sort by match quality and recency
+      const matchingTasks = results
+        .filter(task => task !== null)
+        .sort((a, b) => {
+          const aMatch = isNameMatch(a.name, taskName);
+          const bMatch = isNameMatch(b.name, taskName);
+          
+          // First sort by match quality
+          if (bMatch.score !== aMatch.score) {
+            return bMatch.score - aMatch.score;
+          }
+          
+          // Then sort by recency
+          return parseInt(b.date_updated) - parseInt(a.date_updated);
+        });
+      
+      if (matchingTasks.length === 0) {
+        throw new Error(`Task "${taskName}" not found in any list across your workspace. Please check the task name and try again.`);
+      }
+      
+      const bestMatch = matchingTasks[0];
+      
+      // Add subtasks if requested
+      if (includeSubtasks) {
+        const subtasks = await taskService.getSubtasks(bestMatch.id);
+        return { task: bestMatch, subtasks };
+      }
+      
+      return { task: bestMatch };
+    }
+    
+    // We shouldn't reach here if validation is working correctly
+    throw new Error("No valid task identification provided");
+    
+  } catch (error) {
+    // Enhance error message for non-existent tasks
+    if (taskName && error.message.includes('not found')) {
+      throw new Error(`Task "${taskName}" not found. Please check the task name and try again.`);
+    }
+    
+    // Pass along other formatted errors
+    throw error;
+  }
+}
+
+/**
+ * Helper function to find a task by name in an array of tasks
+ */
+function findTaskByName(tasks, name) {
+  if (!tasks || !Array.isArray(tasks) || !name) return null;
+  
+  const normalizedSearchName = name.toLowerCase().trim();
+  
+  // Get match scores for all tasks
+  const taskMatchScores = tasks.map(task => {
+    const matchResult = isNameMatch(task.name, name);
+    return {
+      task,
+      matchResult,
+      // Parse the date_updated field as a number for sorting
+      updatedAt: task.date_updated ? parseInt(task.date_updated, 10) : 0
+    };
+  }).filter(result => result.matchResult.isMatch);
+  
+  if (taskMatchScores.length === 0) {
+    return null;
+  }
+  
+  // First, try to find exact matches
+  const exactMatches = taskMatchScores
+    .filter(result => result.matchResult.exactMatch)
+    .sort((a, b) => {
+      // For exact matches with the same score, sort by most recently updated
+      if (b.matchResult.score === a.matchResult.score) {
+        return b.updatedAt - a.updatedAt;
+      }
+      return b.matchResult.score - a.matchResult.score;
+    });
+  
+  // Get the best matches based on whether we have exact matches or need to fall back to fuzzy matches
+  const bestMatches = exactMatches.length > 0 ? exactMatches : taskMatchScores.sort((a, b) => {
+    // First sort by match score (highest first)
+    if (b.matchResult.score !== a.matchResult.score) {
+      return b.matchResult.score - a.matchResult.score;
+    }
+    // Then sort by most recently updated
+    return b.updatedAt - a.updatedAt;
+  });
+  
+  // Get the best match
+  return bestMatches[0].task;
+}
+
+/**
+ * Handler for getting a task - uses the consolidated findTask function
+ */
+export async function getTaskHandler(params) {
+  try {
+    const result = await findTask({
+      taskId: params.taskId,
+      taskName: params.taskName,
+      listName: params.listName,
+      customTaskId: params.customTaskId,
+      includeSubtasks: params.subtasks
+    });
+    
+    if (result.subtasks) {
+      return { ...result.task, subtasks: result.subtasks };
+    }
+    
+    return result.task;
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Get task ID from various identifiers - uses the consolidated findTask function
+ */
+export async function getTaskId(taskId?: string, taskName?: string, listName?: string, customTaskId?: string, requireId?: boolean, includeSubtasks?: boolean): Promise<string> {
+  // Check task context cache first if we have a task name
+  if (taskName && !taskId && !customTaskId) {
+    const cachedId = getCachedTaskContext(taskName);
+    if (cachedId) {
+      return cachedId;
+    }
+  }
+
+  const result = await findTask({
+    taskId,
+    taskName,
+    listName,
+    customTaskId,
+    requireId,
+    includeSubtasks
+  });
+  
+  // Store task context for future operations
+  if (taskName && result.task.id) {
+    storeTaskContext(taskName, result.task.id);
+  }
+  
+  return result.task.id;
 }
 
 /**
@@ -128,7 +388,15 @@ function buildTaskFilters(params: any): TaskFilters {
  */
 async function mapTaskIds(tasks: any[]): Promise<string[]> {
   return Promise.all(tasks.map(async (task) => {
-    validateTaskIdentification(task.taskId, task.taskName, task.listName, task.customTaskId);
+    const validationResult = validateTaskIdentification(
+      { taskId: task.taskId, taskName: task.taskName, listName: task.listName, customTaskId: task.customTaskId },
+      { useGlobalLookup: true }
+    );
+    
+    if (!validationResult.isValid) {
+      throw new Error(validationResult.errorMessage);
+    }
+    
     return await getTaskId(task.taskId, task.taskName, task.listName, task.customTaskId);
   }));
 }
@@ -188,27 +456,48 @@ export async function createTaskHandler(params) {
   return await taskService.createTask(listId, taskData);
 }
 
+export interface UpdateTaskParams extends UpdateTaskData {
+  taskId?: string;
+  taskName?: string;
+  listName?: string;
+  customTaskId?: string;
+}
+
 /**
  * Handler for updating a task
  */
-export async function updateTaskHandler(params) {
-  console.log('Update Task Handler - Raw params:', JSON.stringify(params));
-  console.log('Update Task Handler - Priority type:', typeof params.priority, 'Value:', params.priority);
+export async function updateTaskHandler(
+  taskService: TaskService,
+  params: UpdateTaskParams
+): Promise<ClickUpTask> {
+  const { taskId, taskName, listName, customTaskId, ...updateData } = params;
   
-  validateTaskUpdateData(params);
-  const taskId = await getTaskId(params.taskId, params.taskName, params.listName);
-  
-  const updateData = buildUpdateData(params);
-  console.log('Update Task Handler - Update data:', JSON.stringify(updateData));
-  
-  return await taskService.updateTask(taskId, updateData);
+  // Validate task identification with global lookup enabled
+  const validationResult = validateTaskIdentification(params, { useGlobalLookup: true });
+  if (!validationResult.isValid) {
+    throw new Error(validationResult.errorMessage);
+  }
+
+  // Validate update data
+  validateTaskUpdateData(updateData);
+
+  // Log operation parameters
+  console.info('Updating task', { taskId, taskName, listName, customTaskId, updateData });
+
+  try {
+    // Get the task ID using global lookup
+    const id = await getTaskId(taskId, taskName, listName, customTaskId);
+    return await taskService.updateTask(id, updateData);
+  } catch (error) {
+    throw new Error(`Failed to update task: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 /**
  * Handler for moving a task
  */
 export async function moveTaskHandler(params) {
-  const taskId = await getTaskId(params.taskId, params.taskName, params.listName);
+  const taskId = await getTaskId(params.taskId, params.taskName, undefined, params.customTaskId, false);
   const listId = await getListId(params.listId, params.listName);
   return await taskService.moveTask(taskId, listId);
 }
@@ -217,7 +506,7 @@ export async function moveTaskHandler(params) {
  * Handler for duplicating a task
  */
 export async function duplicateTaskHandler(params) {
-  const taskId = await getTaskId(params.taskId, params.taskName, params.listName);
+  const taskId = await getTaskId(params.taskId, params.taskName, undefined, params.customTaskId, false);
   let listId;
   
   if (params.listId || params.listName) {
@@ -225,131 +514,6 @@ export async function duplicateTaskHandler(params) {
   }
   
   return await taskService.duplicateTask(taskId, listId);
-}
-
-/**
- * Handler for getting a task
- */
-export async function getTaskHandler(params) {
-  try {
-    // Direct path for taskId - most efficient
-    if (params.taskId) {
-      const task = await taskService.getTask(params.taskId);
-      
-      // Add subtasks if requested
-      if (params.subtasks) {
-        const subtasks = await taskService.getSubtasks(task.id);
-        return { ...task, subtasks };
-      }
-      
-      return task;
-    }
-    
-    // Direct path for customTaskId - also efficient
-    if (params.customTaskId) {
-      const task = await taskService.getTaskByCustomId(params.customTaskId);
-      
-      // Add subtasks if requested
-      if (params.subtasks) {
-        const subtasks = await taskService.getSubtasks(task.id);
-        return { ...task, subtasks };
-      }
-      
-      return task;
-    }
-    
-    // Special optimized path for taskName + listName combination
-    if (params.taskName && params.listName) {
-      // First, get the list ID
-      const listId = await getListId(null, params.listName);
-      if (!listId) {
-        throw new Error(`List "${params.listName}" not found`);
-      }
-      
-      // Use the ClickUp API to get filtered tasks
-      // Need to get all tasks and filter on client side
-      // This is more efficient than the original approach because it's a dedicated path 
-      // that skips the global lookup framework entirely
-      const allTasks = await taskService.getTasks(listId);
-      
-      // Find the matching task
-      // Extract this to avoid dependency on internal isNameMatch implementation
-      const matchingTask = findTaskByName(allTasks, params.taskName);
-      
-      if (!matchingTask) {
-        throw new Error(`Task "${params.taskName}" not found in list "${params.listName}"`);
-      }
-      
-      // Add subtasks if requested
-      if (params.subtasks) {
-        const subtasks = await taskService.getSubtasks(matchingTask.id);
-        return { ...matchingTask, subtasks };
-      }
-      
-      return matchingTask;
-    }
-    
-    // Fallback to the original global lookup for all other cases
-    const result = await taskService.findTasks({
-      taskName: params.taskName,
-      allowMultipleMatches: true,
-      useSmartDisambiguation: false,
-      includeFullDetails: true,
-      includeListContext: true
-    });
-
-    // Handle the response based on the result type
-    if (Array.isArray(result)) {
-      // If multiple tasks matched, format them with task count
-      return {
-        matches: result,
-        count: result.length
-      };
-    } else if (result) {
-      // Single task found, check if we need to include subtasks
-      if (params.subtasks) {
-        const subtasks = await taskService.getSubtasks(result.id);
-        return { ...result, subtasks };
-      }
-      
-      // Return the single task
-      return result;
-    } else {
-      throw new Error("Task not found");
-    }
-  } catch (error) {
-    // Enhance error message for non-existent tasks
-    if (params.taskName && error.message.includes('not found')) {
-      throw new Error(`Task "${params.taskName}" not found. Please check the task name and try again.`);
-    }
-    
-    // Pass along other formatted errors
-    throw error;
-  }
-}
-
-/**
- * Helper function to find a task by name in an array of tasks
- */
-function findTaskByName(tasks, name) {
-  if (!tasks || !Array.isArray(tasks) || !name) return null;
-  
-  // Try exact match first
-  let match = tasks.find(task => task.name === name);
-  if (match) return match;
-  
-  // Try case-insensitive match
-  match = tasks.find(task => 
-    task.name.toLowerCase() === name.toLowerCase()
-  );
-  if (match) return match;
-  
-  // Try fuzzy match - looking for name as substring
-  match = tasks.find(task => 
-    task.name.toLowerCase().includes(name.toLowerCase())
-  );
-  
-  return match || null;
 }
 
 /**

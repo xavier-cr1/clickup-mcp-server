@@ -21,7 +21,6 @@ import {
   moveTaskTool,
   duplicateTaskTool,
   getTaskTool,
-  getTasksTool,
   deleteTaskTool,
   getTaskCommentsTool,
   createTaskCommentTool,
@@ -77,7 +76,7 @@ const { workspace } = clickUpServices;
 export const server = new Server(
   {
     name: "clickup-mcp-server",
-    version: "0.6.5",
+    version: "0.6.4",
   },
   {
     capabilities: {
@@ -102,7 +101,6 @@ export function configureServer() {
         workspaceHierarchyTool,
         createTaskTool,
         getTaskTool,
-        getTasksTool,
         updateTaskTool,
         moveTaskTool,
         duplicateTaskTool,
@@ -139,7 +137,7 @@ export function configureServer() {
 
   // Register CallTool handler with proper logging
   logger.info("Registering tool handlers", {
-    toolCount: 28,
+    toolCount: 31,
     categories: ["workspace", "task", "list", "folder", "tag"]
   });
   
@@ -166,8 +164,6 @@ export function configureServer() {
           return handleDuplicateTask(params);
         case "get_task":
           return handleGetTask(params);
-        case "get_tasks":
-          return handleGetTasks(params);
         case "delete_task":
           return handleDeleteTask(params);
         case "get_task_comments":

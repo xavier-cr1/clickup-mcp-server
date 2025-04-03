@@ -88,47 +88,23 @@ export class BulkService {
    */
   private async findTaskInList(taskName: string, listName: string): Promise<string> {
     try {
-      // First get the list ID using the global lookup utility
-      const listInfo = await findListIDByName(clickUpServices.workspace, listName);
-      if (!listInfo) {
-        throw new ClickUpServiceError(
-          `List "${listName}" not found`,
-          ErrorCode.NOT_FOUND
-        );
-      }
-      
-      logger.info(`List "${listName}" resolved to ID: ${listInfo.id}`);
-      
-      // Get tasks from the list using the resolved ID
-      const taskList = await this.taskService.getTasks(listInfo.id);
-      
-      // Find the task by name - first try exact match
-      let matchingTask = taskList.find(t => t.name === taskName);
-      
-      // If no exact match, try case-insensitive match
-      if (!matchingTask) {
-        matchingTask = taskList.find(t => 
-          t.name.toLowerCase() === taskName.toLowerCase()
-        );
-        
-        // If still no match, try substring match as a fallback
-        if (!matchingTask) {
-          matchingTask = taskList.find(t => 
-            t.name.toLowerCase().includes(taskName.toLowerCase()) ||
-            taskName.toLowerCase().includes(t.name.toLowerCase())
-          );
-        }
-      }
-      
-      if (!matchingTask) {
+      const result = await this.taskService.findTasks({
+        taskName,
+        listName,
+        allowMultipleMatches: false,
+        useSmartDisambiguation: true,
+        includeFullDetails: false
+      });
+
+      if (!result || Array.isArray(result)) {
         throw new ClickUpServiceError(
           `Task "${taskName}" not found in list "${listName}"`,
           ErrorCode.NOT_FOUND
         );
       }
-      
-      logger.info(`Task "${taskName}" found with ID: ${matchingTask.id}`);
-      return matchingTask.id;
+
+      logger.info(`Task "${taskName}" found with ID: ${result.id}`);
+      return result.id;
     } catch (error) {
       // Enhance the error message
       if (error instanceof ClickUpServiceError) {

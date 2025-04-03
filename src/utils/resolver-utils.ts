@@ -11,39 +11,135 @@ import { clickUpServices } from '../services/shared.js';
 import { findListIDByName } from '../tools/list.js';
 
 /**
- * Check if a task name matches search criteria
- * 
- * Performs flexible case-insensitive and emoji-aware text matching
- * Used by multiple components for consistent name matching behavior
+ * Result of a name match operation including the quality of the match
  */
-export function isNameMatch(taskName: string, searchTerm: string): boolean {
-  const normalizedTask = taskName.toLowerCase().trim();
-  const normalizedSearch = searchTerm.toLowerCase().trim();
+export interface NameMatchResult {
+  isMatch: boolean;
+  score: number; // 0-100, higher is better
+  exactMatch: boolean; // Whether this is an exact match
+  reason?: string; // Optional reason for debugging
+}
+
+/**
+ * Check if a name matches another name using a variety of matching strategies
+ * Returns a structured result with match quality information rather than just a boolean
+ * 
+ * @param actualName The actual name to check
+ * @param searchName The name being searched for
+ * @returns A structured result with match details
+ */
+export function isNameMatch(actualName: string, searchName: string): NameMatchResult {
+  if (!actualName || !searchName) {
+    return { isMatch: false, score: 0, exactMatch: false, reason: 'One of the names is empty' };
+  }
+
+  // Remove any extra whitespace
+  const normalizedActualName = actualName.trim();
+  const normalizedSearchName = searchName.trim();
   
-  // Handle empty strings - don't match empty task names
-  if (normalizedTask === '') return false;
-  if (normalizedSearch === '') return false;
-  
-  // Exact match check
-  if (normalizedTask === normalizedSearch) return true;
-  
-  // Substring match check
-  if (normalizedTask.includes(normalizedSearch) || normalizedSearch.includes(normalizedTask)) return true;
-  
-  // Handle emoji characters in names
-  if (/[\p{Emoji}]/u.test(normalizedSearch) || /[\p{Emoji}]/u.test(normalizedTask)) {
-    const taskWithoutEmoji = normalizedTask.replace(/[\p{Emoji}]/gu, '').trim();
-    const searchWithoutEmoji = normalizedSearch.replace(/[\p{Emoji}]/gu, '').trim();
-    
-    // Don't match if either becomes empty after emoji removal
-    if (taskWithoutEmoji === '' || searchWithoutEmoji === '') return false;
-    
-    return taskWithoutEmoji === searchWithoutEmoji ||
-           taskWithoutEmoji.includes(searchWithoutEmoji) ||
-           searchWithoutEmoji.includes(taskWithoutEmoji);
+  // Handle empty names after normalization
+  if (normalizedActualName === '') {
+    return { isMatch: false, score: 0, exactMatch: false, reason: 'Actual name is empty' };
   }
   
-  return false;
+  if (normalizedSearchName === '') {
+    return { isMatch: false, score: 0, exactMatch: false, reason: 'Search name is empty' };
+  }
+
+  // 1. Exact match (highest quality)
+  if (normalizedActualName === normalizedSearchName) {
+    return { 
+      isMatch: true, 
+      score: 100, 
+      exactMatch: true,
+      reason: 'Exact match' 
+    };
+  }
+
+  // 2. Case-insensitive exact match (high quality)
+  if (normalizedActualName.toLowerCase() === normalizedSearchName.toLowerCase()) {
+    return { 
+      isMatch: true, 
+      score: 90, 
+      exactMatch: true,
+      reason: 'Case-insensitive exact match' 
+    };
+  }
+
+  // 3. Match after removing emojis (moderate quality)
+  const actualNameWithoutEmoji = normalizedActualName.replace(/[\p{Emoji}\u{FE00}-\u{FE0F}\u200d]+/gu, '').trim();
+  const searchNameWithoutEmoji = normalizedSearchName.replace(/[\p{Emoji}\u{FE00}-\u{FE0F}\u200d]+/gu, '').trim();
+  
+  if (actualNameWithoutEmoji === searchNameWithoutEmoji) {
+    return { 
+      isMatch: true, 
+      score: 80, 
+      exactMatch: false,
+      reason: 'Exact match after removing emojis' 
+    };
+  }
+  
+  if (actualNameWithoutEmoji.toLowerCase() === searchNameWithoutEmoji.toLowerCase()) {
+    return { 
+      isMatch: true, 
+      score: 70, 
+      exactMatch: false,
+      reason: 'Case-insensitive match after removing emojis' 
+    };
+  }
+
+  // 4. Substring matches (lower quality)
+  const lowerActual = normalizedActualName.toLowerCase();
+  const lowerSearch = normalizedSearchName.toLowerCase();
+  
+  // Full substring (term completely contained)
+  if (lowerActual.includes(lowerSearch)) {
+    return { 
+      isMatch: true, 
+      score: 60, 
+      exactMatch: false,
+      reason: 'Search term found as substring in actual name' 
+    };
+  }
+  
+  if (lowerSearch.includes(lowerActual)) {
+    return { 
+      isMatch: true, 
+      score: 50, 
+      exactMatch: false,
+      reason: 'Actual name found as substring in search term' 
+    };
+  }
+  
+  // 5. Fuzzy emoji-less matches (lowest quality)
+  const lowerActualNoEmoji = actualNameWithoutEmoji.toLowerCase();
+  const lowerSearchNoEmoji = searchNameWithoutEmoji.toLowerCase();
+  
+  if (lowerActualNoEmoji.includes(lowerSearchNoEmoji)) {
+    return { 
+      isMatch: true, 
+      score: 40, 
+      exactMatch: false,
+      reason: 'Search term (without emoji) found as substring in actual name' 
+    };
+  }
+  
+  if (lowerSearchNoEmoji.includes(lowerActualNoEmoji)) {
+    return { 
+      isMatch: true, 
+      score: 30, 
+      exactMatch: false,
+      reason: 'Actual name (without emoji) found as substring in search term' 
+    };
+  }
+
+  // No match found
+  return { 
+    isMatch: false, 
+    score: 0, 
+    exactMatch: false,
+    reason: 'No match found with any matching strategy' 
+  };
 }
 
 /**

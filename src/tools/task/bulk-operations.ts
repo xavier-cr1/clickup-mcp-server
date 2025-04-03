@@ -100,11 +100,13 @@ Valid Usage:
 
 Requirements:
 - tasks: REQUIRED (array of tasks, each with at least a name)
-- List identification: EITHER listId OR listName REQUIRED
+- EITHER listId OR listName: REQUIRED
+- All tasks will be created in the specified list
 
 Notes:
-- Configure batch processing via options parameter
-- Custom fields supported for each task`,
+- Configure batch size and concurrency via options for performance
+- Each task should have a name with emoji prefix
+- Custom fields can be set for each task using the custom_fields property (array of {id, value} objects)`,
   inputSchema: {
     type: "object",
     properties: {
@@ -188,16 +190,22 @@ export const updateBulkTasksTool = {
   description: `Purpose: Update multiple tasks efficiently in a single operation.
 
 Valid Usage:
-1. Provide array of tasks with taskId (preferred)
-2. Provide array of tasks with taskName + listName
+1. For each task, provide taskId (preferred)
+2. For each task, provide taskName + listName
 
 Requirements:
 - tasks: REQUIRED (array of tasks to update)
-- Each task needs identification and update fields
+- For each task entry, EITHER taskId OR (taskName + listName) is REQUIRED
+- At least one update field per task (name, description, status, priority, dueDate)
 
 Notes:
 - Only specified fields will be updated for each task
-- Configure batch processing via options parameter`,
+- Configure batch size and concurrency via options for performance
+- Each task can have different fields to update
+- Custom fields can be updated using the custom_fields property (array of {id, value} objects)
+
+Warning:
+- Using taskName without listName will fail as tasks may have identical names across lists`,
   inputSchema: {
     type: "object",
     properties: {
@@ -282,14 +290,21 @@ export const moveBulkTasksTool = {
   description: `Purpose: Move multiple tasks to a different list efficiently.
 
 Valid Usage:
-1. Provide tasks array + target list
+1. For each task, provide taskId + target list (preferred)
+2. For each task, provide taskName + listName + target list
 
 Requirements:
-- tasks: REQUIRED (array of task identifiers)
-- Target list: EITHER targetListId OR targetListName REQUIRED
+- tasks: REQUIRED (array of tasks to move)
+- EITHER targetListId OR targetListName: REQUIRED
+- For each task entry, EITHER taskId OR (taskName + listName) is REQUIRED
+
+Notes:
+- Configure batch size and concurrency via options for performance
+- All tasks will be moved to the same destination list
 
 Warning:
-- Task statuses may reset if destination list has different status options`,
+- Task statuses may reset if destination list has different status options
+- Using taskName without listName will fail as tasks may have identical names across lists`,
   inputSchema: {
     type: "object",
     properties: {
@@ -340,15 +355,20 @@ export const deleteBulkTasksTool = {
   description: `Purpose: PERMANENTLY DELETE multiple tasks at once.
 
 Valid Usage:
-1. Provide array of tasks with taskId (preferred)
-2. Provide array of tasks with taskName + listName
+1. For each task, provide taskId (preferred and safest)
+2. For each task, provide taskName + listName
 
 Requirements:
-- tasks: REQUIRED (array of task identifiers)
+- tasks: REQUIRED (array of tasks to delete)
+- For each task entry, EITHER taskId OR (taskName + listName) is REQUIRED
+
+Notes:
+- Configure batch size and concurrency via options for performance
 
 Warning:
-- This action CANNOT be undone
-- Always provide listName when using taskName`,
+- This action CANNOT be undone for any of the tasks
+- Using taskName without listName is dangerous as names may not be unique
+- Always provide listName when using taskName for safer targeting`,
   inputSchema: {
     type: "object",
     properties: {

@@ -77,16 +77,17 @@ export const createTaskTool = {
 
 Valid Usage:
 1. Provide listId (preferred if available)
-2. Provide listName (will look up the list ID)
+2. Provide listName (system will look up the list ID)
 
 Requirements:
 - name: REQUIRED
-- List identification: EITHER listId OR listName REQUIRED
+- EITHER listId OR listName: REQUIRED
 
 Notes:
-- Use create_bulk_tasks for multiple tasks
-- Set parent parameter to create a subtask
-- Custom fields can be set via custom_fields parameter`,
+- For multiple tasks, use create_bulk_tasks instead
+- Reuse list IDs from previous responses when possible to avoid redundant lookups
+- To create a subtask, set the parent parameter to the ID of the parent task
+- Custom fields can be set using the custom_fields parameter (array of {id, value} objects)`,
   inputSchema: {
     type: "object",
     properties: {
@@ -170,17 +171,25 @@ export const updateTaskTool = {
   description: `Purpose: Modify properties of an existing task.
 
 Valid Usage:
-1. Use taskId (preferred) - works with both regular and custom IDs
-2. Use taskName + listName for targeted search
+1. Use taskId alone (preferred) - works with both regular and custom IDs
+2. Use taskName alone (will search across all lists)
+3. Use taskName + listName (for faster, targeted search)
 
 Requirements:
-- Task identification: EITHER taskId OR taskName REQUIRED
-- Updates: At least one update field (name, description, status, priority, dueDate) REQUIRED
+- At least one update field (name, description, status, priority, dueDate) must be provided
+- EITHER taskId OR taskName: REQUIRED
+- listName: Optional, but recommended when using taskName
 
 Notes:
+- The tool automatically searches for tasks using smart name matching
+- When only taskName is provided, it searches across all lists
+- Adding listName narrows the search to a specific list for better performance
 - Only specified fields will be updated
-- Custom fields can be set using the custom_fields parameter
-- Using taskName without listName may match multiple tasks`,
+- Custom fields can be set using the custom_fields parameter (array of {id, value} objects)
+
+Warning:
+- Using taskName without listName may match multiple tasks
+- If multiple matches are found, the operation will fail with a disambiguation error`,
   inputSchema: {
     type: "object",
     properties: {
@@ -254,15 +263,16 @@ export const moveTaskTool = {
   description: `Purpose: Move a task to a different list.
 
 Valid Usage:
-1. Use taskId + destination list (preferred)
-2. Use taskName + sourceListName + destination list
+1. Use taskId + (listId OR listName) - preferred
+2. Use taskName + sourceListName + (listId OR listName)
 
 Requirements:
-- Task identification: EITHER taskId OR (taskName + sourceListName) REQUIRED
-- Destination: EITHER listId OR listName REQUIRED
+- Destination list: EITHER listId OR listName REQUIRED
+- When using taskName, sourceListName is REQUIRED
 
 Warning:
-- Task statuses may reset if destination list has different status options`,
+- Task statuses may reset if destination list has different status options
+- System cannot find a task by name without knowing which list to search in`,
   inputSchema: {
     type: "object",
     properties: {
@@ -299,15 +309,18 @@ export const duplicateTaskTool = {
   description: `Purpose: Create a copy of a task in the same or different list.
 
 Valid Usage:
-1. Use taskId (preferred)
-2. Use taskName + sourceListName
+1. Use taskId + optional (listId OR listName) - preferred
+2. Use taskName + sourceListName + optional (listId OR listName)
 
 Requirements:
-- Task identification: EITHER taskId OR (taskName + sourceListName) REQUIRED
-- Destination: OPTIONAL - defaults to original list
+- When using taskName, sourceListName is REQUIRED
 
 Notes:
-- The duplicate preserves the original task's properties`,
+- The duplicate preserves the original task's properties
+- If no destination list specified, uses same list as original task
+
+Warning:
+- System cannot find a task by name without knowing which list to search in`,
   inputSchema: {
     type: "object",
     properties: {
@@ -344,14 +357,20 @@ export const getTaskTool = {
   description: `Purpose: Retrieve detailed information about a specific task.
 
 Valid Usage:
-1. Use taskId (preferred) - works with both regular and custom IDs
-2. Use taskName + listName for targeted search 
+1. Use taskId alone (preferred) - works with both regular and custom IDs (like "DEV-1234")
+2. Use taskName alone (will search across all lists in the workspace)
+3. Use taskName + listName (for faster, targeted search)
+4. Use customTaskId for explicit custom ID lookup
 
 Requirements:
-- Task identification: EITHER taskId OR (taskName + listName) REQUIRED
+- EITHER taskId OR taskName OR customTaskId: REQUIRED
+- listName: Optional, but recommended when using taskName for faster and more precise lookup
 
-Notes:
-- Task names are only unique within a list
+Note:
+- When using just taskName, the system performs a global search across all lists
+- Task names are most unique within a specific list, so providing listName increases reliability
+- Regular task IDs are always 9 characters long (e.g., "86b394eqa")
+- Custom IDs have an uppercase prefix followed by a hyphen and number (e.g., "DEV-1234")
 - Set subtasks=true to include all subtasks in the response`,
   inputSchema: {
     type: "object",
@@ -362,11 +381,11 @@ Notes:
       },
       taskName: {
         type: "string",
-        description: "Name of task to retrieve. When using this parameter, you MUST also provide listName."
+        description: "Name of task to retrieve. Can be used alone for a global search, or with listName for faster lookup."
       },
       listName: {
         type: "string",
-        description: "Name of list containing the task. REQUIRED when using taskName."
+        description: "Name of list containing the task. Optional but recommended when using taskName."
       },
       customTaskId: {
         type: "string",
@@ -392,11 +411,12 @@ Valid Usage:
 2. Use listName
 
 Requirements:
-- List identification: EITHER listId OR listName REQUIRED
+- EITHER listId OR listName is REQUIRED
 
 Notes:
-- Use filters (archived, statuses) to narrow down results
-- Pagination and sorting available`,
+- Use filters (archived, statuses, etc.) to narrow down results
+- Pagination available through page parameter
+- Sorting available through order_by and reverse parameters`,
   inputSchema: {
     type: "object",
     properties: {
@@ -447,14 +467,12 @@ export const getTaskCommentsTool = {
 
 Valid Usage:
 1. Use taskId (preferred)
-2. Use taskName + listName for targeted search
-
-Requirements:
-- Task identification: EITHER taskId OR taskName REQUIRED
+2. Use taskName + optional listName
 
 Notes:
+- If using taskName, providing listName helps locate the correct task
 - Task names may not be unique across different lists
-- Use start/startId parameters for pagination`,
+- Use start and startId parameters for pagination through comments`,
   inputSchema: {
     type: "object",
     properties: {
@@ -494,11 +512,13 @@ Valid Usage:
 2. Use taskName + listName
 
 Requirements:
-- Task identification: EITHER taskId OR (taskName + listName) REQUIRED
-- commentText: REQUIRED
+- EITHER taskId OR (taskName + listName) is REQUIRED
+- commentText is REQUIRED
 
 Notes:
-- Set notifyAll=true to notify all task assignees`,
+- When using taskName, providing listName helps locate the correct task
+- Set notifyAll to true to send notifications to all task assignees
+- Use assignee to assign the comment to a specific user (optional)`,
   inputSchema: {
     type: "object",
     properties: {
@@ -539,15 +559,24 @@ export const deleteTaskTool = {
   description: `Purpose: PERMANENTLY DELETE a task.
 
 Valid Usage:
-1. Use taskId (preferred and safest)
-2. Use taskName + listName for targeted search
+1. Use taskId alone (preferred and safest)
+2. Use taskName alone (will search across all lists)
+3. Use taskName + listName (for faster, targeted search)
 
 Requirements:
-- Task identification: EITHER taskId OR taskName REQUIRED
+- EITHER taskId OR taskName: REQUIRED
+- listName: Optional, but recommended when using taskName
+
+Notes:
+- The tool automatically searches for tasks using smart name matching
+- When only taskName is provided, it searches across all lists
+- Adding listName narrows the search to a specific list for better performance
+- Supports both regular task IDs and custom IDs (like 'DEV-1234')
 
 Warning:
 - This action CANNOT be undone
-- Using taskName without listName may match multiple tasks`,
+- Using taskName without listName may match multiple tasks
+- If multiple matches are found, the operation will fail with a disambiguation error`,
   inputSchema: {
     type: "object",
     properties: {

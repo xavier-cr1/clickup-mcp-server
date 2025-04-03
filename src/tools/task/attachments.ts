@@ -55,23 +55,39 @@ export const attachTaskFileTool = {
   description: `Purpose: Attaches a file to a ClickUp task.
 
 Valid Usage:
-1. Use taskId (preferred) - works with both regular and custom IDs
-2. Use taskName + listName for targeted search
+1. Use taskId alone (preferred) - works with both regular and custom IDs
+2. Use taskName alone (will search across all lists)
+3. Use taskName + listName (for faster, targeted search)
 
-File Sources:
-- Base64: Provide file_data + file_name
-- URL: Provide file_url starting with http:// or https://
-- Local file: Provide file_url as absolute path
-- Chunked upload: Use chunk_* parameters for large files
+File Source Options:
+1. Upload from base64: Provide file_data + file_name
+2. Upload from URL: Provide file_url starting with http:// or https://
+3. Upload from local file: Provide file_url as absolute path (starting with / or drive letter)
+4. For large files: Use chunk_* parameters for advanced chunked uploading
 
 Requirements:
-- Task identification: EITHER taskId OR taskName REQUIRED
-- File source: EITHER file_data+file_name OR file_url OR chunk_session REQUIRED
+- EITHER taskId OR taskName: REQUIRED
+- listName: Optional, but recommended when using taskName
+- File Source: ONE of the following is REQUIRED:
+  - file_data + file_name
+  - file_url (web URL or local path)
+  - chunk_session (for continuing chunked upload)
 
 Notes:
-- System automatically selects best upload method based on file size
-- Base64 uploads limited to 10MB
-- Using taskName without listName may match multiple tasks`,
+- The tool automatically searches for tasks using smart name matching
+- When only taskName is provided, it searches across all lists
+- Adding listName narrows the search to a specific list for better performance
+- The system automatically selects the best upload method based on file size and source:
+  - Base64 method: Limited to 10MB due to encoding overhead
+  - URL method: Works for files hosted online
+  - Local file method: Works with absolute paths only
+  - Large files: Automatically uses chunked uploading
+
+Warning:
+- Using taskName without listName may match multiple tasks
+- If multiple matches are found, the operation will fail with a disambiguation error
+- For local files, relative paths are not supported
+- Base64 uploads over 10MB will automatically switch to chunked upload mode`,
   inputSchema: {
     type: "object",
     properties: {
@@ -129,11 +145,18 @@ Notes:
  */
 async function attachTaskFileHandler(params: any): Promise<any> {
   // Extract common parameters
-  const { taskId, taskName, listName, file_name, file_data, file_url, auth_header,
+  const { taskId, taskName, listName, customTaskId, file_name, file_data, file_url, auth_header,
     chunk_total, chunk_size, chunk_index, session_id } = params;
   
   // Validate task identification
-  validateTaskIdentification(params);
+  const validationResult = validateTaskIdentification(
+    { taskId, taskName, listName, customTaskId },
+    { useGlobalLookup: true }
+  );
+  
+  if (!validationResult.isValid) {
+    throw new Error(validationResult.errorMessage);
+  }
   
   // Validate file source - either file_data or file_url must be provided
   if (!file_data && !file_url && !session_id) {
