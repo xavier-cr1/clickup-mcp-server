@@ -40,6 +40,13 @@ export class TaskServiceCore extends BaseClickUpService {
       valid: boolean;
     }>()
   };
+
+  // Cache for task name to ID mapping
+  private nameToIdCache = new Map<string, {
+    taskId: string;
+    validatedAt: number;
+    listId?: string; // Optional list context for disambiguation
+  }>();
   
   // Cache TTL in milliseconds (5 minutes)
   private readonly CACHE_TTL = 5 * 60 * 1000;
@@ -515,6 +522,39 @@ export class TaskServiceCore extends BaseClickUpService {
       });
       throw error;
     }
+  }
+
+  /**
+   * Try to get a task ID from the name cache
+   * @param taskName The name of the task
+   * @param listId Optional list ID for context
+   * @returns The cached task ID if found and not expired, otherwise null
+   */
+  protected getCachedTaskId(taskName: string, listId?: string): string | null {
+    const cached = this.nameToIdCache.get(taskName);
+    if (cached && Date.now() - cached.validatedAt < this.CACHE_TTL) {
+      // If listId is provided, ensure it matches the cached context
+      if (!listId || cached.listId === listId) {
+        this.logger.debug('Using cached task ID for name', { taskName, cachedId: cached.taskId });
+        return cached.taskId;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Cache a task name to ID mapping
+   * @param taskName The name of the task
+   * @param taskId The ID of the task
+   * @param listId Optional list ID for context
+   */
+  protected cacheTaskNameToId(taskName: string, taskId: string, listId?: string): void {
+    this.nameToIdCache.set(taskName, {
+      taskId,
+      validatedAt: Date.now(),
+      listId
+    });
+    this.logger.debug('Cached task name to ID mapping', { taskName, taskId, listId });
   }
 }
 

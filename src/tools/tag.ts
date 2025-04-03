@@ -16,9 +16,13 @@ import { Logger } from '../logger.js';
 import { sponsorService } from '../utils/sponsor-service.js';
 import { ClickUpTag } from '../services/clickup/types.js';
 import { processColorCommand } from '../utils/color-processor.js';
+import { validateTaskIdentification } from './task/utilities.js';
 
 // Create a logger specific to tag tools
 const logger = new Logger('TagTools');
+
+// Use shared services instance
+const { task: taskService } = clickUpServices;
 
 //=============================================================================
 // TOOL DEFINITIONS
@@ -211,17 +215,18 @@ export const addTagToTaskTool = {
 
 Valid Usage:
 1. Provide taskId (preferred if available)
-2. Provide taskName + listName
+2. Provide taskName (optionally with listName for disambiguation)
 
 Requirements:
 - tagName: REQUIRED
-- EITHER taskId OR (taskName + listName): REQUIRED
+- EITHER taskId OR customTaskId OR taskName: REQUIRED
 - The tag MUST exist in the space containing the task before calling this tool
 
 Warning:
 - The operation will fail if the tag does not exist in the space
 - Always use get_space_tags first to verify the tag exists
 - If the tag doesn't exist, create it using create_space_tag before adding it to the task
+- If multiple tasks have the same name, provide listName to disambiguate
 
 Notes:
 - Use get_space_tags to see available tags
@@ -239,11 +244,11 @@ Notes:
       },
       taskName: {
         type: "string",
-        description: "Name of the task to add tag to. When using this parameter, you MUST also provide listName."
+        description: "Name of the task to add tag to. Will search across all lists unless listName is provided."
       },
       listName: {
         type: "string",
-        description: "Name of the list containing the task. REQUIRED when using taskName."
+        description: "Optional: Name of the list containing the task. Use to disambiguate when multiple tasks have the same name."
       },
       tagName: {
         type: "string",
@@ -263,15 +268,16 @@ export const removeTagFromTaskTool = {
 
 Valid Usage:
 1. Provide taskId (preferred if available)
-2. Provide taskName + listName
+2. Provide taskName (optionally with listName for disambiguation)
 
 Requirements:
 - tagName: REQUIRED
-- EITHER taskId OR (taskName + listName): REQUIRED
+- EITHER taskId OR customTaskId OR taskName: REQUIRED
 
 Notes:
 - This only removes the association between the tag and task
-- The tag will still exist in the space`,
+- The tag will still exist in the space
+- If multiple tasks have the same name, provide listName to disambiguate`,
   inputSchema: {
     type: "object",
     properties: {
@@ -285,11 +291,11 @@ Notes:
       },
       taskName: {
         type: "string",
-        description: "Name of the task to remove tag from. When using this parameter, you MUST also provide listName."
+        description: "Name of the task to remove tag from. Will search across all lists unless listName is provided."
       },
       listName: {
         type: "string",
-        description: "Name of the list containing the task. REQUIRED when using taskName."
+        description: "Optional: Name of the list containing the task. Use to disambiguate when multiple tasks have the same name."
       },
       tagName: {
         type: "string",
@@ -800,31 +806,48 @@ async function resolveTaskId(params: {
 }): Promise<{ success: boolean; taskId?: string; error?: any }> {
   const { taskId, customTaskId, taskName, listName } = params;
   
-  // If we have a direct taskId, use it
-  if (taskId) {
-    return { success: true, taskId };
-  }
+  try {
+    // First validate task identification with global lookup enabled
+    const validationResult = validateTaskIdentification(
+      { taskId, customTaskId, taskName, listName },
+      { useGlobalLookup: true }
+    );
 
-  // Custom task ID handling
-  if (customTaskId) {
-    return { success: true, taskId: customTaskId };
-  }
-  
-  // Task name lookup (requires list name)
-  if (taskName && listName) {
-    // Implementation would go here
-    return { 
-      success: false, 
-      error: { message: 'Task name resolution not implemented yet' } 
+    if (!validationResult.isValid) {
+      return {
+        success: false,
+        error: { message: validationResult.errorMessage }
+      };
+    }
+
+    const result = await taskService.findTasks({
+      taskId,
+      customTaskId,
+      taskName,
+      listName,
+      allowMultipleMatches: false,
+      useSmartDisambiguation: true,
+      includeFullDetails: false
+    });
+
+    if (!result || Array.isArray(result)) {
+      return {
+        success: false,
+        error: { message: 'Task not found with the provided identification' }
+      };
+    }
+
+    return { success: true, taskId: result.id };
+  } catch (error) {
+    return {
+      success: false,
+      error: {
+        message: error.message || 'Failed to resolve task ID',
+        code: error.code,
+        details: error.data
+      }
     };
   }
-  
-  return {
-    success: false,
-    error: { 
-      message: 'Task identifier is required (taskId, customTaskId, or taskName+listName)' 
-    }
-  };
 }
 
 /**
@@ -851,12 +874,12 @@ export async function addTagToTask(params: {
     };
   }
   
-  if (!taskId && !customTaskId && !(taskName && listName)) {
-    logger.error('addTagToTask called without proper task identifier');
+  if (!taskId && !customTaskId && !taskName) {
+    logger.error('addTagToTask called without task identifier');
     return {
       success: false,
       error: {
-        message: 'Either taskId, customTaskId, or both taskName and listName are required'
+        message: 'Either taskId, customTaskId, or taskName is required'
       }
     };
   }
@@ -954,12 +977,12 @@ export async function removeTagFromTask(params: {
     };
   }
   
-  if (!taskId && !customTaskId && !(taskName && listName)) {
-    logger.error('removeTagFromTask called without proper task identifier');
+  if (!taskId && !customTaskId && !taskName) {
+    logger.error('removeTagFromTask called without task identifier');
     return {
       success: false,
       error: {
-        message: 'Either taskId, customTaskId, or both taskName and listName are required'
+        message: 'Either taskId, customTaskId, or taskName is required'
       }
     };
   }

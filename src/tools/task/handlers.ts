@@ -26,12 +26,42 @@ import { TaskService } from '../../services/clickup/task/task-service.js';
 import { ExtendedTaskFilters } from '../../services/clickup/types.js';
 import { findListIDByName } from '../list.js';
 import { workspaceService } from '../../services/shared.js';
+import { isNameMatch } from '../../utils/resolver-utils.js';
 
 // Use shared services instance
 const { task: taskService, list: listService } = clickUpServices;
 
 // Create a bulk service instance that uses the task service
 const bulkService = new BulkService(taskService);
+
+// Cache for task context between sequential operations
+const taskContextCache = new Map<string, { id: string, timestamp: number }>();
+const TASK_CONTEXT_TTL = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Store task context for sequential operations
+ */
+function storeTaskContext(taskName: string, taskId: string) {
+  taskContextCache.set(taskName, {
+    id: taskId,
+    timestamp: Date.now()
+  });
+}
+
+/**
+ * Get cached task context if valid
+ */
+function getCachedTaskContext(taskName: string): string | null {
+  const context = taskContextCache.get(taskName);
+  if (!context) return null;
+  
+  if (Date.now() - context.timestamp > TASK_CONTEXT_TTL) {
+    taskContextCache.delete(taskName);
+    return null;
+  }
+  
+  return context.id;
+}
 
 //=============================================================================
 // SHARED UTILITY FUNCTIONS
@@ -143,178 +173,75 @@ async function findTask(params: {
       return { task: matchingTask };
     }
     
-    // Fallback to global lookup for taskName-only case
+    // Fallback to searching all lists for taskName-only case
     if (taskName) {
-      console.log(`Attempting global search for task: "${taskName}"`);
+      console.log(`Searching all lists for task: "${taskName}"`);
       
-      // Step 1: Get the workspace hierarchy to access all lists
-      const workspaceService = clickUpServices.workspace;
-      const hierarchy = await workspaceService.getWorkspaceHierarchy(true);
+      // Get workspace hierarchy which contains all lists
+      const hierarchy = await workspaceService.getWorkspaceHierarchy();
       
-      const allLists: any[] = [];
-      // Collect all lists from the hierarchy
-      const collectLists = (nodes: any[]) => {
-        for (const node of nodes || []) {
-          if (node.type === 'list') {
-            allLists.push(node);
-          }
-          if (node.children && node.children.length > 0) {
-            collectLists(node.children);
-          }
+      // Extract all list IDs from the hierarchy
+      const listIds: string[] = [];
+      const extractListIds = (node: any) => {
+        if (node.type === 'list') {
+          listIds.push(node.id);
+        }
+        if (node.children) {
+          node.children.forEach(extractListIds);
         }
       };
       
-      collectLists(hierarchy.root.children);
-      console.log(`Found ${allLists.length} lists in the workspace hierarchy`);
+      // Start from the root's children
+      hierarchy.root.children.forEach(extractListIds);
       
-      // Step 2: Search through each list for the task
-      for (const list of allLists) {
+      // Search through each list
+      const searchPromises = listIds.map(async (listId) => {
         try {
-          console.log(`Searching in list: "${list.name}" (${list.id})`);
-          const tasksInList = await taskService.getTasks(list.id);
-          
-          // Debug: Log any blank tasks we find
-          const blankTasks = tasksInList.filter(t => t.name.trim() === '');
-          if (blankTasks.length > 0) {
-            console.log(`WARNING: Found ${blankTasks.length} blank tasks in list "${list.name}":`);
-            blankTasks.forEach(t => {
-              console.log(`  - Blank task ID: ${t.id}, content length: ${t.text_content?.length || 0}, created: ${new Date(parseInt(t.date_created)).toISOString()}`);
-            });
+          const tasks = await taskService.getTasks(listId);
+          const matchingTask = findTaskByName(tasks, taskName);
+          if (matchingTask) {
+            console.log(`Found task "${matchingTask.name}" (ID: ${matchingTask.id}) in list with ID "${listId}"`);
+            return matchingTask;
           }
-          
-          // Search through tasks in this list
-          for (const task of tasksInList) {
-            const normalizedTaskName = task.name.toLowerCase().trim();
-            const normalizedSearchName = taskName.toLowerCase().trim();
-            
-            // For debugging, log more details about matching
-            if (task.name.trim() === '' || task.name.trim() === '   ') {
-              console.log(`ALERT: Potential problematic task "${task.name}" (ID: ${task.id})`);
-              console.log(`  - In list: "${list.name}" (${list.id})`);
-              console.log(`  - Raw name length: ${task.name.length}`);
-              console.log(`  - Name characters: ${[...task.name].map(c => c.charCodeAt(0)).join(',')}`);
-              console.log(`  - Search term: "${taskName}"`);
-              console.log(`  - exactMatch: ${normalizedTaskName === normalizedSearchName}`);
-              console.log(`  - containsMatch: ${normalizedTaskName.includes(normalizedSearchName) || normalizedSearchName.includes(normalizedTaskName)}`);
-            }
-            
-            // Do multiple kinds of matching
-            const exactMatch = normalizedTaskName === normalizedSearchName;
-            const containsMatch = normalizedTaskName.includes(normalizedSearchName) || 
-                               normalizedSearchName.includes(normalizedTaskName);
-            
-            // Try matching without emoji
-            const taskNameWithoutEmoji = normalizedTaskName.replace(/[\p{Emoji}\u{FE00}-\u{FE0F}\u200d]+/gu, '').trim();
-            const searchNameWithoutEmoji = normalizedSearchName.replace(/[\p{Emoji}\u{FE00}-\u{FE0F}\u200d]+/gu, '').trim();
-            const emojiMatch = taskNameWithoutEmoji === searchNameWithoutEmoji || 
-                            taskNameWithoutEmoji.includes(searchNameWithoutEmoji) ||
-                            searchNameWithoutEmoji.includes(taskNameWithoutEmoji);
-            
-            // Skip blank tasks - never match them regardless of what the user is searching for
-            if (task.name.trim() === '' || task.name.trim() === '   ') {
-              console.log(`Skipping blank task ${task.id} in "${list.name}" list`);
-              continue;
-            }
-            
-            if (exactMatch || containsMatch || emojiMatch) {
-              console.log(`Found matching task: "${task.name}" (${task.id})`);
-              
-              // We found a match!
-              if (includeSubtasks) {
-                const subtasks = await taskService.getSubtasks(task.id);
-                return { task, subtasks };
-              }
-              
-              return { task };
-            }
-          }
-        } catch (err) {
-          console.log(`Error searching list ${list.name}: ${err.message}`);
-          // Continue to next list
+          return null;
+        } catch (error) {
+          console.warn(`Error searching list ${listId}: ${error.message}`);
+          return null;
         }
-      }
-      
-      // If we get here, we couldn't find the task in any list
-      console.log("No matching task found in any list. Trying direct workspace search...");
-      
-      // Step 3: Fall back to workspace tasks API as a last resort
-      const workspaceTasks = await taskService.getWorkspaceTasks({
-        include_closed: true,
-        include_archived_lists: true,
-        include_closed_lists: true,
-        detail_level: 'detailed'
       });
       
-      // Check if we have tasks in the response
-      const tasks = 'tasks' in workspaceTasks ? workspaceTasks.tasks : [];
-      console.log(`Received ${tasks.length} tasks from workspace search`);
+      // Wait for all searches to complete
+      const results = await Promise.all(searchPromises);
       
-      // Now we need to find matching tasks by name
-      if (tasks.length > 0) {
-        const matchingTasks = tasks.filter(task => 
-          task.name.toLowerCase().includes(taskName.toLowerCase()) || 
-          taskName.toLowerCase().includes(task.name.toLowerCase().replace(/[\p{Emoji}]/gu, '').trim())
-        );
-        
-        console.log(`Found ${matchingTasks.length} matching tasks`);
-        
-        if (matchingTasks.length > 0) {
-          // Sort by updated date for smart disambiguation
-          matchingTasks.sort((a, b) => {
-            const aDate = parseInt(a.date_updated || '0', 10);
-            const bDate = parseInt(b.date_updated || '0', 10);
-            return bDate - aDate; // Most recent first
-          });
+      // Filter out null results and sort by match quality and recency
+      const matchingTasks = results
+        .filter(task => task !== null)
+        .sort((a, b) => {
+          const aMatch = isNameMatch(a.name, taskName);
+          const bMatch = isNameMatch(b.name, taskName);
           
-          const result = matchingTasks[0];
-          
-          if (includeSubtasks) {
-            const subtasks = await taskService.getSubtasks(result.id);
-            return { task: result, subtasks };
+          // First sort by match quality
+          if (bMatch.score !== aMatch.score) {
+            return bMatch.score - aMatch.score;
           }
           
-          return { task: result };
-        }
-      }
-      
-      // As a last resort, try the standard findTasks method
-      try {
-        const result = await taskService.findTasks({
-          taskName,
-          allowMultipleMatches: false,
-          useSmartDisambiguation: true,
-          includeFullDetails: true,
-          includeListContext: true
+          // Then sort by recency
+          return parseInt(b.date_updated) - parseInt(a.date_updated);
         });
-        
-        if (!result) {
-          throw new Error(`Task "${taskName}" not found in any list. Please check the task name and try again.`);
-        }
-        
-        // Handle result which could be a single task or an array
-        if (!Array.isArray(result)) {
-          if (includeSubtasks) {
-            const subtasks = await taskService.getSubtasks(result.id);
-            return { task: result, subtasks };
-          }
-          
-          return { task: result };
-        } else if (result.length > 0) {
-          // If we got an array, use the first item
-          const firstMatch = result[0];
-          
-          if (includeSubtasks) {
-            const subtasks = await taskService.getSubtasks(firstMatch.id);
-            return { task: firstMatch, subtasks };
-          }
-          
-          return { task: firstMatch };
-        } else {
-          throw new Error(`Task "${taskName}" not found in any list. Please check the task name and try again.`);
-        }
-      } catch (innerError) {
-        throw innerError;
+      
+      if (matchingTasks.length === 0) {
+        throw new Error(`Task "${taskName}" not found in any list across your workspace. Please check the task name and try again.`);
       }
+      
+      const bestMatch = matchingTasks[0];
+      
+      // Add subtasks if requested
+      if (includeSubtasks) {
+        const subtasks = await taskService.getSubtasks(bestMatch.id);
+        return { task: bestMatch, subtasks };
+      }
+      
+      return { task: bestMatch };
     }
     
     // We shouldn't reach here if validation is working correctly
@@ -339,41 +266,44 @@ function findTaskByName(tasks, name) {
   
   const normalizedSearchName = name.toLowerCase().trim();
   
-  // Try exact match first
-  let match = tasks.find(task => task.name === name);
-  if (match) return match;
+  // Get match scores for all tasks
+  const taskMatchScores = tasks.map(task => {
+    const matchResult = isNameMatch(task.name, name);
+    return {
+      task,
+      matchResult,
+      // Parse the date_updated field as a number for sorting
+      updatedAt: task.date_updated ? parseInt(task.date_updated, 10) : 0
+    };
+  }).filter(result => result.matchResult.isMatch);
   
-  // Try case-insensitive match
-  match = tasks.find(task => 
-    task.name.toLowerCase().trim() === normalizedSearchName
-  );
-  if (match) return match;
-  
-  // Try emoji-agnostic matching by removing emojis from both sides
-  const searchNameWithoutEmoji = normalizedSearchName.replace(/[\p{Emoji}\u{FE00}-\u{FE0F}\u200d]+/gu, '').trim();
-  
-  match = tasks.find(task => {
-    const taskNameWithoutEmoji = task.name.toLowerCase().replace(/[\p{Emoji}\u{FE00}-\u{FE0F}\u200d]+/gu, '').trim();
-    return taskNameWithoutEmoji === searchNameWithoutEmoji;
-  });
-  if (match) return match;
-  
-  // Try fuzzy match - looking for name as substring
-  match = tasks.find(task => 
-    task.name.toLowerCase().includes(normalizedSearchName) || 
-    normalizedSearchName.includes(task.name.toLowerCase())
-  );
-  
-  // Try fuzzy match with emoji removal as final attempt
-  if (!match) {
-    match = tasks.find(task => {
-      const taskNameWithoutEmoji = task.name.toLowerCase().replace(/[\p{Emoji}\u{FE00}-\u{FE0F}\u200d]+/gu, '').trim();
-      return taskNameWithoutEmoji.includes(searchNameWithoutEmoji) || 
-             searchNameWithoutEmoji.includes(taskNameWithoutEmoji);
-    });
+  if (taskMatchScores.length === 0) {
+    return null;
   }
   
-  return match || null;
+  // First, try to find exact matches
+  const exactMatches = taskMatchScores
+    .filter(result => result.matchResult.exactMatch)
+    .sort((a, b) => {
+      // For exact matches with the same score, sort by most recently updated
+      if (b.matchResult.score === a.matchResult.score) {
+        return b.updatedAt - a.updatedAt;
+      }
+      return b.matchResult.score - a.matchResult.score;
+    });
+  
+  // Get the best matches based on whether we have exact matches or need to fall back to fuzzy matches
+  const bestMatches = exactMatches.length > 0 ? exactMatches : taskMatchScores.sort((a, b) => {
+    // First sort by match score (highest first)
+    if (b.matchResult.score !== a.matchResult.score) {
+      return b.matchResult.score - a.matchResult.score;
+    }
+    // Then sort by most recently updated
+    return b.updatedAt - a.updatedAt;
+  });
+  
+  // Get the best match
+  return bestMatches[0].task;
 }
 
 /**
@@ -403,6 +333,14 @@ export async function getTaskHandler(params) {
  * Get task ID from various identifiers - uses the consolidated findTask function
  */
 export async function getTaskId(taskId?: string, taskName?: string, listName?: string, customTaskId?: string, requireId?: boolean, includeSubtasks?: boolean): Promise<string> {
+  // Check task context cache first if we have a task name
+  if (taskName && !taskId && !customTaskId) {
+    const cachedId = getCachedTaskContext(taskName);
+    if (cachedId) {
+      return cachedId;
+    }
+  }
+
   const result = await findTask({
     taskId,
     taskName,
@@ -411,6 +349,11 @@ export async function getTaskId(taskId?: string, taskName?: string, listName?: s
     requireId,
     includeSubtasks
   });
+  
+  // Store task context for future operations
+  if (taskName && result.task.id) {
+    storeTaskContext(taskName, result.task.id);
+  }
   
   return result.task.id;
 }
