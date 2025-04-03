@@ -15,9 +15,11 @@ import { BatchProcessingOptions } from '../../utils/concurrency-utils.js';
 import { formatDueDate } from '../utils.js';
 import { clickUpServices } from '../../services/shared.js';
 import { findListIDByName } from '../../tools/list.js';
+import { WorkspaceService } from '../../services/clickup/workspace.js';
+import { TaskPriority } from '../../services/clickup/types.js';
 
 // Use shared services instance for ID resolution
-const { workspace: workspaceService } = clickUpServices;
+const { workspace: workspaceService, task: taskService } = clickUpServices;
 
 //=============================================================================
 // DATA FORMATTING UTILITIES
@@ -79,25 +81,79 @@ export function formatTaskData(task: ClickUpTask, additional: any = {}) {
 //=============================================================================
 
 /**
+ * Task identification parameters
+ */
+export interface TaskIdentificationParams {
+  taskId?: string;
+  taskName?: string;
+  listName?: string;
+  customTaskId?: string;
+}
+
+/**
+ * Task validation result
+ */
+export interface TaskValidationResult {
+  isValid: boolean;
+  errorMessage?: string;
+}
+
+/**
+ * Options for task identification validation
+ */
+export interface TaskIdentificationValidationOptions {
+  requireTaskId?: boolean;
+  useGlobalLookup?: boolean;
+}
+
+/**
  * Validates task identification parameters
- * Ensures either taskId, customTaskId, or both taskName and listName are provided
- * When useGlobalLookup is true, allows taskName without listName
+ * 
+ * @param params - Task identification parameters
+ * @param options - Validation options
+ * @returns Validation result with error message if any
  */
 export function validateTaskIdentification(
-  taskId?: string, 
-  taskName?: string, 
-  listName?: string, 
-  customTaskId?: string,
-  useGlobalLookup = true
-): void {
-  if (!taskId && !taskName && !customTaskId) {
-    throw new Error("Either taskId, customTaskId, or taskName must be provided");
-  }
+  params: TaskIdentificationParams,
+  options: TaskIdentificationValidationOptions = {}
+): TaskValidationResult {
+  const { 
+    taskId, 
+    taskName, 
+    customTaskId,
+    listName
+  } = params;
   
-  // When global lookup is not enabled, we need list context for task name lookup
-  if (!useGlobalLookup && !taskId && !customTaskId && taskName && !listName) {
-    throw new Error("listName is required when using taskName and global lookup is disabled");
+  const { 
+    requireTaskId = false,
+    useGlobalLookup = true
+  } = options;
+
+  // If taskId is required, it must be provided
+  if (requireTaskId && !taskId) {
+    return {
+      isValid: false,
+      errorMessage: 'Task ID is required for this operation'
+    };
   }
+
+  // At least one identification method must be provided
+  if (!taskId && !taskName && !customTaskId) {
+    return {
+      isValid: false,
+      errorMessage: 'Either taskId, taskName, or customTaskId must be provided to identify the task'
+    };
+  }
+
+  // When using taskName without global lookup, listName is required
+  if (taskName && !taskId && !customTaskId && !useGlobalLookup && !listName) {
+    return {
+      isValid: false,
+      errorMessage: 'When identifying a task by name, you must also provide the listName parameter'
+    };
+  }
+
+  return { isValid: true };
 }
 
 /**
@@ -118,7 +174,7 @@ export function validateTaskUpdateData(updateData: any): void {
   // Check if there are any valid update fields present
   const hasUpdates = Object.keys(updateData).some(key => {
     return ['name', 'description', 'markdown_description', 'status', 'priority', 
-            'dueDate', 'startDate', 'taskId', 'taskName', 'custom_fields'].includes(key);
+            'dueDate', 'startDate', 'custom_fields'].includes(key);
   });
   
   if (!hasUpdates) {
@@ -267,4 +323,48 @@ export function extractTreePath(root: any, targetId: string): any[] {
   
   // Not found in this branch
   return [];
+}
+
+/**
+ * Get task ID from various identification methods
+ */
+export async function getTaskId(
+  taskId?: string,
+  taskName?: string,
+  listName?: string,
+  customTaskId?: string,
+  requireId = false
+): Promise<string> {
+  // Validate task identification
+  const validationResult = validateTaskIdentification(
+    { taskId, taskName, listName, customTaskId },
+    { requireTaskId: requireId, useGlobalLookup: true }
+  );
+  
+  if (!validationResult.isValid) {
+    throw new Error(validationResult.errorMessage);
+  }
+
+  try {
+    const result = await taskService.findTasks({
+      taskId,
+      customTaskId,
+      taskName,
+      listName,
+      allowMultipleMatches: false,
+      useSmartDisambiguation: true,
+      includeFullDetails: false
+    });
+
+    if (!result || Array.isArray(result)) {
+      throw new Error(`Task not found with the provided identification`);
+    }
+
+    return result.id;
+  } catch (error) {
+    if (error.message.includes('Multiple tasks found')) {
+      throw new Error(`Multiple tasks found with name "${taskName}". Please provide list name to disambiguate.`);
+    }
+    throw error;
+  }
 } 

@@ -21,7 +21,6 @@ import {
   moveTaskTool,
   duplicateTaskTool,
   getTaskTool,
-  getTasksTool,
   deleteTaskTool,
   getTaskCommentsTool,
   createTaskCommentTool,
@@ -102,7 +101,6 @@ export function configureServer() {
         workspaceHierarchyTool,
         createTaskTool,
         getTaskTool,
-        getTasksTool,
         updateTaskTool,
         moveTaskTool,
         duplicateTaskTool,
@@ -166,8 +164,6 @@ export function configureServer() {
           return handleDuplicateTask(params);
         case "get_task":
           return handleGetTask(params);
-        case "get_tasks":
-          return handleGetTasks(params);
         case "delete_task":
           return handleDeleteTask(params);
         case "get_task_comments":

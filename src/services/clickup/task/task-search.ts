@@ -18,7 +18,8 @@ import {
   WorkspaceTasksResponse,
   DetailedTaskResponse,
   TeamTasksResponse,
-  ExtendedTaskFilters
+  ExtendedTaskFilters,
+  UpdateTaskData
 } from '../types.js';
 import { isNameMatch } from '../../../utils/resolver-utils.js';
 import { findListIDByName } from '../../../tools/list.js';
@@ -329,7 +330,20 @@ export class TaskServiceSearch extends TaskServiceCore {
         
         // Case 3b: Task name without list context - global lookup across workspace
         // Get lightweight task summaries for efficient first-pass filtering
-        const response = await this.getTaskSummaries({});
+        this.logOperation('findTasks', { 
+          message: `Starting global task search for "${taskName}"`,
+          includeFullDetails,
+          useSmartDisambiguation 
+        });
+        
+        // Use statuses parameter to get both open and closed tasks
+        // Include additional filters to ensure we get as many tasks as possible
+        const response = await this.getTaskSummaries({
+          include_closed: true,
+          include_archived_lists: true,
+          include_closed_lists: true,
+          subtasks: true
+        });
         
         if (!this.workspaceService) {
           throw new Error("Workspace service required for global task lookup");
@@ -380,8 +394,34 @@ export class TaskServiceSearch extends TaskServiceCore {
         const initialMatches: { id: string, task: any, listContext: any }[] = [];
         
         // Process task summaries to find initial matches
+        let taskCount = 0;
+        let matchesFound = 0;
+        
+        // Add additional logging to debug task matching
+        this.logOperation('findTasks', { 
+          total_tasks_in_response: response.summaries.length,
+          search_term: taskName
+        });
+        
         for (const taskSummary of response.summaries) {
-          if (isNameMatch(taskSummary.name, taskName)) {
+          taskCount++;
+          
+          // Use isNameMatch for consistent matching behavior
+          const isMatch = isNameMatch(taskSummary.name, taskName);
+          
+          // For debugging, log every 20th task or any task with a similar name
+          if (taskCount % 20 === 0 || taskSummary.name.toLowerCase().includes(taskName.toLowerCase()) || 
+              taskName.toLowerCase().includes(taskSummary.name.toLowerCase())) {
+            this.logOperation('findTasks:matching', { 
+              task_name: taskSummary.name,
+              search_term: taskName,
+              list_name: taskSummary.list?.name || 'Unknown list',
+              is_match: isMatch
+            });
+          }
+          
+          if (isMatch) {
+            matchesFound++;
             // Get list context information
             const listContext = listContextMap.get(taskSummary.list.id);
             
@@ -395,6 +435,14 @@ export class TaskServiceSearch extends TaskServiceCore {
             }
           }
         }
+        
+        this.logOperation('findTasks', { 
+          globalSearch: true, 
+          searchTerm: taskName,
+          tasksSearched: taskCount,
+          matchesFound: matchesFound,
+          validMatchesWithContext: initialMatches.length
+        });
         
         // Handle the no matches case
         if (initialMatches.length === 0) {
@@ -547,6 +595,28 @@ export class TaskServiceSearch extends TaskServiceCore {
       
       // Unexpected errors
       throw this.handleError(error, `Error finding task: ${error.message}`);
+    }
+  }
+
+  /**
+   * Update a task by name within a specific list
+   * @param listId The ID of the list containing the task
+   * @param taskName The name of the task to update
+   * @param updateData The data to update the task with
+   * @returns The updated task
+   */
+  async updateTaskByName(listId: string, taskName: string, updateData: UpdateTaskData): Promise<ClickUpTask> {
+    this.logOperation('updateTaskByName', { listId, taskName, ...updateData });
+    
+    try {
+      const task = await this.findTaskByName(listId, taskName);
+      if (!task) {
+        throw new Error(`Task "${taskName}" not found in list ${listId}`);
+      }
+      
+      return await this.updateTask(task.id, updateData);
+    } catch (error) {
+      throw this.handleError(error, `Failed to update task by name: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 }

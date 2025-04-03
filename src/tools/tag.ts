@@ -369,10 +369,18 @@ export const handleDeleteSpaceTag = createHandlerWrapper(deleteSpaceTag, () => (
 /**
  * Wrapper for addTagToTask handler
  */
-export const handleAddTagToTask = createHandlerWrapper(addTagToTask, () => ({
-  success: true,
-  message: "Tag added to task successfully"
-}));
+export const handleAddTagToTask = createHandlerWrapper(addTagToTask, (result) => {
+  if (!result.success) {
+    return {
+      success: false,
+      error: result.error
+    };
+  }
+  return {
+    success: true,
+    message: "Tag added to task successfully"
+  };
+});
 
 /**
  * Wrapper for removeTagFromTask handler
@@ -871,6 +879,31 @@ export async function addTagToTask(params: {
     
     if (!result.success) {
       logger.error('Failed to add tag to task', result.error);
+      
+      // Provide more specific error messages based on error code
+      if (result.error?.code === 'TAG_NOT_FOUND') {
+        return {
+          success: false,
+          error: {
+            message: `The tag "${tagName}" does not exist in the space. Please create it first using create_space_tag.`
+          }
+        };
+      } else if (result.error?.code === 'SPACE_NOT_FOUND') {
+        return {
+          success: false,
+          error: {
+            message: 'Could not determine which space the task belongs to.'
+          }
+        };
+      } else if (result.error?.code === 'TAG_VERIFICATION_FAILED') {
+        return {
+          success: false,
+          error: {
+            message: 'The tag addition could not be verified. Please check if the tag was added manually.'
+          }
+        };
+      }
+      
       return {
         success: false,
         error: result.error || {

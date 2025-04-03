@@ -358,15 +358,17 @@ export const getTaskTool = {
 
 Valid Usage:
 1. Use taskId alone (preferred) - works with both regular and custom IDs (like "DEV-1234")
-2. Use taskName + listName
-3. Use customTaskId for explicit custom ID lookup
+2. Use taskName alone (will search across all lists in the workspace)
+3. Use taskName + listName (for faster, targeted search)
+4. Use customTaskId for explicit custom ID lookup
 
 Requirements:
-- When using taskName, listName is REQUIRED
-- When using customTaskId, listName is recommended for faster lookup
+- EITHER taskId OR taskName OR customTaskId: REQUIRED
+- listName: Optional, but recommended when using taskName for faster and more precise lookup
 
 Note:
-- Task names are only unique within a list, so the system needs to know which list to search in
+- When using just taskName, the system performs a global search across all lists
+- Task names are most unique within a specific list, so providing listName increases reliability
 - Regular task IDs are always 9 characters long (e.g., "86b394eqa")
 - Custom IDs have an uppercase prefix followed by a hyphen and number (e.g., "DEV-1234")
 - Set subtasks=true to include all subtasks in the response`,
@@ -379,11 +381,11 @@ Note:
       },
       taskName: {
         type: "string",
-        description: "Name of task to retrieve. When using this parameter, you MUST also provide listName."
+        description: "Name of task to retrieve. Can be used alone for a global search, or with listName for faster lookup."
       },
       listName: {
         type: "string",
-        description: "Name of list containing the task. REQUIRED when using taskName."
+        description: "Name of list containing the task. Optional but recommended when using taskName."
       },
       customTaskId: {
         type: "string",
