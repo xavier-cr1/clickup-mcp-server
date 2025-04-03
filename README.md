@@ -1,12 +1,12 @@
 <img src="assets/images/clickup_mcp_server_social_image.png" alt="ClickUp MCP Server" width="100%">
 
-![Total Supporters](https://img.shields.io/badge/🏆%20Total%20Supporters-2-gold)
+![Total Supporters](https://img.shields.io/badge/🏆%20Total%20Supporters-3-gold)
 [![GitHub Stars](https://img.shields.io/github/stars/TaazKareem/clickup-mcp-server?style=flat&logo=github)](https://github.com/TaazKareem/clickup-mcp-server/stargazers)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-brightgreen.svg)](https://github.com/TaazKareem/clickup-mcp-server/graphs/commit-activity)
 
 A Model Context Protocol (MCP) server for integrating ClickUp tasks with AI applications. This server allows AI agents to interact with ClickUp tasks, spaces, lists, and folders through a standardized protocol.
 
-> 🚧 **Status Update:** Rolling out v0.6.5 will add Global Task Lookup with smart disambiguation, Start Date Support for tasks with natural language expressions, Complete Tag Support including natural language tag color commands, Subtasks Support, Custom ID Support, and Logging Fixes
+> 🚧 **Status Update:** Rolling out v0.6.6 will add Global Task Lookup with smart disambiguation, Start Date Support for tasks with natural language expressions, Complete Tag Support including natural language tag color commands, Subtasks Support, Custom ID Support, and Logging Fixes
 
 ## Setup
 
