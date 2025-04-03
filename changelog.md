@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.6.7 (2025-04-03)
+
+### 🚀 New Features & Improvements
+- Enhanced token limit protection for workspace tasks:
+  - Added handler-level token limit validation (50,000 tokens)
+  - Implemented smart response format switching
+  - Automatic fallback to summary format for large responses
+  - Improved token estimation for task responses
+  - Added logging for format switching events
+  - Double-layer protection at both service and handler levels
+
+### 🔄 Repository Updates
+- Updated task handler implementation with token limit checks
+- Added token estimation utilities for task responses
+
 ## v0.6.6 (2025-04-03)
 
 ### 🐛 Bug Fixes
