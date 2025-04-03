@@ -1,5 +1,13 @@
+# v0.6.6 Release Notes (2025-04-03)
 
-# v0.6.2 Release Notes (2025-03-27)
+## 🐛 Bug Fixes
+
+- Fixed critical task caching issue that was causing rate limits:
+  - Identified and fixed issue where task IDs weren't being shared between sequential operations
+  - Each tool operation was performing redundant global task searches
+  - Implemented task name-to-ID mapping in cache to prevent duplicate lookups
+  - Improved caching efficiency for operations performed on the same task
+  - Reduced API calls for sequential operations using the same task
 
 ## 🚀 New Features & Improvements
 
@@ -32,3 +40,5 @@
 - Added API reference for the new workspace tasks filtering tool
 - Improved main README with feature descriptions
 - Enhanced changelog to document the new capabilities
+- Updated changelog to document the caching improvements
+- Enhanced documentation about task caching behavior

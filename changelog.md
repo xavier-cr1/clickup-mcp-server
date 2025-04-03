@@ -1,6 +1,15 @@
 # Changelog
 
-## v0.6.4 (2025-03-28)
+## v0.6.6 (2025-04-03)
+
+### 🐛 Bug Fixes
+- Fixed task caching issue causing rate limits:
+  - Task IDs from name lookups weren't being shared between sequential operations
+  - Each tool operation was performing redundant global task searches
+  - Added task name-to-ID mapping in cache to prevent duplicate lookups
+  - Improved caching efficiency for sequential operations on same task
+
+## v0.6.5 (2025-03-28)
 
 - Added start date support for tasks:
   - Set task start dates with natural language expressions (e.g., "now", "tomorrow at 9am")

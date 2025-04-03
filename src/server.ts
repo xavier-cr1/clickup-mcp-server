@@ -10,6 +10,7 @@ import {
   ListToolsRequestSchema,
   ListPromptsRequestSchema,
   GetPromptRequestSchema,
+  ListResourcesRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { createClickUpServices } from "./services/clickup/index.js";
 import config from "./config.js";
@@ -20,7 +21,6 @@ import {
   moveTaskTool,
   duplicateTaskTool,
   getTaskTool,
-  getTasksTool,
   deleteTaskTool,
   getTaskCommentsTool,
   createTaskCommentTool,
@@ -61,9 +61,6 @@ import {
 } from "./tools/folder.js";
 import {
   getSpaceTagsTool, handleGetSpaceTags,
-  createSpaceTagTool, handleCreateSpaceTag,
-  updateSpaceTagTool, handleUpdateSpaceTag,
-  deleteSpaceTagTool, handleDeleteSpaceTag,
   addTagToTaskTool, handleAddTagToTask,
   removeTagFromTaskTool, handleRemoveTagFromTask
 } from "./tools/tag.js";
@@ -85,6 +82,7 @@ export const server = new Server(
     capabilities: {
       tools: {},
       prompts: {},
+      resources: {},
     },
   }
 );
@@ -103,7 +101,6 @@ export function configureServer() {
         workspaceHierarchyTool,
         createTaskTool,
         getTaskTool,
-        getTasksTool,
         updateTaskTool,
         moveTaskTool,
         duplicateTaskTool,
@@ -126,13 +123,16 @@ export function configureServer() {
         updateFolderTool,
         deleteFolderTool,
         getSpaceTagsTool,
-        createSpaceTagTool,
-        updateSpaceTagTool,
-        deleteSpaceTagTool,
         addTagToTaskTool,
         removeTagFromTaskTool
       ]
     };
+  });
+
+  // Add handler for resources/list
+  server.setRequestHandler(ListResourcesRequestSchema, async (req) => {
+    logger.debug("Received ListResources request");
+    return { resources: [] };
   });
 
   // Register CallTool handler with proper logging
@@ -164,8 +164,6 @@ export function configureServer() {
           return handleDuplicateTask(params);
         case "get_task":
           return handleGetTask(params);
-        case "get_tasks":
-          return handleGetTasks(params);
         case "delete_task":
           return handleDeleteTask(params);
         case "get_task_comments":
@@ -204,23 +202,37 @@ export function configureServer() {
           return handleDeleteFolder(params);
         case "get_space_tags":
           return handleGetSpaceTags(params);
-        case "create_space_tag":
-          return handleCreateSpaceTag(params);
-        case "update_space_tag":
-          return handleUpdateSpaceTag(params);
-        case "delete_space_tag":
-          return handleDeleteSpaceTag(params);
         case "add_tag_to_task":
           return handleAddTagToTask(params);
         case "remove_tag_from_task":
           return handleRemoveTagFromTask(params);
         default:
           logger.error(`Unknown tool requested: ${name}`);
-          throw new Error(`Unknown tool: ${name}`);
+          const error = new Error(`Unknown tool: ${name}`);
+          error.name = "UnknownToolError";
+          throw error;
       }
     } catch (err) {
       logger.error(`Error executing tool: ${name}`, err);
-      throw err;
+      
+      // Transform error to a more descriptive JSON-RPC error
+      if (err.name === "UnknownToolError") {
+        throw {
+          code: -32601,
+          message: `Method not found: ${name}`
+        };
+      } else if (err.name === "ValidationError") {
+        throw {
+          code: -32602,
+          message: `Invalid params for tool ${name}: ${err.message}`
+        };
+      } else {
+        // Generic server error
+        throw {
+          code: -32000,
+          message: `Error executing tool ${name}: ${err.message}`
+        };
+      }
     }
   });
 

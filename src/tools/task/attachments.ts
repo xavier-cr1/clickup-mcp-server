@@ -145,11 +145,18 @@ Warning:
  */
 async function attachTaskFileHandler(params: any): Promise<any> {
   // Extract common parameters
-  const { taskId, taskName, listName, file_name, file_data, file_url, auth_header,
+  const { taskId, taskName, listName, customTaskId, file_name, file_data, file_url, auth_header,
     chunk_total, chunk_size, chunk_index, session_id } = params;
   
   // Validate task identification
-  validateTaskIdentification(params);
+  const validationResult = validateTaskIdentification(
+    { taskId, taskName, listName, customTaskId },
+    { useGlobalLookup: true }
+  );
+  
+  if (!validationResult.isValid) {
+    throw new Error(validationResult.errorMessage);
+  }
   
   // Validate file source - either file_data or file_url must be provided
   if (!file_data && !file_url && !session_id) {
