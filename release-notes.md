@@ -1,4 +1,4 @@
-# v0.6.7 Release Notes (2025-04-03)
+# v0.6.9 Release Notes (2025-04-03)
 
 ## 🚀 New Features & Improvements
 
