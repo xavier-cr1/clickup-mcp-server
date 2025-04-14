@@ -36,6 +36,24 @@ export {
   getWorkspaceTasksTool
 } from './workspace-operations.js';
 
+// Re-export time tracking tools and handlers
+export {
+  getTaskTimeEntriesTool,
+  startTimeTrackingTool,
+  stopTimeTrackingTool,
+  addTimeEntryTool,
+  deleteTimeEntryTool,
+  getCurrentTimeEntryTool,
+  handleGetTaskTimeEntries,
+  handleStartTimeTracking,
+  handleStopTimeTracking,
+  handleAddTimeEntry,
+  handleDeleteTimeEntry,
+  handleGetCurrentTimeEntry,
+  timeTrackingTools,
+  timeTrackingHandlers
+} from './time-tracking.js';
+
 // Re-export attachment tool
 export {
   attachTaskFileTool,
@@ -74,4 +92,4 @@ export {
   validateBulkTasks,
   parseBulkOptions,
   resolveListIdWithValidation
-} from './utilities.js'; 
+} from './utilities.js';

@@ -30,6 +30,12 @@ import {
   deleteBulkTasksTool,
   attachTaskFileTool,
   getWorkspaceTasksTool,
+  getTaskTimeEntriesTool,
+  startTimeTrackingTool,
+  stopTimeTrackingTool,
+  addTimeEntryTool,
+  deleteTimeEntryTool,
+  getCurrentTimeEntryTool,
   handleCreateTask,
   handleUpdateTask,
   handleMoveTask,
@@ -44,7 +50,13 @@ import {
   handleDeleteBulkTasks,
   handleGetTask,
   handleAttachTaskFile,
-  handleGetWorkspaceTasks
+  handleGetWorkspaceTasks,
+  handleGetTaskTimeEntries,
+  handleStartTimeTracking,
+  handleStopTimeTracking,
+  handleAddTimeEntry,
+  handleDeleteTimeEntry,
+  handleGetCurrentTimeEntry
 } from "./tools/task/index.js";
 import {
   createListTool, handleCreateList,
@@ -113,6 +125,12 @@ export function configureServer() {
         moveBulkTasksTool,
         deleteBulkTasksTool,
         getWorkspaceTasksTool,
+        getTaskTimeEntriesTool,
+        startTimeTrackingTool,
+        stopTimeTrackingTool,
+        addTimeEntryTool,
+        deleteTimeEntryTool,
+        getCurrentTimeEntryTool,
         createListTool,
         createListInFolderTool,
         getListTool,
@@ -137,8 +155,8 @@ export function configureServer() {
 
   // Register CallTool handler with proper logging
   logger.info("Registering tool handlers", {
-    toolCount: 31,
-    categories: ["workspace", "task", "list", "folder", "tag"]
+    toolCount: 37,
+    categories: ["workspace", "task", "time-tracking", "list", "folder", "tag"]
   });
   
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
@@ -206,6 +224,18 @@ export function configureServer() {
           return handleAddTagToTask(params);
         case "remove_tag_from_task":
           return handleRemoveTagFromTask(params);
+        case "get_task_time_entries":
+          return handleGetTaskTimeEntries(params);
+        case "start_time_tracking":
+          return handleStartTimeTracking(params);
+        case "stop_time_tracking":
+          return handleStopTimeTracking(params);
+        case "add_time_entry":
+          return handleAddTimeEntry(params);
+        case "delete_time_entry":
+          return handleDeleteTimeEntry(params);
+        case "get_current_time_entry":
+          return handleGetCurrentTimeEntry(params);
         default:
           logger.error(`Unknown tool requested: ${name}`);
           const error = new Error(`Unknown tool: ${name}`);
