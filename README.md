@@ -57,8 +57,10 @@ Or use this npx command:
 | 📝 Task Management | 🏷️ Tag Management |
 |----------------------------|----------------------------|
 | • Create, update, and delete tasks<br>• Move and duplicate tasks anywhere<br>• Support for single and bulk operations<br>• Set start/due dates with natural language<br>• Create and manage subtasks<br>• Add comments and attachments | • Create, update, and delete space tags<br>• Add and remove tags from tasks<br>• Use natural language color commands<br>• Automatic contrasting foreground colors<br>• View all space tags<br>• Tag-based task organization across workspace |
-| 🌳 **Workspace Organization** | ⚡ **Integration Features** |
-| • Navigate spaces, folders, and lists<br>• Create and manage folders<br>• Organize lists within spaces<br>• Create lists in folders<br>• View workspace hierarchy<br>• Efficient path navigation | • Global name or ID-based lookups<br>• Case-insensitive matching<br>• Markdown formatting support<br>• Built-in rate limiting<br>• Error handling and validation<br>• Comprehensive API coverage |
+| ⏱️ **Time Tracking** | 🌳 **Workspace Organization** |
+| • View time entries for tasks<br>• Start/stop time tracking on tasks<br>• Add manual time entries<br>• Delete time entries<br>• View currently running timer<br>• Track billable and non-billable time | • Navigate spaces, folders, and lists<br>• Create and manage folders<br>• Organize lists within spaces<br>• Create lists in folders<br>• View workspace hierarchy<br>• Efficient path navigation |
+| ⚡ **Integration Features** | |
+| • Global name or ID-based lookups<br>• Case-insensitive matching<br>• Markdown formatting support<br>• Built-in rate limiting<br>• Error handling and validation<br>• Comprehensive API coverage | |
 
 ## Available Tools
 
@@ -95,6 +97,12 @@ Or use this npx command:
 | [delete_space_tag](docs/api-reference.md#tag-management) | Delete tag | `tagName`, `spaceId`/`spaceName` |
 | [add_tag_to_task](docs/api-reference.md#tag-management) | Add tag to task | `tagName`, `taskId`/(`taskName`+`listName`) |
 | [remove_tag_from_task](docs/api-reference.md#tag-management) | Remove tag from task | `tagName`, `taskId`/(`taskName`+`listName`) |
+| [get_task_time_entries](docs/api-reference.md#time-tracking) | Get time entries for a task | `taskId`/`taskName` |
+| [start_time_tracking](docs/api-reference.md#time-tracking) | Start time tracking on a task | `taskId`/`taskName` |
+| [stop_time_tracking](docs/api-reference.md#time-tracking) | Stop current time tracking | None |
+| [add_time_entry](docs/api-reference.md#time-tracking) | Add manual time entry to a task | `taskId`/`taskName`, `start`, `duration` |
+| [delete_time_entry](docs/api-reference.md#time-tracking) | Delete a time entry | `timeEntryId` |
+| [get_current_time_entry](docs/api-reference.md#time-tracking) | Get currently running timer | None |
 
 See [full documentation](docs/api-reference.md) for optional parameters and advanced usage.
 
