@@ -52,6 +52,8 @@ Or use this npx command:
 
 `npx -y @taazkareem/clickup-mcp-server@latest --env CLICKUP_API_KEY=your-api-key --env CLICKUP_TEAM_ID=your-team-id`
 
+Additionally, you can use the `DISABLED_COMMANDS` environment variable or `--env DISABLED_COMMANDS` argument to disable specific commands. Provide a comma-separated list of command names to disable (e.g., `create_task,delete_task`).
+
 ## Features
 
 | 📝 Task Management | 🏷️ Tag Management |

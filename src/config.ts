@@ -18,6 +18,7 @@ for (let i = 0; i < args.length; i++) {
     if (key === 'CLICKUP_API_KEY') envArgs.clickupApiKey = value;
     if (key === 'CLICKUP_TEAM_ID') envArgs.clickupTeamId = value;
     if (key === 'LOG_LEVEL') envArgs.logLevel = value;
+    if (key === 'DISABLED_COMMANDS') envArgs.disabledCommands = value;
     i++;
   }
 }
@@ -53,6 +54,7 @@ interface Config {
   clickupTeamId: string;
   enableSponsorMessage: boolean;
   logLevel: LogLevel;
+  disabledCommands: string[];
 }
 
 // Load configuration from command line args or environment variables
@@ -60,7 +62,10 @@ const configuration: Config = {
   clickupApiKey: envArgs.clickupApiKey || process.env.CLICKUP_API_KEY || '',
   clickupTeamId: envArgs.clickupTeamId || process.env.CLICKUP_TEAM_ID || '',
   enableSponsorMessage: process.env.ENABLE_SPONSOR_MESSAGE !== 'false',
-  logLevel: parseLogLevel(envArgs.logLevel || process.env.LOG_LEVEL)
+  logLevel: parseLogLevel(envArgs.logLevel || process.env.LOG_LEVEL),
+  disabledCommands: (
+    (envArgs.disabledCommands || process.env.DISABLED_COMMANDS)?.split(',').map(cmd => cmd.trim()).filter(cmd => cmd !== '') || []
+  ),
 };
 
 // Don't log to console as it interferes with JSON-RPC communication
