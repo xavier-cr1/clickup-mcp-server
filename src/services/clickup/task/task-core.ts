@@ -339,10 +339,14 @@ export class TaskServiceCore extends BaseClickUpService {
     this.logOperation('updateTask', { taskId, ...updateData });
     
     try {
-      return await this.makeRequest(async () => {
+      // Extract custom fields from updateData
+      const { custom_fields, ...standardFields } = updateData;
+      
+      // First update the standard fields
+      const updatedTask = await this.makeRequest(async () => {
         const response = await this.client.put<ClickUpTask | string>(
           `/task/${taskId}`,
-          updateData
+          standardFields
         );
         
         // Handle both JSON and text responses
@@ -363,6 +367,18 @@ export class TaskServiceCore extends BaseClickUpService {
         
         return data;
       });
+      
+      // Then update custom fields if provided
+      if (custom_fields && Array.isArray(custom_fields) && custom_fields.length > 0) {
+        // Use the setCustomFieldValues method from the inherited class
+        // This will be available in TaskServiceCustomFields which extends this class
+        await (this as any).setCustomFieldValues(taskId, custom_fields);
+        
+        // Fetch the task again to get the updated version with custom fields
+        return await this.getTask(taskId);
+      }
+      
+      return updatedTask;
     } catch (error) {
       throw this.handleError(error, `Failed to update task ${taskId}`);
     }
