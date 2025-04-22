@@ -216,7 +216,8 @@ export const updateBulkTasksTool = {
               description: "New status"
             },
             priority: {
-              type: ["number", "null"],
+              type: "number",
+              nullable: true,
               enum: [1, 2, 3, 4, null],
               description: "New priority (1-4 or null)"
             },
