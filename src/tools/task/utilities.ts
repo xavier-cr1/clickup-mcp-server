@@ -171,16 +171,6 @@ export function validateListIdentification(listId?: string, listName?: string): 
  * Ensures at least one update field is provided
  */
 export function validateTaskUpdateData(updateData: any): void {
-  // Check if there are any valid update fields present
-  const hasUpdates = Object.keys(updateData).some(key => {
-    return ['name', 'description', 'markdown_description', 'status', 'priority', 
-            'dueDate', 'startDate', 'custom_fields', 'time_estimate'].includes(key);
-  });
-  
-  if (!hasUpdates) {
-    throw new Error("At least one field to update must be provided");
-  }
-  
   // Validate custom_fields if provided
   if (updateData.custom_fields) {
     if (!Array.isArray(updateData.custom_fields)) {
@@ -192,6 +182,11 @@ export function validateTaskUpdateData(updateData: any): void {
         throw new Error("Each custom field must have both id and value properties");
       }
     }
+  }
+  
+  // Ensure there's at least one field to update
+  if (Object.keys(updateData).length === 0) {
+    throw new Error("At least one field to update must be provided");
   }
 }
 

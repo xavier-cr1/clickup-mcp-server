@@ -1,62 +1,23 @@
-# v0.7.0 Release Notes (2025-04-24)
+# v0.7.2 Release Notes (2025-04-25)
 
-## 🚀 New Features & Improvements
+## 🛠️ Bug Fixes
 
-- Added Documents Module with comprehensive capabilities:
-
-  - Complete document lifecycle management (create, list, search, update)
-  - Page-level operations for creating and modifying document content
-  - Optional activation via `DOCUMENT_SUPPORT=true` environment variable
-  - Full compatibility with ClickUp API V3 for document operations
-  - Seamless integration with existing workspace navigation
-- Added Time Tracking Suite with comprehensive tools:
-
-  - View and manage time entries for tasks with flexible filtering
-  - Start/stop time tracking with one command
-  - Add manual time entries with natural language duration support
-  - Track billable and non-billable time
-  - Delete unwanted time entries
-  - Monitor currently running timers across workspace
-- Added Command Disabling Capability:
-
-  - Selective tool access via `DISABLED_TOOLS` environment variable
-  - Comma-separated command list for granular control
-  - Compatible with both environment variables and command line arguments
-  - Clear error messages when attempting to use disabled commands
-  - Enhanced security for production deployments
-
-## 🛠️ Bug Fixes & Improvements
-
-- Fixed custom task ID lookup in `getTaskByCustomId` method:
-  - Corrected API endpoint from `/task/custom_task_ids` to `/task/{id}` with proper parameters
-  - Added required `custom_task_ids=true` and `team_id` parameters for proper authentication
-  - Fixed "Authorization failed" error when retrieving tasks by custom ID
-  - Improved error handling and logging for custom ID operations
-
-- Fixed JSON schema compatibility issues for third-party integrations
-- Enhanced custom field handling in task update operations
-- Improved error handling and validation across all new tools
-- Optimized response formatting for consistent output
+- Fixed time estimate support in task updates:
+  - Removed redundant field-specific validation check in task update operations
+  - Simplified validation to check only for the presence of update fields
+  - Fixed "At least one field to update must be provided" error when using time_estimate
+  - Added time string parsing for converting formats like "2h 30m" to minutes
+  - Improved tool description for clear guidance on supported formats
+  - Ensures compatibility with all fields defined in the UpdateTaskData type
 
 ## 📦 Dependencies
 
 - No dependency changes in this release
 
-## 🔄 Repository Updates
-
-- Comprehensive documentation updates for all new features
-- Enhanced API reference with examples for document and time tracking operations
-- Added configuration guides for new environment variables
-- Improved tool descriptions and parameter documentation
-
 ## 🙏 Thank You
 
-Special thanks to our contributors who made this release possible:
+Special thanks to our contributors who reported and helped fix this issue:
 
-- [@jsb989](https://github.com/jsb989) - Document support implementation
-- [@quitequinn](https://github.com/quitequinn) - Time tracking functionality
-- [@somework](https://github.com/somework) - Command disabling feature
-- [@Nemo64](https://github.com/Nemo64) - JSON schema compatibility improvements
-- [@FruitSwimer](https://github.com/FruitSwimer) - Custom field update fixes
+- [@m-roberts](https://github.com/m-roberts) - Reporting and suggesting fix for the time estimate update issue
 
-Your contributions have significantly improved the ClickUp MCP Server!
+Your feedback helps make ClickUp MCP Server better for everyone!
