@@ -310,21 +310,55 @@ export class TaskServiceCore extends BaseClickUpService {
   /**
    * Get a task by its custom ID
    * @param customTaskId The custom ID of the task (e.g., "ABC-123")
-   * @param listId Optional list ID to limit the search
+   * @param listId Optional list ID to limit the search (Note: ClickUp API might not filter by list_id when using custom_task_id)
    * @returns The task details
    */
   async getTaskByCustomId(customTaskId: string, listId?: string): Promise<ClickUpTask> {
+    // Log the operation, including listId even if the API might ignore it for this specific lookup type
     this.logOperation('getTaskByCustomId', { customTaskId, listId });
-    
+
     try {
       return await this.makeRequest(async () => {
-        // Construct the URL with optional list ID
-        const url = `/task/custom_task_ids?custom_task_id=${encodeURIComponent(customTaskId)}${listId ? `&list_id=${listId}` : ''}`;
-        
-        const response = await this.client.get<ClickUpTask>(url);
-        return response.data;
+        // Use the standard task endpoint with the custom task ID
+        const url = `/task/${encodeURIComponent(customTaskId)}`;
+
+        // Add required query parameters for custom ID lookup
+        const params = new URLSearchParams({
+          custom_task_ids: 'true',
+          team_id: this.teamId // team_id is required when custom_task_ids is true
+        });
+
+        // Note: The ClickUp API documentation for GET /task/{task_id} doesn't explicitly mention
+        // filtering by list_id when custom_task_ids=true. This parameter might be ignored.
+        if (listId) {
+          this.logger.warn('listId provided to getTaskByCustomId, but the ClickUp API endpoint might not support it directly for custom ID lookups.', { customTaskId, listId });
+          // If ClickUp API were to support it, you would add it like this:
+          // params.append('list_id', listId);
+        }
+
+        const response = await this.client.get<ClickUpTask>(url, { params });
+
+        // Handle potential non-JSON responses (though less likely with GET)
+        const data = response.data;
+        if (typeof data === 'string') {
+          throw new ClickUpServiceError(
+            'Received unexpected text response from API when fetching by custom ID',
+            ErrorCode.UNKNOWN,
+            data
+          );
+        }
+
+        return data;
       });
     } catch (error) {
+      // Provide more specific error context if possible
+      if (error instanceof ClickUpServiceError && error.code === ErrorCode.NOT_FOUND) {
+        throw new ClickUpServiceError(
+          `Task with custom ID ${customTaskId} not found or not accessible for team ${this.teamId}.`,
+          ErrorCode.NOT_FOUND,
+          error.data
+        );
+      }
       throw this.handleError(error, `Failed to get task with custom ID ${customTaskId}`);
     }
   }
