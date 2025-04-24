@@ -71,5 +71,32 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       
+      - name: Create GitHub Release
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            let releaseNotes = '';
+            
+            try {
+              // Read release notes from file
+              releaseNotes = fs.readFileSync('./release-notes.md', 'utf8');
+            } catch (error) {
+              console.log('Warning: Could not read release-notes.md, using default message');
+              releaseNotes = 'See CHANGELOG.md for detailed changes in this version.';
+            }
+            
+            // Create the release
+            await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: `v${{ steps.new_version.outputs.new_version }}`,
+              name: `v${{ steps.new_version.outputs.new_version }}`,
+              body: releaseNotes,
+              draft: false,
+              prerelease: false
+            });
+      
       - name: Push changes
         run: git push --follow-tags 
