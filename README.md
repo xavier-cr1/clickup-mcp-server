@@ -41,16 +41,18 @@ Add this entry to your client's MCP settings JSON file:
       ],
       "env": {
         "CLICKUP_API_KEY": "your-api-key",
-        "CLICKUP_TEAM_ID": "your-team-id"
+        "CLICKUP_TEAM_ID": "your-team-id",
+        "DOCUMENT": "true"
       }
     }
   }
 }
 ```
-
 Or use this npx command:
 
 `npx -y @taazkareem/clickup-mcp-server@latest --env CLICKUP_API_KEY=your-api-key --env CLICKUP_TEAM_ID=your-team-id`
+
+**Obs: if you don't pass "DOCUMENT": "true", the default is false and document module will be not active.**
 
 Additionally, you can use the `DISABLED_COMMANDS` environment variable or `--env DISABLED_COMMANDS` argument to disable specific commands. Provide a comma-separated list of command names to disable (e.g., `create_task,delete_task`).
 
@@ -61,8 +63,8 @@ Additionally, you can use the `DISABLED_COMMANDS` environment variable or `--env
 | • Create, update, and delete tasks<br>• Move and duplicate tasks anywhere<br>• Support for single and bulk operations<br>• Set start/due dates with natural language<br>• Create and manage subtasks<br>• Add comments and attachments | • Create, update, and delete space tags<br>• Add and remove tags from tasks<br>• Use natural language color commands<br>• Automatic contrasting foreground colors<br>• View all space tags<br>• Tag-based task organization across workspace |
 | ⏱️ **Time Tracking** | 🌳 **Workspace Organization** |
 | • View time entries for tasks<br>• Start/stop time tracking on tasks<br>• Add manual time entries<br>• Delete time entries<br>• View currently running timer<br>• Track billable and non-billable time | • Navigate spaces, folders, and lists<br>• Create and manage folders<br>• Organize lists within spaces<br>• Create lists in folders<br>• View workspace hierarchy<br>• Efficient path navigation |
-| ⚡ **Integration Features** | |
-| • Global name or ID-based lookups<br>• Case-insensitive matching<br>• Markdown formatting support<br>• Built-in rate limiting<br>• Error handling and validation<br>• Comprehensive API coverage | |
+| ⚡ **Integration Features** | **Document Listing, Creation and Updating!** |
+| • Global name or ID-based lookups<br>• Case-insensitive matching<br>• Markdown formatting support<br>• Built-in rate limiting<br>• Error handling and validation<br>• Comprehensive API coverage | • Document Listing through all workspace <br> • Document Page listing <br> • Document Page Details <br> • Document Creation <br> • Document page update, modification (append and prepend) <br>  |
 
 ## Available Tools
 
@@ -105,6 +107,13 @@ Additionally, you can use the `DISABLED_COMMANDS` environment variable or `--env
 | [add_time_entry](docs/api-reference.md#time-tracking) | Add manual time entry to a task | `taskId`/`taskName`, `start`, `duration` |
 | [delete_time_entry](docs/api-reference.md#time-tracking) | Delete a time entry | `timeEntryId` |
 | [get_current_time_entry](docs/api-reference.md#time-tracking) | Get currently running timer | None |
+| [create_document](docs/api-reference.md#document-management) | Create a document | `workspaceId`, `name`, `parentId`/`parentType`, `visibility`, `create_pages` |
+| [get_document](docs/api-reference.md#document-management) | Get a document | `workspaceId`/`documentId` |
+| [list_documents](docs/api-reference.md#document-management) | List documents | `workspaceId`, `documentId`/`creator`/`deleted`/`archived`/`parent_id`/`parent_type`/`limit`/`next_cursor` |
+| [list_document_pages](docs/api-reference.md#document-management) | List document pages | `documentId`/`documentName` |
+| [get_document_pages](docs/api-reference.md#document-management) | Get document pages | `documentId`/`documentName`, `pageIds` |
+| [create_document_pages](docs/api-reference.md#document-management) | Create a document page | `workspaceId`/`documentId`, `parent_page_id`/`name`/`sub_title`,`content`/`content_format` |
+| [update_document_page](docs/api-reference.md#document-management) | Update a document page | `workspaceId`/`documentId`, `name`/`sub_title`,`content`/`content_edit_mode`/`content_format` |
 
 See [full documentation](docs/api-reference.md) for optional parameters and advanced usage.
 
