@@ -8,7 +8,7 @@
   - Document listing and search across workspace
   - Document creation with customizable visibility
   - Document page management (create, list, get, update)
-  - Optional module activation via `DOCUMENT=true` environment variable
+  - Optional module activation via `DOCUMENT_SUPPORT=true` environment variable
   - Support for both API V2 and V3 endpoints
 - Added comprehensive Time Tracking functionality:
   - View time entries for tasks with filtering options
@@ -18,7 +18,7 @@
   - View currently running timer with elapsed time information
   - Track billable and non-billable time
 - Added command disabling capability:
-  - New `DISABLED_COMMANDS` environment variable
+  - New `DISABLED_TOOLS` environment variable
   - Disable specific commands via comma-separated list
   - Support for both environment variable and command line argument
   - Improved security through selective command access
@@ -46,7 +46,7 @@
 ### 🔗 References
 
 - #36: [Fix types for windsurf compatibility](https://github.com/taazkareem/clickup-mcp-server/pull/36)
-- #38: [Add time tracking functionality](https://github.com/taazkareem/clickup-mcp-server/pull/38) 
+- #38: [Add time tracking functionality](https://github.com/taazkareem/clickup-mcp-server/pull/38)
 - #39: [Add command disabling capability](https://github.com/taazkareem/clickup-mcp-server/pull/39)
 - #40: [Fix custom field updates](https://github.com/taazkareem/clickup-mcp-server/pull/40)
 - #41: [Add document module](https://github.com/taazkareem/clickup-mcp-server/pull/41)

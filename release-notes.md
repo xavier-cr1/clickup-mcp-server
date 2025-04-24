@@ -6,7 +6,7 @@
 
   - Complete document lifecycle management (create, list, search, update)
   - Page-level operations for creating and modifying document content
-  - Optional activation via `DOCUMENT=true` environment variable
+  - Optional activation via `DOCUMENT_SUPPORT=true` environment variable
   - Full compatibility with ClickUp API V3 for document operations
   - Seamless integration with existing workspace navigation
 - Added Time Tracking Suite with comprehensive tools:
@@ -19,7 +19,7 @@
   - Monitor currently running timers across workspace
 - Added Command Disabling Capability:
 
-  - Selective tool access via `DISABLED_COMMANDS` environment variable
+  - Selective tool access via `DISABLED_TOOLS` environment variable
   - Comma-separated command list for granular control
   - Compatible with both environment variables and command line arguments
   - Clear error messages when attempting to use disabled commands
