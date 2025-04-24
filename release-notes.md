@@ -27,6 +27,12 @@
 
 ## 🛠️ Bug Fixes & Improvements
 
+- Fixed custom task ID lookup in `getTaskByCustomId` method:
+  - Corrected API endpoint from `/task/custom_task_ids` to `/task/{id}` with proper parameters
+  - Added required `custom_task_ids=true` and `team_id` parameters for proper authentication
+  - Fixed "Authorization failed" error when retrieving tasks by custom ID
+  - Improved error handling and logging for custom ID operations
+
 - Fixed JSON schema compatibility issues for third-party integrations
 - Enhanced custom field handling in task update operations
 - Improved error handling and validation across all new tools

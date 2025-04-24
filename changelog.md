@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.7.0 (2025-04-24)
+## v0.7.1 (2025-04-24)
 
 ### 🚀 New Features & Improvements
 
@@ -26,6 +26,11 @@
 
 ### 🛠️ Bug Fixes & Improvements
 
+- Fixed custom task ID lookup in `getTaskByCustomId` method:
+  - Corrected API endpoint from `/task/custom_task_ids` to `/task/{id}` with proper parameters
+  - Added required `custom_task_ids=true` and `team_id` parameters for proper authentication
+  - Fixed "Authorization failed" error when retrieving tasks by custom ID
+  - Improved error handling and logging for custom ID operations
 - Fixed JSON schema type definitions in task tools for improved compatibility with third-party parsers:
   - Updated schema to use single string type with nullable property instead of array types
   - Ensures compatibility with Go-based parsers like windsurf that have strict type requirements
@@ -45,6 +50,7 @@
 
 ### 🔗 References
 
+- #37: [Fix authorization issue with custom task IDs](https://github.com/taazkareem/clickup-mcp-server/issues/37)
 - #36: [Fix types for windsurf compatibility](https://github.com/taazkareem/clickup-mcp-server/pull/36)
 - #38: [Add time tracking functionality](https://github.com/taazkareem/clickup-mcp-server/pull/38)
 - #39: [Add command disabling capability](https://github.com/taazkareem/clickup-mcp-server/pull/39)
