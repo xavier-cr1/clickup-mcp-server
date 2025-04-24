@@ -200,6 +200,10 @@ export const updateTaskTool = {
         type: "string",
         description: "New start date. Supports both Unix timestamps (in milliseconds) and natural language expressions."
       },
+      time_estimate: {
+        type: "string",
+        description: "Time estimate for the task. For best compatibility with the ClickUp API, use a numeric value in minutes (e.g., '150' for 2h 30m)"
+      },
       custom_fields: {
         type: "array",
         items: {

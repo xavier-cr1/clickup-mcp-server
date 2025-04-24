@@ -75,6 +75,40 @@ function getCachedTaskContext(taskName: string): string | null {
 //=============================================================================
 
 /**
+ * Parse time estimate string into minutes
+ * Supports formats like "2h 30m", "150m", "2.5h"
+ */
+function parseTimeEstimate(timeEstimate: string | number): number {
+  // If it's already a number, return it directly
+  if (typeof timeEstimate === 'number') {
+    return timeEstimate;
+  }
+  
+  if (!timeEstimate || typeof timeEstimate !== 'string') return 0;
+  
+  // If it's just a number as string, parse it
+  if (/^\d+$/.test(timeEstimate)) {
+    return parseInt(timeEstimate, 10);
+  }
+  
+  let totalMinutes = 0;
+  
+  // Extract hours
+  const hoursMatch = timeEstimate.match(/(\d+\.?\d*)h/);
+  if (hoursMatch) {
+    totalMinutes += parseFloat(hoursMatch[1]) * 60;
+  }
+  
+  // Extract minutes
+  const minutesMatch = timeEstimate.match(/(\d+)m/);
+  if (minutesMatch) {
+    totalMinutes += parseInt(minutesMatch[1], 10);
+  }
+  
+  return Math.round(totalMinutes); // Return minutes
+}
+
+/**
  * Build task update data from parameters
  */
 function buildUpdateData(params: any): UpdateTaskData {
@@ -96,6 +130,18 @@ function buildUpdateData(params: any): UpdateTaskData {
   if (params.startDate !== undefined) {
     updateData.start_date = parseDueDate(params.startDate);
     updateData.start_date_time = true;
+  }
+  
+  // Handle time estimate if provided - convert from string to minutes
+  if (params.time_estimate !== undefined) {
+    // Log the time estimate for debugging
+    console.log(`Original time_estimate: ${params.time_estimate}, typeof: ${typeof params.time_estimate}`);
+    
+    // Parse and convert to number in minutes
+    const minutes = parseTimeEstimate(params.time_estimate);
+    
+    console.log(`Converted time_estimate: ${minutes}`);
+    updateData.time_estimate = minutes;
   }
   
   // Handle custom fields if provided

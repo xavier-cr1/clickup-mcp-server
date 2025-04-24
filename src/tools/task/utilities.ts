@@ -174,7 +174,7 @@ export function validateTaskUpdateData(updateData: any): void {
   // Check if there are any valid update fields present
   const hasUpdates = Object.keys(updateData).some(key => {
     return ['name', 'description', 'markdown_description', 'status', 'priority', 
-            'dueDate', 'startDate', 'custom_fields'].includes(key);
+            'dueDate', 'startDate', 'custom_fields', 'time_estimate'].includes(key);
   });
   
   if (!hasUpdates) {
