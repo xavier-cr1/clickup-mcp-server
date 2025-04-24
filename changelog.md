@@ -1,5 +1,27 @@
 # Changelog
 
+## v0.7.0 (2025-04-10)
+
+### 🚀 New Features & Improvements
+- Added Documents Module with comprehensive document management:
+  - Document listing and search across workspace
+  - Document creation with customizable visibility
+  - Document page management (create, list, get, update)
+  - Optional module activation via `DOCUMENT=true` environment variable
+  - Support for both API V2 and V3 endpoints
+  - Non-premium feature compatibility
+- Added command disabling capability:
+  - New `DISABLED_COMMANDS` environment variable
+  - Disable specific commands via comma-separated list
+  - Support for both environment variable and command line argument
+  - Improved security through selective command access
+  - Clear error messages for disabled command attempts
+
+### 🔄 Repository Updates
+- Updated documentation with new document module features
+- Added configuration guide for disabled commands
+- Enhanced API reference with document management examples
+
 ## v0.6.7 (2025-04-03)
 
 ### 🚀 New Features & Improvements
