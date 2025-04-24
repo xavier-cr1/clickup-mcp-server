@@ -47,7 +47,7 @@
 
 Special thanks to our contributors who made this release possible:
 
-- [@jsb989](https://github.com/jsb989) - Document module implementation
+- [@jsb989](https://github.com/jsb989) - Document support implementation
 - [@quitequinn](https://github.com/quitequinn) - Time tracking functionality
 - [@somework](https://github.com/somework) - Command disabling feature
 - [@Nemo64](https://github.com/Nemo64) - JSON schema compatibility improvements

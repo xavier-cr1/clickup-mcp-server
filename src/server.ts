@@ -109,7 +109,7 @@ export const server = new Server(
 );
 
 const documentModule = () => {
-  if (config.documentModule === 'true') {
+  if (config.documentSupport === 'true') {
     return [
       createDocumentTool,
       getDocumentTool,
@@ -169,7 +169,7 @@ export function configureServer() {
         addTagToTaskTool,
         removeTagFromTaskTool,
         ...documentModule()
-      ].filter(tool => !config.disabledCommands.includes(tool.name))
+      ].filter(tool => !config.disabledTools.includes(tool.name))
     };
   });
 
@@ -193,8 +193,8 @@ export function configureServer() {
       params 
     });
     
-    // Check if the command is disabled
-    if (config.disabledCommands.includes(name)) {
+    // Check if the tool is disabled
+    if (config.disabledTools.includes(name)) {
       logger.warn(`Tool execution blocked: Tool '${name}' is disabled.`);
       throw {
         code: -32601,

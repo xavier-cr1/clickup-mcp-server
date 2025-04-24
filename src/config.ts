@@ -8,8 +8,8 @@
  * securely to this file when running the hosted server at smithery.ai. Optionally, 
  * they can be parsed via command line arguments when running the server locally.
  * 
- * The document module is optional and can be passed via command line arguments.
- * The default value is 'false' (string), which means the document module will be disabled if
+ * The document support is optional and can be passed via command line arguments.
+ * The default value is 'false' (string), which means document support will be disabled if
  * no parameter is passed. Pass it as 'true' (string) to enable it.
  */
 
@@ -21,9 +21,12 @@ for (let i = 0; i < args.length; i++) {
     const [key, value] = args[i + 1].split('=');
     if (key === 'CLICKUP_API_KEY') envArgs.clickupApiKey = value;
     if (key === 'CLICKUP_TEAM_ID') envArgs.clickupTeamId = value;
-    if (key === 'DOCUMENT_MODEL') envArgs.documentModule = value;
+    if (key === 'DOCUMENT_SUPPORT') envArgs.documentSupport = value;
+    if (key === 'DOCUMENT_MODEL') envArgs.documentSupport = value; // Backward compatibility
+    if (key === 'DOCUMENT_MODULE') envArgs.documentSupport = value; // Backward compatibility
     if (key === 'LOG_LEVEL') envArgs.logLevel = value;
-    if (key === 'DISABLED_COMMANDS') envArgs.disabledCommands = value;
+    if (key === 'DISABLED_TOOLS') envArgs.disabledTools = value;
+    if (key === 'DISABLED_COMMANDS') envArgs.disabledTools = value; // Backward compatibility
     i++;
   }
 }
@@ -58,9 +61,9 @@ interface Config {
   clickupApiKey: string;
   clickupTeamId: string;
   enableSponsorMessage: boolean;
-  documentModule: string;
+  documentSupport: string;
   logLevel: LogLevel;
-  disabledCommands: string[];
+  disabledTools: string[];
 }
 
 // Load configuration from command line args or environment variables
@@ -68,10 +71,10 @@ const configuration: Config = {
   clickupApiKey: envArgs.clickupApiKey || process.env.CLICKUP_API_KEY || '',
   clickupTeamId: envArgs.clickupTeamId || process.env.CLICKUP_TEAM_ID || '',
   enableSponsorMessage: process.env.ENABLE_SPONSOR_MESSAGE !== 'false',
-  documentModule: envArgs.documentModule || process.env.DOCUMENT_MODULE || 'false',
+  documentSupport: envArgs.documentSupport || process.env.DOCUMENT_SUPPORT || process.env.DOCUMENT_MODULE || process.env.DOCUMENT_MODEL || 'false',
   logLevel: parseLogLevel(envArgs.logLevel || process.env.LOG_LEVEL),
-  disabledCommands: (
-    (envArgs.disabledCommands || process.env.DISABLED_COMMANDS)?.split(',').map(cmd => cmd.trim()).filter(cmd => cmd !== '') || []
+  disabledTools: (
+    (envArgs.disabledTools || process.env.DISABLED_TOOLS || process.env.DISABLED_COMMANDS)?.split(',').map(cmd => cmd.trim()).filter(cmd => cmd !== '') || []
   ),
 };
 
