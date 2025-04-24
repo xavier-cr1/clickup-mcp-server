@@ -143,7 +143,7 @@ export function configureServer() {
         getSpaceTagsTool,
         addTagToTaskTool,
         removeTagFromTaskTool
-      ]
+      ].filter(tool => !config.disabledCommands.includes(tool.name))
     };
   });
 
@@ -166,6 +166,15 @@ export function configureServer() {
     logger.info(`Received CallTool request for tool: ${name}`, { 
       params 
     });
+    
+    // Check if the command is disabled
+    if (config.disabledCommands.includes(name)) {
+      logger.warn(`Tool execution blocked: Tool '${name}' is disabled.`);
+      throw {
+        code: -32601,
+        message: `Tool '${name}' is disabled.`
+      };
+    }
     
     try {
       // Handle tool calls by routing to the appropriate handler
