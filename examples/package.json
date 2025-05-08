@@ -1,0 +1,13 @@
+{
+  "name": "clickup-mcp-server-examples",
+  "version": "1.0.0",
+  "description": "Examples for using ClickUp MCP Server",
+  "private": true,
+  "scripts": {
+    "sse-client": "node sse-client.js"
+  },
+  "dependencies": {
+    "eventsource": "^2.0.2",
+    "node-fetch": "^2.6.12"
+  }
+} 

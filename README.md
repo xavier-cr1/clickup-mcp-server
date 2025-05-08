@@ -59,6 +59,78 @@ Additionally, you can use the `DISABLED_TOOLS` environment variable or `--env DI
 
 Please disable tools you don't need if you are having issues with the number of tools or any context limitations
 
+## Server Transport Options
+
+The clickup-mcp-server now supports multiple transport mechanisms to communicate with clients:
+
+### STDIO Transport (Default)
+
+The default transport mechanism uses standard input/output for communication. This is compatible with most MCP client implementations and requires no additional configuration.
+
+### SSE Transport (Server-Sent Events)
+
+The SSE transport enables integration with web applications and services that support Server-Sent Events, such as n8n. To enable the SSE transport:
+
+```json
+{
+  "mcpServers": {
+    "ClickUp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@taazkareem/clickup-mcp-server@latest"
+      ],
+      "env": {
+        "CLICKUP_API_KEY": "your-api-key",
+        "CLICKUP_TEAM_ID": "your-team-id",
+        "DOCUMENT_SUPPORT": "true",
+        "ENABLE_SSE": "true",
+        "SSE_PORT": "3000"
+      }
+    }
+  }
+}
+```
+
+Or use environment variables when running the server:
+
+```bash
+ENABLE_SSE=true SSE_PORT=3000 npx -y @taazkareem/clickup-mcp-server@latest --env CLICKUP_API_KEY=your-api-key --env CLICKUP_TEAM_ID=your-team-id
+```
+
+Available configuration options:
+
+| Option | Description | Default |
+| ------ | ----------- | ------- |
+| `ENABLE_SSE` | Enable the SSE transport | `false` |
+| `SSE_PORT` | Port for the SSE server | `3000` |
+| `ENABLE_STDIO` | Enable the STDIO transport | `true` |
+
+#### n8n Integration
+
+To integrate with n8n:
+
+1. Start the clickup-mcp-server with SSE enabled
+2. In n8n, add a new "MCP AI Tool" node
+3. Configure the node with:
+   - Transport: SSE
+   - Server URL: `http://localhost:3000` (or your server address)
+   - Tools: Select the ClickUp tools you want to use
+
+#### Example Client
+
+An example SSE client is provided in the `examples` directory. To run it:
+
+```bash
+# Start the server with SSE enabled
+ENABLE_SSE=true SSE_PORT=3000 npx -y @taazkareem/clickup-mcp-server@latest --env CLICKUP_API_KEY=your-api-key --env CLICKUP_TEAM_ID=your-team-id
+
+# In another terminal, run the example client
+cd examples
+npm install
+npm run sse-client
+```
+
 ## Features
 
 | 📝 Task Management                                                                                                                                                                                                                                                   | 🏷️ Tag Management                                                                                                                                                                                                                                                        |

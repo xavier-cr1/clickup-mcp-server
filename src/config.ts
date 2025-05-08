@@ -11,6 +11,11 @@
  * The document support is optional and can be passed via command line arguments.
  * The default value is 'false' (string), which means document support will be disabled if
  * no parameter is passed. Pass it as 'true' (string) to enable it.
+ * 
+ * Server transport options:
+ * - ENABLE_SSE: Enable Server-Sent Events transport (default: false)
+ * - SSE_PORT: Port for SSE server (default: 3000)
+ * - ENABLE_STDIO: Enable STDIO transport (default: true)
  */
 
 // Parse any command line environment arguments
@@ -27,6 +32,9 @@ for (let i = 0; i < args.length; i++) {
     if (key === 'LOG_LEVEL') envArgs.logLevel = value;
     if (key === 'DISABLED_TOOLS') envArgs.disabledTools = value;
     if (key === 'DISABLED_COMMANDS') envArgs.disabledTools = value; // Backward compatibility
+    if (key === 'ENABLE_SSE') envArgs.enableSSE = value;
+    if (key === 'SSE_PORT') envArgs.ssePort = value;
+    if (key === 'ENABLE_STDIO') envArgs.enableStdio = value;
     i++;
   }
 }
@@ -64,7 +72,23 @@ interface Config {
   documentSupport: string;
   logLevel: LogLevel;
   disabledTools: string[];
+  enableSSE: boolean;
+  ssePort: number;
+  enableStdio: boolean;
 }
+
+// Parse boolean string
+const parseBoolean = (value: string | undefined, defaultValue: boolean): boolean => {
+  if (value === undefined) return defaultValue;
+  return value.toLowerCase() === 'true';
+};
+
+// Parse integer string
+const parseInteger = (value: string | undefined, defaultValue: number): number => {
+  if (value === undefined) return defaultValue;
+  const parsed = parseInt(value, 10);
+  return isNaN(parsed) ? defaultValue : parsed;
+};
 
 // Load configuration from command line args or environment variables
 const configuration: Config = {
@@ -76,6 +100,9 @@ const configuration: Config = {
   disabledTools: (
     (envArgs.disabledTools || process.env.DISABLED_TOOLS || process.env.DISABLED_COMMANDS)?.split(',').map(cmd => cmd.trim()).filter(cmd => cmd !== '') || []
   ),
+  enableSSE: parseBoolean(envArgs.enableSSE || process.env.ENABLE_SSE, false),
+  ssePort: parseInteger(envArgs.ssePort || process.env.SSE_PORT, 3000),
+  enableStdio: parseBoolean(envArgs.enableStdio || process.env.ENABLE_STDIO, true),
 };
 
 // Don't log to console as it interferes with JSON-RPC communication
