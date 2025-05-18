@@ -34,6 +34,16 @@ import {
   getWorkspaceTasksTool
 } from './workspace-operations.js';
 
+// Add this to your import statements at the top of the file
+import {
+  getWorkspaceMembersTool,
+  findMemberByNameTool,
+  resolveAssigneesTool,
+  handleGetWorkspaceMembers,
+  handleFindMemberByName,
+  handleResolveAssignees
+} from '../member.js';  // Adjust the path as needed - it should point to where member.ts is located
+
 // Import handlers
 import {
   createTaskHandler,
@@ -274,5 +284,17 @@ export const tools = [
         errors: result.failed.map(f => f.error)
       };
     }
+  },
+   {
+    definition: getWorkspaceMembersTool,
+    handler: handleGetWorkspaceMembers
+  },
+  {
+    definition: findMemberByNameTool,
+    handler: handleFindMemberByName
+  },
+  {
+    definition: resolveAssigneesTool,
+    handler: handleResolveAssignees
   }
 ];

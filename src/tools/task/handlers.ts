@@ -13,8 +13,8 @@ import { clickUpServices } from '../../services/shared.js';
 import { BulkService } from '../../services/clickup/bulk.js';
 import { BatchResult } from '../../utils/concurrency-utils.js';
 import { parseDueDate } from '../utils.js';
-import { 
-  validateTaskIdentification, 
+import {
+  validateTaskIdentification,
   validateListIdentification,
   validateTaskUpdateData,
   validateBulkTasks,
@@ -61,12 +61,12 @@ function storeTaskContext(taskName: string, taskId: string) {
 function getCachedTaskContext(taskName: string): string | null {
   const context = taskContextCache.get(taskName);
   if (!context) return null;
-  
+
   if (Date.now() - context.timestamp > TASK_CONTEXT_TTL) {
     taskContextCache.delete(taskName);
     return null;
   }
-  
+
   return context.id;
 }
 
@@ -83,28 +83,28 @@ function parseTimeEstimate(timeEstimate: string | number): number {
   if (typeof timeEstimate === 'number') {
     return timeEstimate;
   }
-  
+
   if (!timeEstimate || typeof timeEstimate !== 'string') return 0;
-  
+
   // If it's just a number as string, parse it
   if (/^\d+$/.test(timeEstimate)) {
     return parseInt(timeEstimate, 10);
   }
-  
+
   let totalMinutes = 0;
-  
+
   // Extract hours
   const hoursMatch = timeEstimate.match(/(\d+\.?\d*)h/);
   if (hoursMatch) {
     totalMinutes += parseFloat(hoursMatch[1]) * 60;
   }
-  
+
   // Extract minutes
   const minutesMatch = timeEstimate.match(/(\d+)m/);
   if (minutesMatch) {
     totalMinutes += parseInt(minutesMatch[1], 10);
   }
-  
+
   return Math.round(totalMinutes); // Return minutes
 }
 
@@ -113,42 +113,42 @@ function parseTimeEstimate(timeEstimate: string | number): number {
  */
 function buildUpdateData(params: any): UpdateTaskData {
   const updateData: UpdateTaskData = {};
-  
+
   if (params.name !== undefined) updateData.name = params.name;
   if (params.description !== undefined) updateData.description = params.description;
   if (params.markdown_description !== undefined) updateData.markdown_description = params.markdown_description;
   if (params.status !== undefined) updateData.status = params.status;
-  
+
   // Skip toTaskPriority conversion since we're handling priority in the main handler
   if (params.priority !== undefined) updateData.priority = params.priority;
-  
+
   if (params.dueDate !== undefined) {
     updateData.due_date = parseDueDate(params.dueDate);
     updateData.due_date_time = true;
   }
-  
+
   if (params.startDate !== undefined) {
     updateData.start_date = parseDueDate(params.startDate);
     updateData.start_date_time = true;
   }
-  
+
   // Handle time estimate if provided - convert from string to minutes
   if (params.time_estimate !== undefined) {
     // Log the time estimate for debugging
     console.log(`Original time_estimate: ${params.time_estimate}, typeof: ${typeof params.time_estimate}`);
-    
+
     // Parse and convert to number in minutes
     const minutes = parseTimeEstimate(params.time_estimate);
-    
+
     console.log(`Converted time_estimate: ${minutes}`);
     updateData.time_estimate = minutes;
   }
-  
+
   // Handle custom fields if provided
   if (params.custom_fields !== undefined) {
     updateData.custom_fields = params.custom_fields;
   }
-  
+
   return updateData;
 }
 
@@ -171,68 +171,68 @@ async function findTask(params: {
     { taskId, taskName, listName, customTaskId },
     { requireTaskId: requireId, useGlobalLookup: true }
   );
-  
+
   if (!validationResult.isValid) {
     throw new Error(validationResult.errorMessage);
   }
-  
+
   try {
     // Direct path for taskId - most efficient
     if (taskId) {
       const task = await taskService.getTask(taskId);
-      
+
       // Add subtasks if requested
       if (includeSubtasks) {
         const subtasks = await taskService.getSubtasks(task.id);
         return { task, subtasks };
       }
-      
+
       return { task };
     }
-    
+
     // Direct path for customTaskId - also efficient
     if (customTaskId) {
       const task = await taskService.getTaskByCustomId(customTaskId);
-      
+
       // Add subtasks if requested
       if (includeSubtasks) {
         const subtasks = await taskService.getSubtasks(task.id);
         return { task, subtasks };
       }
-      
+
       return { task };
     }
-    
+
     // Special optimized path for taskName + listName combination
     if (taskName && listName) {
       const listId = await resolveListIdWithValidation(null, listName);
-      
+
       // Get all tasks in the list
       const allTasks = await taskService.getTasks(listId);
-      
+
       // Find the task that matches the name
       const matchingTask = findTaskByName(allTasks, taskName);
-      
+
       if (!matchingTask) {
         throw new Error(`Task "${taskName}" not found in list "${listName}"`);
       }
-      
+
       // Add subtasks if requested
       if (includeSubtasks) {
         const subtasks = await taskService.getSubtasks(matchingTask.id);
         return { task: matchingTask, subtasks };
       }
-      
+
       return { task: matchingTask };
     }
-    
+
     // Fallback to searching all lists for taskName-only case
     if (taskName) {
       logger.debug(`Searching all lists for task: "${taskName}"`);
-      
+
       // Get workspace hierarchy which contains all lists
       const hierarchy = await workspaceService.getWorkspaceHierarchy();
-      
+
       // Extract all list IDs from the hierarchy
       const listIds: string[] = [];
       const extractListIds = (node: any) => {
@@ -243,10 +243,10 @@ async function findTask(params: {
           node.children.forEach(extractListIds);
         }
       };
-      
+
       // Start from the root's children
       hierarchy.root.children.forEach(extractListIds);
-      
+
       // Search through each list
       const searchPromises = listIds.map(async (listId) => {
         try {
@@ -262,50 +262,50 @@ async function findTask(params: {
           return null;
         }
       });
-      
+
       // Wait for all searches to complete
       const results = await Promise.all(searchPromises);
-      
+
       // Filter out null results and sort by match quality and recency
       const matchingTasks = results
         .filter(task => task !== null)
         .sort((a, b) => {
           const aMatch = isNameMatch(a.name, taskName);
           const bMatch = isNameMatch(b.name, taskName);
-          
+
           // First sort by match quality
           if (bMatch.score !== aMatch.score) {
             return bMatch.score - aMatch.score;
           }
-          
+
           // Then sort by recency
           return parseInt(b.date_updated) - parseInt(a.date_updated);
         });
-      
+
       if (matchingTasks.length === 0) {
         throw new Error(`Task "${taskName}" not found in any list across your workspace. Please check the task name and try again.`);
       }
-      
+
       const bestMatch = matchingTasks[0];
-      
+
       // Add subtasks if requested
       if (includeSubtasks) {
         const subtasks = await taskService.getSubtasks(bestMatch.id);
         return { task: bestMatch, subtasks };
       }
-      
+
       return { task: bestMatch };
     }
-    
+
     // We shouldn't reach here if validation is working correctly
     throw new Error("No valid task identification provided");
-    
+
   } catch (error) {
     // Enhance error message for non-existent tasks
     if (taskName && error.message.includes('not found')) {
       throw new Error(`Task "${taskName}" not found. Please check the task name and try again.`);
     }
-    
+
     // Pass along other formatted errors
     throw error;
   }
@@ -316,9 +316,9 @@ async function findTask(params: {
  */
 function findTaskByName(tasks, name) {
   if (!tasks || !Array.isArray(tasks) || !name) return null;
-  
+
   const normalizedSearchName = name.toLowerCase().trim();
-  
+
   // Get match scores for all tasks
   const taskMatchScores = tasks.map(task => {
     const matchResult = isNameMatch(task.name, name);
@@ -329,11 +329,11 @@ function findTaskByName(tasks, name) {
       updatedAt: task.date_updated ? parseInt(task.date_updated, 10) : 0
     };
   }).filter(result => result.matchResult.isMatch);
-  
+
   if (taskMatchScores.length === 0) {
     return null;
   }
-  
+
   // First, try to find exact matches
   const exactMatches = taskMatchScores
     .filter(result => result.matchResult.exactMatch)
@@ -344,7 +344,7 @@ function findTaskByName(tasks, name) {
       }
       return b.matchResult.score - a.matchResult.score;
     });
-  
+
   // Get the best matches based on whether we have exact matches or need to fall back to fuzzy matches
   const bestMatches = exactMatches.length > 0 ? exactMatches : taskMatchScores.sort((a, b) => {
     // First sort by match score (highest first)
@@ -354,7 +354,7 @@ function findTaskByName(tasks, name) {
     // Then sort by most recently updated
     return b.updatedAt - a.updatedAt;
   });
-  
+
   // Get the best match
   return bestMatches[0].task;
 }
@@ -371,11 +371,11 @@ export async function getTaskHandler(params) {
       customTaskId: params.customTaskId,
       includeSubtasks: params.subtasks
     });
-    
+
     if (result.subtasks) {
       return { ...result.task, subtasks: result.subtasks };
     }
-    
+
     return result.task;
   } catch (error) {
     throw error;
@@ -402,12 +402,12 @@ export async function getTaskId(taskId?: string, taskName?: string, listName?: s
     requireId,
     includeSubtasks
   });
-  
+
   // Store task context for future operations
   if (taskName && result.task.id) {
     storeTaskContext(taskName, result.task.id);
   }
-  
+
   return result.task.id;
 }
 
@@ -425,13 +425,13 @@ async function getListId(listId?: string, listName?: string): Promise<string> {
 function buildTaskFilters(params: any): TaskFilters {
   const { subtasks, statuses, page, order_by, reverse } = params;
   const filters: TaskFilters = {};
-  
+
   if (subtasks !== undefined) filters.subtasks = subtasks;
   if (statuses !== undefined) filters.statuses = statuses;
   if (page !== undefined) filters.page = page;
   if (order_by !== undefined) filters.order_by = order_by;
   if (reverse !== undefined) filters.reverse = reverse;
-  
+
   return filters;
 }
 
@@ -445,11 +445,11 @@ async function mapTaskIds(tasks: any[]): Promise<string[]> {
       { taskId: task.taskId, taskName: task.taskName, listName: task.listName, customTaskId: task.customTaskId },
       { useGlobalLookup: true }
     );
-    
+
     if (!validationResult.isValid) {
       throw new Error(validationResult.errorMessage);
     }
-    
+
     return await getTaskId(task.taskId, task.taskName, task.listName, task.customTaskId);
   }));
 }
@@ -462,26 +462,27 @@ async function mapTaskIds(tasks: any[]): Promise<string[]> {
  * Handler for creating a task
  */
 export async function createTaskHandler(params) {
-  const { 
-    name, 
-    description, 
-    markdown_description, 
-    status, 
-    dueDate, 
-    startDate, 
-    parent, 
+  const {
+    name,
+    description,
+    markdown_description,
+    status,
+    dueDate,
+    startDate,
+    parent,
     tags,
     custom_fields,
-    check_required_custom_fields
+    check_required_custom_fields,
+    assignees
   } = params;
-  
+
   if (!name) throw new Error("Task name is required");
-  
+
   // Use our helper function to validate and convert priority
   const priority = toTaskPriority(params.priority);
 
   const listId = await getListId(params.listId, params.listName);
-  
+
   const taskData: CreateTaskData = {
     name,
     description,
@@ -491,21 +492,22 @@ export async function createTaskHandler(params) {
     parent,
     tags,
     custom_fields,
-    check_required_custom_fields
+    check_required_custom_fields,
+    assignees
   };
-  
+
   // Add due date if specified
   if (dueDate) {
     taskData.due_date = parseDueDate(dueDate);
     taskData.due_date_time = true;
   }
-  
+
   // Add start date if specified
   if (startDate) {
     taskData.start_date = parseDueDate(startDate);
     taskData.start_date_time = true;
   }
-  
+
   return await taskService.createTask(listId, taskData);
 }
 
@@ -524,7 +526,7 @@ export async function updateTaskHandler(
   params: UpdateTaskParams
 ): Promise<ClickUpTask> {
   const { taskId, taskName, listName, customTaskId, ...updateData } = params;
-  
+
   // Validate task identification with global lookup enabled
   const validationResult = validateTaskIdentification(params, { useGlobalLookup: true });
   if (!validationResult.isValid) {
@@ -558,11 +560,11 @@ export async function moveTaskHandler(params) {
 export async function duplicateTaskHandler(params) {
   const taskId = await getTaskId(params.taskId, params.taskName, undefined, params.customTaskId, false);
   let listId;
-  
+
   if (params.listId || params.listName) {
     listId = await getListId(params.listId, params.listName);
   }
-  
+
   return await taskService.duplicateTask(taskId, listId);
 }
 
@@ -591,18 +593,18 @@ export async function createTaskCommentHandler(params) {
   if (!params.commentText) {
     throw new Error('Comment text is required');
   }
-  
+
   try {
     // Resolve the task ID
     const taskId = await getTaskId(params.taskId, params.taskName, params.listName);
-    
+
     // Extract other parameters with defaults
     const {
       commentText,
       notifyAll = false,
       assignee = null
     } = params;
-    
+
     // Create the comment
     return await taskService.createTaskComment(taskId, commentText, notifyAll, assignee);
   } catch (error) {
@@ -614,7 +616,7 @@ export async function createTaskCommentHandler(params) {
         throw new Error(`Task with ID "${params.taskId}" not found`);
       }
     }
-    
+
     // Otherwise, rethrow the original error
     throw error;
   }
@@ -627,23 +629,23 @@ export async function createTaskCommentHandler(params) {
 function estimateTaskResponseTokens(task: ClickUpTask): number {
   // Base estimation for task structure
   let tokenCount = 0;
-  
+
   // Core fields
   tokenCount += (task.name?.length || 0) / 4; // Approximate tokens for name
   tokenCount += (task.description?.length || 0) / 4; // Approximate tokens for description
   tokenCount += (task.text_content?.length || 0) / 4; // Use text_content instead of markdown_description
-  
+
   // Status and other metadata
   tokenCount += 5; // Basic metadata fields
-  
+
   // Custom fields
   if (task.custom_fields) {
     tokenCount += Object.keys(task.custom_fields).length * 10; // Rough estimate per custom field
   }
-  
+
   // Add overhead for JSON structure
   tokenCount *= 1.1;
-  
+
   return Math.ceil(tokenCount);
 }
 
@@ -652,15 +654,15 @@ function estimateTaskResponseTokens(task: ClickUpTask): number {
  */
 function wouldExceedTokenLimit(response: any): boolean {
   if (!response.tasks?.length) return false;
-  
+
   // Calculate total estimated tokens
-  const totalTokens = response.tasks.reduce((sum: number, task: ClickUpTask) => 
+  const totalTokens = response.tasks.reduce((sum: number, task: ClickUpTask) =>
     sum + estimateTaskResponseTokens(task), 0
   );
-  
+
   // Add overhead for response structure
   const estimatedTotal = totalTokens * 1.1;
-  
+
   return estimatedTotal > WORKSPACE_TASKS_TOKEN_LIMIT;
 }
 
@@ -676,7 +678,7 @@ export async function getWorkspaceTasksHandler(
     const hasFilter = [
       'tags',
       'list_ids',
-      'folder_ids', 
+      'folder_ids',
       'space_ids',
       'statuses',
       'assignees',
@@ -723,13 +725,13 @@ export async function getWorkspaceTasksHandler(
     // Check token limit at handler level
     if (params.detail_level !== 'summary' && wouldExceedTokenLimit(response)) {
       logger.info('Response would exceed token limit, fetching summary format instead');
-      
+
       // Refetch with summary format
       const summaryResponse = await taskService.getWorkspaceTasks({
         ...filters,
         detail_level: 'summary'
       });
-      
+
       return summaryResponse;
     }
 

@@ -85,6 +85,13 @@ import {
   createDocumentPageTool, handleCreateDocumentPage,
   updateDocumentPageTool, handleUpdateDocumentPage
 } from "./tools/documents.js";
+
+import {
+  getWorkspaceMembersTool, handleGetWorkspaceMembers,
+  findMemberByNameTool, handleFindMemberByName,
+  resolveAssigneesTool, handleResolveAssignees
+} from "./tools/member.js";
+
 import { Logger } from "./logger.js";
 import { clickUpServices } from "./services/shared.js";
 
@@ -129,7 +136,7 @@ const documentModule = () => {
  */
 export function configureServer() {
   logger.info("Registering server request handlers");
-  
+
   // Register ListTools handler
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     logger.debug("Received ListTools request");
@@ -168,6 +175,9 @@ export function configureServer() {
         getSpaceTagsTool,
         addTagToTaskTool,
         removeTagFromTaskTool,
+        getWorkspaceMembersTool,
+        findMemberByNameTool,
+        resolveAssigneesTool,
         ...documentModule()
       ].filter(tool => !config.disabledTools.includes(tool.name))
     };
@@ -184,15 +194,15 @@ export function configureServer() {
     toolCount: 40,
     categories: ["workspace", "task", "time-tracking", "list", "folder", "tag", "document"]
   });
-  
+
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
     const { name, arguments: params } = req.params;
-    
+
     // Improved logging with more context
-    logger.info(`Received CallTool request for tool: ${name}`, { 
-      params 
+    logger.info(`Received CallTool request for tool: ${name}`, {
+      params
     });
-    
+
     // Check if the tool is disabled
     if (config.disabledTools.includes(name)) {
       logger.warn(`Tool execution blocked: Tool '${name}' is disabled.`);
@@ -201,7 +211,7 @@ export function configureServer() {
         message: `Tool '${name}' is disabled.`
       };
     }
-    
+
     try {
       // Handle tool calls by routing to the appropriate handler
       switch (name) {
@@ -285,6 +295,12 @@ export function configureServer() {
           return handleCreateDocumentPage(params);
         case "update_document_page":
           return handleUpdateDocumentPage(params);
+        case "get_workspace_members":
+          return handleGetWorkspaceMembers();
+        case "find_member_by_name":
+          return handleFindMemberByName(params);
+        case "resolve_assignees":
+          return handleResolveAssignees(params);
         default:
           logger.error(`Unknown tool requested: ${name}`);
           const error = new Error(`Unknown tool: ${name}`);
@@ -293,7 +309,7 @@ export function configureServer() {
       }
     } catch (err) {
       logger.error(`Error executing tool: ${name}`, err);
-      
+
       // Transform error to a more descriptive JSON-RPC error
       if (err.name === "UnknownToolError") {
         throw {

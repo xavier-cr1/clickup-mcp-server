@@ -8,11 +8,11 @@
  */
 
 import { BaseClickUpService, ClickUpServiceError, ErrorCode } from './base.js';
-import { 
-  ClickUpSpace, 
+import {
+  ClickUpSpace,
   ClickUpFolder,
   ClickUpList,
-  WorkspaceTree, 
+  WorkspaceTree,
   WorkspaceNode
 } from './types.js';
 import { Logger } from '../../logger.js';
@@ -24,7 +24,7 @@ const logger = new Logger('WorkspaceService');
  * Service for workspace-related operations
  */
 export class WorkspaceService extends BaseClickUpService {
-  
+
   // Store the workspace hierarchy in memory
   private workspaceHierarchy: WorkspaceTree | null = null;
 
@@ -35,8 +35,8 @@ export class WorkspaceService extends BaseClickUpService {
    * @param baseUrl - Optional custom API URL
    */
   constructor(
-    apiKey: string, 
-    teamId: string, 
+    apiKey: string,
+    teamId: string,
     baseUrl?: string
   ) {
     super(apiKey, teamId, baseUrl);
@@ -50,7 +50,7 @@ export class WorkspaceService extends BaseClickUpService {
    */
   private handleError(error: any, message?: string): ClickUpServiceError {
     logger.error('WorkspaceService error:', error);
-    
+
     // If the error is already a ClickUpServiceError, return it
     if (error instanceof ClickUpServiceError) {
       return error;
@@ -87,7 +87,7 @@ export class WorkspaceService extends BaseClickUpService {
       // Validate spaceId
       if (!spaceId) {
         throw new ClickUpServiceError(
-          'Space ID is required', 
+          'Space ID is required',
           ErrorCode.INVALID_PARAMETER
         );
       }
@@ -111,7 +111,7 @@ export class WorkspaceService extends BaseClickUpService {
       // Validate spaceName
       if (!spaceName) {
         throw new ClickUpServiceError(
-          'Space name is required', 
+          'Space name is required',
           ErrorCode.INVALID_PARAMETER
         );
       }
@@ -119,7 +119,7 @@ export class WorkspaceService extends BaseClickUpService {
       // Get all spaces and find the one with the matching name
       const spaces = await this.getSpaces();
       const space = spaces.find(s => s.name === spaceName);
-      
+
       return space || null;
     } catch (error) {
       throw this.handleError(error, `Failed to find space with name ${spaceName}`);
@@ -225,7 +225,7 @@ export class WorkspaceService extends BaseClickUpService {
 
           // Add folderless lists to space
           logger.debug(`Adding ${listsInSpace.length} lists directly to space ${space.name}`);
-          
+
           const listNodes = listsInSpace.map(list => ({
             id: list.id,
             name: list.name,
@@ -361,9 +361,9 @@ export class WorkspaceService extends BaseClickUpService {
     try {
       // The /space/{space_id}/list endpoint already returns folderless lists only
       const lists = await this.getFolderlessLists(spaceId);
-      
+
       logger.debug(`Found ${lists.length} folderless lists in space ${spaceId}`);
-      
+
       // Return all lists without filtering since the API already returns folderless lists
       return lists;
     } catch (error) {
@@ -433,4 +433,35 @@ export class WorkspaceService extends BaseClickUpService {
       throw this.handleError(error, `Failed to get lists in folder ${folderId}`);
     }
   }
-} 
+
+
+  /**
+   * Get all members in a workspace
+   * @returns Array of workspace members
+   */
+  async getWorkspaceMembers() {
+    try {
+      // Use the existing team/workspace endpoint which typically returns member information
+      const teamId = this.teamId;
+      const response = await this.client.get(`/team/${teamId}`);
+
+      if (!response || !response.data || !response.data.team) {
+        throw new Error('Invalid response from ClickUp API');
+      }
+
+      // Extract and normalize member data
+      const members = response.data.team.members || [];
+      return members.map((member: any) => ({
+        id: member.user?.id,
+        name: member.user?.username || member.user?.email,
+        username: member.user?.username,
+        email: member.user?.email,
+        role: member.role,
+        profilePicture: member.user?.profilePicture
+      }));
+    } catch (error) {
+      console.error('Error getting workspace members:', error);
+      throw error;
+    }
+  }
+}
