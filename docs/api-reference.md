@@ -14,6 +14,7 @@ This document provides detailed information about all available tools, their par
 - [Prompts](#prompts)
 - [Common Parameters](#common-parameters)
 - [Error Handling](#error-handling)
+- [Member Management Tools](#member-management-tools)
 
 ## Server Transport Options
 
@@ -56,7 +57,7 @@ For detailed SSE setup instructions, see [SSE Transport Documentation](sse-trans
 | get_task_comments | Retrieve comments for a task | Either `taskId` or `taskName` | `listName`, `start`, `startId` |
 | create_task_comment | Add a comment to a task | `commentText` and either `taskId` or (`taskName` + `listName`) | `notifyAll`, `assignee` |
 | attach_task_file | Attach a file to a task | Either `taskId` or `taskName`, and EITHER `file_data` OR `file_url` | `file_name`, `chunk_*` parameters for large files |
-| create_task | Create a new task | `name` and either `listId` or `listName` | description, status, priority (1-4), dueDate, startDate, parent |
+| create_task | Create a new task | `name` and either `listId` or `listName` | description, status, priority (1-4), dueDate, startDate, parent, assignees |
 | create_bulk_tasks | Create multiple tasks | `tasks[]` | `listId` or `listName` |
 | update_task | Modify task properties | Either `taskId` or `taskName` | name, description, status, priority, dueDate, startDate |
 | update_bulk_tasks | Modify multiple tasks | `tasks[]` with task identifiers | Each task can have: name, description, status, priority, dueDate, startDate, etc. |
@@ -1328,4 +1329,103 @@ The server provides clear error messages for:
 ### Rate Limiting
 - Automatic handling of ClickUp API rate limits
 - Built-in retry mechanism with exponential backoff
-- Status updates during rate limit waits 
+- Status updates during rate limit waits
+
+# Member Management
+
+| Tool | Description | Required Parameters | Optional Parameters |
+|------|-------------|-------------------|-------------------|
+| get_workspace_members | Get all members in workspace | None | None |
+| find_member_by_name | Find member by name or email | `nameOrEmail` | None |
+| resolve_assignees | Resolve names/emails to user IDs | `assignees[]` | None |
+
+## get_workspace_members
+
+Returns all members (users) in the ClickUp workspace/team. Useful for resolving assignees by name or email.
+
+### Parameters
+- None
+
+### Response
+```json
+{
+  "members": [
+    {
+      "id": 123,
+      "username": "jdoe",
+      "email": "jdoe@example.com",
+      "full_name": "John Doe",
+      "profile_picture": "https://...",
+      "role": 1,
+      "role_name": "Admin",
+      "initials": "JD",
+      "last_active": "2025-05-17T12:00:00Z"
+    }
+  ]
+}
+```
+
+## find_member_by_name
+
+Finds a member in the ClickUp workspace by name or email. Returns the member object if found, or null if not found.
+
+### Parameters
+| Parameter | Type | Description | Required |
+|-----------|------|-------------|----------|
+| nameOrEmail | string | Name or email of the member to find | Yes |
+
+### Response
+```json
+{
+  "member": {
+    "id": 123,
+    "username": "jdoe",
+    "email": "jdoe@example.com",
+    "full_name": "John Doe",
+    "profile_picture": "https://...",
+    "role": 1,
+    "role_name": "Admin",
+    "initials": "JD",
+    "last_active": "2025-05-17T12:00:00Z"
+  }
+}
+```
+
+## resolve_assignees
+
+Resolves an array of assignee names or emails to ClickUp user IDs. Returns an array of user IDs, or null for any that cannot be resolved.
+
+### Parameters
+| Parameter | Type | Description | Required |
+|-----------|------|-------------|----------|
+| assignees | array | Array of names or emails to resolve | Yes |
+
+### Response
+```json
+{
+  "userIds": [123, 456]
+}
+```
+
+## Task Creation with Assignees
+
+When creating or updating tasks, you can use the `assignees` parameter to assign users to tasks. The parameter accepts any of the following formats:
+
+- User IDs (numbers)
+- Email addresses
+- Usernames
+
+### Example
+
+```json
+{
+  "name": "New Task",
+  "description": "This is a new task.",
+  "assignees": [123, "jdoe@example.com", "Jane Smith"]
+}
+```
+
+### Notes
+- The member management tools can be used to resolve user references before task creation
+- The server automatically converts non-ID values (emails, usernames) to ClickUp user IDs
+- If a user cannot be found, the assignment will be skipped without causing an error

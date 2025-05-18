@@ -4,34 +4,37 @@
 
 ### 🚀 New Features & Improvements
 
-- **Server-Sent Events (SSE) Transport Support**:
-  - Added complete SSE transport implementation for web-based integrations
-  - Dual transport support: can run both STDIO and SSE simultaneously
+- **HTTP Streamable Transport Support**:
+  - Added HTTP Streamable transport implementation for modern web-based integrations
+  - Dual transport support: can run both STDIO and HTTP/SSE simultaneously
   - New configuration options:
-    - `ENABLE_SSE` - Enable SSE transport (default: false)
-    - `SSE_PORT` - SSE server port (default: 3000)
+    - `ENABLE_SSE` - Enable HTTP/SSE transport (default: false)
+    - `PORT` - HTTP server port (default: 3231)
     - `ENABLE_STDIO` - Enable STDIO transport (default: true)
-  - SSE server endpoints:
-    - `/events` - SSE connection endpoint for receiving server events
-    - `/request` - POST endpoint for sending requests to the server
-    - `/health` - Health check endpoint
+  - HTTP server endpoints:
+    - `/mcp` - HTTP Streamable endpoint for MCP protocol communication
+    - `/sse` - Legacy SSE endpoint for backwards compatibility
   - Enhanced integration capabilities:
-    - n8n workflow integration support
+    - MCP Inspector compatibility
     - Web application compatibility
     - Multiple client connection support
-    - Message queuing for disconnected clients
-  - Comprehensive documentation and examples:
-    - Complete SSE transport usage guide
-    - Example SSE client implementation
-    - n8n integration instructions
-  - Modular transport architecture for future extensibility
+    - Session management for stateful interactions
+  - Unified server architecture eliminating code duplication
+  - 70% codebase reduction through architectural improvements
+
+- **Member Management Tools**:
+  - Added `getWorkspaceMembers` - Retrieve all workspace members with details
+  - Added `findMemberByName` - Find specific members by name or email
+  - Added `resolveAssignees` - Resolve user IDs/emails to assignee objects
+  - Enhanced task creation with `assignees` parameter for user assignment
+  - Improved error handling and response formatting for member operations
 
 ### 🔄 Repository Updates
 
-- Added `docs/sse-transport.md` with comprehensive SSE usage documentation
-- Added `examples/` directory with SSE client example
-- Updated package dependencies for SSE support (express, cors)
+- Refactored transport architecture for unified server configuration
+- Eliminated 1,100+ lines of duplicated tool definitions
 - Enhanced configuration system for transport selection
+- Improved imports and code organization for maintainability
 
 ## v0.7.2 (2025-04-25)
 

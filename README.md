@@ -133,8 +133,10 @@ npm run sse-client
 | • Create, update, and delete tasks<br>• Move and duplicate tasks anywhere<br>• Support for single and bulk operations<br>• Set start/due dates with natural language<br>• Create and manage subtasks<br>• Add comments and attachments | • Create, update, and delete space tags<br>• Add and remove tags from tasks<br>• Use natural language color commands<br>• Automatic contrasting foreground colors<br>• View all space tags<br>• Tag-based task organization across workspace |
 | ⏱️ **Time Tracking**                                                                                                                                                                                                                                          | 🌳 **Workspace Organization**                                                                                                                                                                                                                                         |
 | • View time entries for tasks<br>• Start/stop time tracking on tasks<br>• Add manual time entries<br>• Delete time entries<br>• View currently running timer<br>• Track billable and non-billable time                                 | • Navigate spaces, folders, and lists<br>• Create and manage folders<br>• Organize lists within spaces<br>• Create lists in folders<br>• View workspace hierarchy<br>• Efficient path navigation                                             |
-| 📄 **Document Management**                                                                                                                                                                                                                                      | ⚡ **Integration Features**                                                                                                                                                                                                                                           |
-| • Document Listing through all workspace<br>• Document Page listing<br>• Document Page Details<br>• Document Creation<br>• Document page update (append & prepend)                                                                       | • Global name or ID-based lookups<br>• Case-insensitive matching<br>• Markdown formatting support<br>• Built-in rate limiting<br>• Error handling and validation<br>• Comprehensive API coverage                                             |
+| 📄 **Document Management**                                                                                                                                                                                                                                      | 👥 **Member Management**                                                                                                                                                                                                                                             |
+| • Document Listing through all workspace<br>• Document Page listing<br>• Document Page Details<br>• Document Creation<br>• Document page update (append & prepend)                                                                       | • Find workspace members by name or email<br>• Resolve assignees for tasks<br>• View member details and permissions<br>• Assign tasks to users during creation<br>• Support for user IDs, emails, or usernames<br>• Team-wide user management                            |
+| ⚡ **Integration Features**                                                                                                                                                                                                                                      |                                                                                                                                                                                                                                                                            |
+| • Global name or ID-based lookups<br>• Case-insensitive matching<br>• Markdown formatting support<br>• Built-in rate limiting<br>• Error handling and validation<br>• Comprehensive API coverage                                             |                                                                                                                                                                                                                                                                            |
 
 ## Available Tools
 
@@ -177,6 +179,9 @@ npm run sse-client
 | [add_time_entry](docs/api-reference.md#time-tracking)                 | Add manual time entry to a task | `taskId`/`taskName`, `start`, `duration`                                                                             |
 | [delete_time_entry](docs/api-reference.md#time-tracking)              | Delete a time entry             | `timeEntryId`                                                                                                              |
 | [get_current_time_entry](docs/api-reference.md#time-tracking)         | Get currently running timer     | None                                                                                                                         |
+| [get_workspace_members](docs/api-reference.md#member-management)      | Get all workspace members       | None                                                                                                                         |
+| [find_member_by_name](docs/api-reference.md#member-management)        | Find member by name or email    | `nameOrEmail`                                                                                                               |
+| [resolve_assignees](docs/api-reference.md#member-management)          | Resolve member names to IDs     | `assignees[]`                                                                                                              |
 | [create_document](docs/api-reference.md#document-management)          | Create a document               | `workspaceId`, `name`, `parentId`/`parentType`, `visibility`, `create_pages`                                     |
 | [get_document](docs/api-reference.md#document-management)             | Get a document                  | `workspaceId`/`documentId`                                                                                               |
 | [list_documents](docs/api-reference.md#document-management)           | List documents                  | `workspaceId`, `documentId`/`creator`/`deleted`/`archived`/`parent_id`/`parent_type`/`limit`/`next_cursor` |
@@ -186,6 +191,20 @@ npm run sse-client
 | [update_document_page](docs/api-reference.md#document-management)     | Update a document page          | `workspaceId`/`documentId`, `name`/`sub_title`,`content`/`content_edit_mode`/`content_format`                  |
 
 See [full documentation](docs/api-reference.md) for optional parameters and advanced usage.
+
+## Member Management Tools
+
+When creating tasks, you can now assign users using the `assignees` parameter. The parameter accepts an array of user IDs, emails, or usernames:
+
+```json
+{
+  "name": "New Task",
+  "description": "This is a new task.",
+  "assignees": ["jdoe@example.com", "Jane Smith"]  // Emails, usernames, or user IDs
+}
+```
+
+The member management tools help resolve user references when needed.
 
 ## Prompts
 
