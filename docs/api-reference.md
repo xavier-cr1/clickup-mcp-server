@@ -3,14 +3,49 @@
 This document provides detailed information about all available tools, their parameters, and usage examples for the ClickUp MCP Server.
 
 ## Table of Contents
+- [Server Transport Options](#server-transport-options)
 - [Task Management](#task-management)
 - [List Management](#list-management)
 - [Folder Management](#folder-management)
 - [Tag Management](#tag-management)
+- [Time Tracking](#time-tracking)
+- [Document Management](#document-management)
 - [Workspace Organization](#workspace-organization)
 - [Prompts](#prompts)
 - [Common Parameters](#common-parameters)
 - [Error Handling](#error-handling)
+
+## Server Transport Options
+
+The ClickUp MCP Server supports multiple transport mechanisms for communication with clients:
+
+### STDIO Transport (Default)
+The standard transport using stdin/stdout communication. Compatible with most MCP clients including Claude Desktop.
+
+### SSE Transport (Server-Sent Events)
+Enables web-based integrations and real-time communication. Perfect for:
+- **n8n workflow automation**
+- **Web applications**
+- **Custom browser-based clients**
+- **Real-time task monitoring**
+
+#### SSE Configuration
+```json
+{
+  "env": {
+    "ENABLE_SSE": "true",
+    "SSE_PORT": "3000",
+    "ENABLE_STDIO": "true"
+  }
+}
+```
+
+#### SSE Endpoints
+- **`GET /events`** - SSE connection endpoint for receiving server events
+- **`POST /request`** - Send JSON-RPC requests to the server
+- **`GET /health`** - Health check endpoint
+
+For detailed SSE setup instructions, see [SSE Transport Documentation](sse-transport.md).
 
 ## Task Management
 

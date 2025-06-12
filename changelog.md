@@ -1,5 +1,38 @@
 # Changelog
 
+## Unreleased
+
+### 🚀 New Features & Improvements
+
+- **Server-Sent Events (SSE) Transport Support**:
+  - Added complete SSE transport implementation for web-based integrations
+  - Dual transport support: can run both STDIO and SSE simultaneously
+  - New configuration options:
+    - `ENABLE_SSE` - Enable SSE transport (default: false)
+    - `SSE_PORT` - SSE server port (default: 3000)
+    - `ENABLE_STDIO` - Enable STDIO transport (default: true)
+  - SSE server endpoints:
+    - `/events` - SSE connection endpoint for receiving server events
+    - `/request` - POST endpoint for sending requests to the server
+    - `/health` - Health check endpoint
+  - Enhanced integration capabilities:
+    - n8n workflow integration support
+    - Web application compatibility
+    - Multiple client connection support
+    - Message queuing for disconnected clients
+  - Comprehensive documentation and examples:
+    - Complete SSE transport usage guide
+    - Example SSE client implementation
+    - n8n integration instructions
+  - Modular transport architecture for future extensibility
+
+### 🔄 Repository Updates
+
+- Added `docs/sse-transport.md` with comprehensive SSE usage documentation
+- Added `examples/` directory with SSE client example
+- Updated package dependencies for SSE support (express, cors)
+- Enhanced configuration system for transport selection
+
 ## v0.7.2 (2025-04-25)
 
 ### 🛠️ Bug Fixes

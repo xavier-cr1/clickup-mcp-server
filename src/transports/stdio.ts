@@ -51,7 +51,7 @@ export class StdioServerTransport implements ServerTransport {
    * Send a message through the transport
    * @param message The message to send
    */
-  async send(message: string): Promise<void> {
+  async send(_message: string): Promise<void> {
     // The underlying StdioServerTransport handles sending messages automatically
     // This method is here for interface compatibility
     return Promise.resolve();
