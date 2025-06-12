@@ -19,18 +19,19 @@
  * - Name-based entity resolution
  * - Markdown formatting
  * - Built-in rate limiting
- * - Multiple transport options (STDIO, SSE)
- * 
+ * - Multiple transport options (STDIO, SSE, HTTP Streamable)
+ *
  * For full documentation and usage examples, please refer to the README.md file.
  */
 
-import { configureServer, server } from "./server.js";
-import { clickUpServices } from "./services/shared.js";
-import { info, error } from "./logger.js";
-import config from "./config.js";
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { configureServer, server } from './server.js';
+import { clickUpServices } from './services/shared.js';
+import { info, error } from './logger.js';
+import config from './config.js';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { StdioServerTransport, SSEServerTransport } from "./transports/index.js";
+import { startSSEServer } from './sse_server.js';
 
 // Get directory name for module paths
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -47,56 +48,46 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 });
 
+async function startStdioServer() {
+  info('Starting ClickUp MCP Server...');
+
+  // Log essential information about the environment
+  info('Server environment', {
+    pid: process.pid,
+    node: process.version,
+    os: process.platform,
+    arch: process.arch,
+  });
+
+  // Configure the server with all handlers
+  info('Configuring server request handlers');
+  await configureServer();
+
+  // Connect using stdio transport
+  info('Connecting to MCP stdio transport');
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+
+  info('Server startup complete - ready to handle requests');
+}
+
 /**
  * Application entry point that configures and starts the MCP server.
  */
 async function main() {
   try {
-    info("Starting ClickUp MCP Server...");
-    
-    // Log essential information about the environment
-    info("Server environment", {
-      pid: process.pid,
-      node: process.version,
-      os: process.platform,
-      arch: process.arch
-    });
-    
-    // Configure the server with all handlers
-    info("Configuring server request handlers");
-    await configureServer();
-    
-    const connectedTransports = [];
-    
-    // Connect using stdio transport if enabled
-    if (config.enableStdio) {
-      info("Initializing STDIO transport");
-      const stdioTransport = new StdioServerTransport();
-      stdioTransport.setServer(server);
-      info("Starting STDIO transport");
-      await stdioTransport.start();
-      connectedTransports.push("STDIO");
-    }
-    
-    // Connect using SSE transport if enabled
     if (config.enableSSE) {
-      info("Initializing SSE transport");
-      const sseTransport = new SSEServerTransport({ port: config.ssePort });
-      sseTransport.setServer(server);
-      info(`Starting SSE transport on port ${config.ssePort}`);
-      await sseTransport.start();
-      connectedTransports.push(`SSE (port ${config.ssePort})`);
+      // Start the new SSE server with HTTP Streamable support
+      startSSEServer();
+    } else {
+      // Start the traditional STDIO server
+      await startStdioServer();
     }
-    
-    // Ensure at least one transport is connected
-    if (connectedTransports.length === 0) {
-      error("No transports enabled. Set ENABLE_STDIO=true or ENABLE_SSE=true");
-      process.exit(1);
-    }
-    
-    info(`Server startup complete - connected transports: ${connectedTransports.join(", ")}`);
   } catch (err) {
-    error("Error during server startup", { message: err.message, stack: err.stack });
+    error('Error during server startup', {
+      message: err.message,
+      stack: err.stack,
+    });
     process.exit(1);
   }
 }

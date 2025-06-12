@@ -59,17 +59,9 @@ Additionally, you can use the `DISABLED_TOOLS` environment variable or `--env DI
 
 Please disable tools you don't need if you are having issues with the number of tools or any context limitations
 
-## Server Transport Options
+## Running with HTTP and SSE Transport Support
 
-The clickup-mcp-server now supports multiple transport mechanisms to communicate with clients:
-
-### STDIO Transport (Default)
-
-The default transport mechanism uses standard input/output for communication. This is compatible with most MCP client implementations and requires no additional configuration.
-
-### SSE Transport (Server-Sent Events)
-
-The SSE transport enables integration with web applications and services that support Server-Sent Events, such as n8n. To enable the SSE transport:
+The server supports both modern **Streamable HTTP** transport and legacy **SSE (Server-Sent Events)** transport for backwards compatibility.
 
 ```json
 {
@@ -83,19 +75,22 @@ The SSE transport enables integration with web applications and services that su
       "env": {
         "CLICKUP_API_KEY": "your-api-key",
         "CLICKUP_TEAM_ID": "your-team-id",
-        "DOCUMENT_SUPPORT": "true",
         "ENABLE_SSE": "true",
-        "SSE_PORT": "3000"
+        "PORT": "8000"
       }
     }
   }
 }
 ```
 
-Or use environment variables when running the server:
+**Endpoints:**
+- **Primary**: `http://127.0.0.1:3231/mcp` (Streamable HTTP)
+- **Legacy**: `http://127.0.0.1:3231/sse` (SSE for backwards compatibility)
+
+### Command Line Usage
 
 ```bash
-ENABLE_SSE=true SSE_PORT=3000 npx -y @taazkareem/clickup-mcp-server@latest --env CLICKUP_API_KEY=your-api-key --env CLICKUP_TEAM_ID=your-team-id
+npx -y @taazkareem/clickup-mcp-server@latest --env CLICKUP_API_KEY=your-api-key --env CLICKUP_TEAM_ID=your-team-id --env ENABLE_SSE=true --env PORT=8000
 ```
 
 Available configuration options:

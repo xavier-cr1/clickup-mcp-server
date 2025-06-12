@@ -35,6 +35,7 @@ for (let i = 0; i < args.length; i++) {
     if (key === 'ENABLE_SSE') envArgs.enableSSE = value;
     if (key === 'SSE_PORT') envArgs.ssePort = value;
     if (key === 'ENABLE_STDIO') envArgs.enableStdio = value;
+    if (key === 'PORT') envArgs.port = value;
     i++;
   }
 }
@@ -75,6 +76,7 @@ interface Config {
   enableSSE: boolean;
   ssePort: number;
   enableStdio: boolean;
+  port?: string;
 }
 
 // Parse boolean string
@@ -103,6 +105,7 @@ const configuration: Config = {
   enableSSE: parseBoolean(envArgs.enableSSE || process.env.ENABLE_SSE, false),
   ssePort: parseInteger(envArgs.ssePort || process.env.SSE_PORT, 3000),
   enableStdio: parseBoolean(envArgs.enableStdio || process.env.ENABLE_STDIO, true),
+  port: envArgs.port || process.env.PORT || '3231',
 };
 
 // Don't log to console as it interferes with JSON-RPC communication

@@ -55,15 +55,16 @@
   },
   "homepage": "https://github.com/taazkareem/clickup-mcp-server#readme",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^0.6.0",
-    "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.1",
+    "@modelcontextprotocol/sdk": "^1.11.3",
     "axios": "^1.6.7",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.1",
     "@types/node": "^20.11.16",
     "typescript": "^5.3.3"
   },
