@@ -1,3 +1,27 @@
+# v0.8.1 Release Notes
+
+## 🛠️ Critical Schema Fix
+
+**v0.8.1** is a patch release that fixes a critical schema validation issue that prevented the MCP server from starting.
+
+### **Bug Fix**
+- **Fixed JSON Schema Validation Error**: Removed invalid `optional: true` keywords from document tool schemas
+  - **Issue**: Server failed to start with error: `Invalid schema for tool list_document_pages: strict mode: unknown keyword: "optional"`
+  - **Root Cause**: Document tools were using `optional: true` which is not a valid JSON Schema keyword
+  - **Solution**: Removed `optional` keywords from all document tool schemas (optional properties are handled by the `required` array)
+  - **Tools Fixed**: `list_document_pages`, `get_document_pages`, `create_document_page`, `update_document_page`
+
+### **Impact**
+- ✅ **Server now starts correctly** without schema validation errors
+- ✅ **All tools load properly** and are fully functional
+- ✅ **Zero breaking changes** - all existing functionality preserved
+- ✅ **Immediate fix** for users experiencing startup issues
+
+### **Technical Details**
+In JSON Schema specification, optional properties are defined by omitting them from the `required` array, not by using an `optional` keyword. This fix ensures compliance with strict JSON Schema validation.
+
+---
+
 # v0.8.0 Release Notes
 
 ## 🎉 Major Release: Architectural Revolution & Member Management

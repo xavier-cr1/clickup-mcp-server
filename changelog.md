@@ -4,6 +4,23 @@
 
 *No unreleased changes*
 
+## v0.8.1 (2025-06-12)
+
+### 🛠️ Critical Bug Fixes
+
+- **Fixed JSON Schema Validation Error**:
+  - Resolved server startup failure with error: `Invalid schema for tool list_document_pages: strict mode: unknown keyword: "optional"`
+  - Removed invalid `optional: true` keywords from document tool schemas
+  - Fixed schemas for: `list_document_pages`, `get_document_pages`, `create_document_page`, `update_document_page`
+  - **Technical Note**: In JSON Schema, optional properties are defined by omitting them from the `required` array, not by using an `optional` keyword
+  - **Impact**: Server now starts correctly without schema validation errors
+
+### 🔄 Repository Updates
+
+- Updated document tool schemas to comply with strict JSON Schema validation
+- Ensured all tools load properly and are fully functional
+- Maintained zero breaking changes - all existing functionality preserved
+
 ## v0.8.0 (2025-06-12)
 
 ### 🚀 Major Features & Architectural Improvements
