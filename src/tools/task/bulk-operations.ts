@@ -92,7 +92,7 @@ const taskIdentifierSchema = {
  */
 export const createBulkTasksTool = {
   name: "create_bulk_tasks",
-  description: `Creates multiple tasks in one list. Use listId (preferred) or listName + array of tasks (each needs name). Configure batch size/concurrency via options. Tasks can have custom fields as {id, value} array.`,
+  description: `Creates multiple tasks in one list. Use listId (preferred) or listName + array of tasks (each needs name). Configure batch size/concurrency via options. Tasks can have custom fields as {id, value} array and assignees as array of user IDs, emails, or usernames.`,
   inputSchema: {
     type: "object",
     properties: {
@@ -149,6 +149,16 @@ export const createBulkTasksTool = {
                 required: ["id", "value"]
               },
               description: "Optional array of custom field values to set on the task."
+            },
+            assignees: {
+              type: "array",
+              items: {
+                oneOf: [
+                  { type: "number" },
+                  { type: "string" }
+                ]
+              },
+              description: "Optional array of assignee user IDs (numbers), emails, or usernames to assign to the task."
             }
           },
           required: ["name"]
@@ -173,7 +183,7 @@ export const createBulkTasksTool = {
  */
 export const updateBulkTasksTool = {
   name: "update_bulk_tasks",
-  description: `Updates multiple tasks efficiently. For each task: use taskId (preferred) or taskName + listName. At least one update field per task. Configure batch size/concurrency via options. WARNING: taskName without listName will fail.`,
+  description: `Updates multiple tasks efficiently. For each task: use taskId (preferred) or taskName + listName. At least one update field per task. Supports assignees as array of user IDs, emails, or usernames. Configure batch size/concurrency via options. WARNING: taskName without listName will fail.`,
   inputSchema: {
     type: "object",
     properties: {
@@ -241,6 +251,16 @@ export const updateBulkTasksTool = {
                 required: ["id", "value"]
               },
               description: "Optional array of custom field values to set on the task."
+            },
+            assignees: {
+              type: "array",
+              items: {
+                oneOf: [
+                  { type: "number" },
+                  { type: "string" }
+                ]
+              },
+              description: "Optional array of assignee user IDs (numbers), emails, or usernames to assign to the task."
             }
           }
         }

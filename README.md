@@ -6,7 +6,7 @@
 
 A Model Context Protocol (MCP) server for integrating ClickUp tasks with AI applications. This server allows AI agents to interact with ClickUp tasks, spaces, lists, and folders through a standardized protocol.
 
-> 🚀 **Status Update:** v0.8.0 is now available with Server-Sent Events (SSE) transport support for web integrations, plus complete Time Tracking and Document Management features.
+> 🚀 **Status Update:** v0.8.0 is now available with HTTP Streamable transport support, Legacy SSE Support, Member Management tools, and more.
 
 ## Setup
 
@@ -59,9 +59,9 @@ Additionally, you can use the `DISABLED_TOOLS` environment variable or `--env DI
 
 Please disable tools you don't need if you are having issues with the number of tools or any context limitations
 
-## Running with HTTP and SSE Transport Support
+## Running with HTTP Transport Support
 
-The server supports both modern **Streamable HTTP** transport and legacy **SSE (Server-Sent Events)** transport for backwards compatibility.
+The server supports both modern **HTTP Streamable** transport (MCP Inspector compatible) and legacy **SSE (Server-Sent Events)** transport for backwards compatibility.
 
 ```json
 {
@@ -76,7 +76,7 @@ The server supports both modern **Streamable HTTP** transport and legacy **SSE (
         "CLICKUP_API_KEY": "your-api-key",
         "CLICKUP_TEAM_ID": "your-team-id",
         "ENABLE_SSE": "true",
-        "PORT": "8000"
+        "PORT": "3231"
       }
     }
   }
@@ -90,15 +90,15 @@ The server supports both modern **Streamable HTTP** transport and legacy **SSE (
 ### Command Line Usage
 
 ```bash
-npx -y @taazkareem/clickup-mcp-server@latest --env CLICKUP_API_KEY=your-api-key --env CLICKUP_TEAM_ID=your-team-id --env ENABLE_SSE=true --env PORT=8000
+npx -y @taazkareem/clickup-mcp-server@latest --env CLICKUP_API_KEY=your-api-key --env CLICKUP_TEAM_ID=your-team-id --env ENABLE_SSE=true --env PORT=3231
 ```
 
 Available configuration options:
 
 | Option | Description | Default |
 | ------ | ----------- | ------- |
-| `ENABLE_SSE` | Enable the SSE transport | `false` |
-| `SSE_PORT` | Port for the SSE server | `3000` |
+| `ENABLE_SSE` | Enable the HTTP/SSE transport | `false` |
+| `PORT` | Port for the HTTP server | `3231` |
 | `ENABLE_STDIO` | Enable the STDIO transport | `true` |
 
 #### n8n Integration
@@ -109,7 +109,7 @@ To integrate with n8n:
 2. In n8n, add a new "MCP AI Tool" node
 3. Configure the node with:
    - Transport: SSE
-   - Server URL: `http://localhost:3000` (or your server address)
+   - Server URL: `http://localhost:3231` (or your server address)
    - Tools: Select the ClickUp tools you want to use
 
 #### Example Client
@@ -118,7 +118,7 @@ An example SSE client is provided in the `examples` directory. To run it:
 
 ```bash
 # Start the server with SSE enabled
-ENABLE_SSE=true SSE_PORT=3000 npx -y @taazkareem/clickup-mcp-server@latest --env CLICKUP_API_KEY=your-api-key --env CLICKUP_TEAM_ID=your-team-id
+ENABLE_SSE=true PORT=3231 npx -y @taazkareem/clickup-mcp-server@latest --env CLICKUP_API_KEY=your-api-key --env CLICKUP_TEAM_ID=your-team-id
 
 # In another terminal, run the example client
 cd examples
@@ -134,11 +134,11 @@ npm run sse-client
 | ⏱️ **Time Tracking**                                                                                                                                                                                                                                          | 🌳 **Workspace Organization**                                                                                                                                                                                                                                         |
 | • View time entries for tasks<br>• Start/stop time tracking on tasks<br>• Add manual time entries<br>• Delete time entries<br>• View currently running timer<br>• Track billable and non-billable time                                 | • Navigate spaces, folders, and lists<br>• Create and manage folders<br>• Organize lists within spaces<br>• Create lists in folders<br>• View workspace hierarchy<br>• Efficient path navigation                                             |
 | 📄 **Document Management**                                                                                                                                                                                                                                      | 👥 **Member Management**                                                                                                                                                                                                                                             |
-| • Document Listing through all workspace<br>• Document Page listing<br>• Document Page Details<br>• Document Creation<br>• Document page update (append & prepend)                                                                       | • Find workspace members by name or email<br>• Resolve assignees for tasks<br>• View member details and permissions<br>• Assign tasks to users during creation<br>• Support for user IDs, emails, or usernames<br>• Team-wide user management                            |
-| ⚡ **Integration Features**                                                                                                                                                                                                                                      |                                                                                                                                                                                                                                                                            |
-| • Global name or ID-based lookups<br>• Case-insensitive matching<br>• Markdown formatting support<br>• Built-in rate limiting<br>• Error handling and validation<br>• Comprehensive API coverage                                             |                                                                                                                                                                                                                                                                            |
+| • Document Listing through all workspace<br>• Document Page listing<br>• Document Page Details<br>• Document Creation<br>• Document page update (append & prepend)                                                                       | • Find workspace members by name or email<br>• Resolve assignees for tasks<br>• View member details and permissions<br>• Assign tasks to users during creation and updates<br>• Support for user IDs, emails, or usernames<br>• Team-wide user management                            |
+| ⚡ **Integration Features**                                                                                                                                                                                                                                      | 🏗️ **Architecture & Performance**                                                                                                                                                                                                                                        |
+| • Global name or ID-based lookups<br>• Case-insensitive matching<br>• Markdown formatting support<br>• Built-in rate limiting<br>• Error handling and validation<br>• Comprehensive API coverage                                             | • **70% codebase reduction** for improved performance<br>• **Unified architecture** across all transport types<br>• **Zero code duplication**<br>• **HTTP Streamable transport** (MCP Inspector compatible)<br>• **Legacy SSE support** for backwards compatibility |
 
-## Available Tools
+## Available Tools (36 Total)
 
 | Tool                                                               | Description                     | Required Parameters                                                                                                          |
 | ------------------------------------------------------------------ | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
@@ -194,13 +194,22 @@ See [full documentation](docs/api-reference.md) for optional parameters and adva
 
 ## Member Management Tools
 
-When creating tasks, you can now assign users using the `assignees` parameter. The parameter accepts an array of user IDs, emails, or usernames:
+When creating or updating tasks, you can assign users using the `assignees` parameter. The parameter accepts an array of user IDs, emails, or usernames:
 
+**Creating tasks with assignees:**
 ```json
 {
   "name": "New Task",
   "description": "This is a new task.",
   "assignees": ["jdoe@example.com", "Jane Smith"]  // Emails, usernames, or user IDs
+}
+```
+
+**Updating task assignees:**
+```json
+{
+  "taskId": "abc123",
+  "assignees": ["newuser@example.com"]  // Replace existing assignees
 }
 ```
 

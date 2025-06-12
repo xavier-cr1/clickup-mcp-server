@@ -73,7 +73,7 @@ const handleOperationError = (operation: string, error: any) => {
  */
 export const createTaskTool = {
   name: "create_task",
-  description: `Creates a single task in a ClickUp list. Use listId (preferred) or listName. Required: name + list info. For multiple tasks use create_bulk_tasks. Can create subtasks via parent param. Supports custom fields as array of {id, value}.`,
+  description: `Creates a single task in a ClickUp list. Use listId (preferred) or listName. Required: name + list info. For multiple tasks use create_bulk_tasks. Can create subtasks via parent param. Supports custom fields as array of {id, value}. Supports assignees as array of user IDs, emails, or usernames.`,
   inputSchema: {
     type: "object",
     properties: {
@@ -144,6 +144,16 @@ export const createTaskTool = {
       check_required_custom_fields: {
         type: "boolean",
         description: "Optional flag to check if all required custom fields are set before saving the task."
+      },
+      assignees: {
+        type: "array",
+        items: {
+          oneOf: [
+            { type: "number" },
+            { type: "string" }
+          ]
+        },
+        description: "Optional array of assignee user IDs (numbers), emails, or usernames to assign to the task."
       }
     }
   }
@@ -154,7 +164,7 @@ export const createTaskTool = {
  */
 export const updateTaskTool = {
   name: "update_task",
-  description: `Updates task properties. Use taskId (preferred) or taskName + optional listName. At least one update field required. Custom fields supported as array of {id, value}. WARNING: Using taskName without listName may match multiple tasks.`,
+  description: `Updates task properties. Use taskId (preferred) or taskName + optional listName. At least one update field required. Custom fields supported as array of {id, value}. Supports assignees as array of user IDs, emails, or usernames. WARNING: Using taskName without listName may match multiple tasks.`,
   inputSchema: {
     type: "object",
     properties: {
@@ -220,6 +230,16 @@ export const updateTaskTool = {
           required: ["id", "value"]
         },
         description: "Optional array of custom field values to set on the task. Each object must have an 'id' and 'value' property."
+      },
+      assignees: {
+        type: "array",
+        items: {
+          oneOf: [
+            { type: "number" },
+            { type: "string" }
+          ]
+        },
+        description: "Optional array of assignee user IDs (numbers), emails, or usernames to assign to the task."
       }
     }
   }

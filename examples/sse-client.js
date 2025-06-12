@@ -6,7 +6,7 @@
  * 
  * Usage:
  * 1. Start the ClickUp MCP Server with SSE enabled:
- *    ENABLE_SSE=true SSE_PORT=3000 node build/index.js
+ *    ENABLE_SSE=true SSE_PORT=3231 node build/index.js
  * 
  * 2. Run this client:
  *    node examples/sse-client.js
@@ -21,7 +21,7 @@ const fetch = require('node-fetch');
 const EventSource = require('eventsource');
 
 // Configuration
-const SERVER_URL = 'http://localhost:3000';
+const SERVER_URL = 'http://localhost:3231';
 const CLIENT_ID = `client-${Date.now()}`;
 
 // Connect to SSE endpoint

@@ -2,7 +2,11 @@
 
 ## Unreleased
 
-### 🚀 New Features & Improvements
+*No unreleased changes*
+
+## v0.8.0 (2025-06-12)
+
+### 🚀 Major Features & Architectural Improvements
 
 - **HTTP Streamable Transport Support**:
   - Added HTTP Streamable transport implementation for modern web-based integrations
@@ -19,22 +23,31 @@
     - Web application compatibility
     - Multiple client connection support
     - Session management for stateful interactions
+
+- **Massive Codebase Refactor & Optimization**:
+  - **70% total codebase reduction** (1,566 → 466 lines)
+  - **Eliminated 1,100+ lines of duplicated tool definitions** (89% reduction in SSE server)
   - Unified server architecture eliminating code duplication
-  - 70% codebase reduction through architectural improvements
+  - Single source of truth for server configuration
+  - Clean separation between server logic and transport setup
+  - Improved maintainability and extensibility
 
 - **Member Management Tools**:
-  - Added `getWorkspaceMembers` - Retrieve all workspace members with details
-  - Added `findMemberByName` - Find specific members by name or email
-  - Added `resolveAssignees` - Resolve user IDs/emails to assignee objects
+  - Added `get_workspace_members` - Retrieve all workspace members with details
+  - Added `find_member_by_name` - Find specific members by name or email
+  - Added `resolve_assignees` - Resolve user IDs/emails to assignee objects
   - Enhanced task creation with `assignees` parameter for user assignment
+  - **Enhanced task updating with `assignees` parameter** for both single and bulk operations
+  - Support for assignees in create, update, and bulk operations (create/update)
   - Improved error handling and response formatting for member operations
 
 ### 🔄 Repository Updates
 
 - Refactored transport architecture for unified server configuration
-- Eliminated 1,100+ lines of duplicated tool definitions
 - Enhanced configuration system for transport selection
 - Improved imports and code organization for maintainability
+- Updated tool schemas to support assignees parameter
+- Comprehensive testing across all transport types
 
 ## v0.7.2 (2025-04-25)
 

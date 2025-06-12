@@ -767,7 +767,8 @@ export async function createBulkTasksHandler(params: any) {
       status: task.status,
       priority: toTaskPriority(task.priority),
       tags: task.tags,
-      custom_fields: task.custom_fields
+      custom_fields: task.custom_fields,
+      assignees: task.assignees
     };
 
     // Add due date if specified

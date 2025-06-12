@@ -191,8 +191,8 @@ export function configureServer() {
 
   // Register CallTool handler with proper logging
   logger.info("Registering tool handlers", {
-    toolCount: 40,
-    categories: ["workspace", "task", "time-tracking", "list", "folder", "tag", "document"]
+    toolCount: 36,
+    categories: ["workspace", "task", "time-tracking", "list", "folder", "tag", "member", "document"]
   });
 
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
