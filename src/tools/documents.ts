@@ -141,8 +141,7 @@ export const listDocumentPagesTool = {
       },
       max_page_depth: {
         type: "number",
-        description: "Maximum depth of pages to retrieve (-1 for unlimited)",
-        optional: true
+        description: "Maximum depth of pages to retrieve (-1 for unlimited)"
       }
     },
     required: ["documentId"]
@@ -172,8 +171,7 @@ export const getDocumentPagesTool = {
       content_format: {
         type: "string",
         enum: ["text/md", "text/html"],
-        description: "Format of the content to retrieve",
-        optional: true
+        description: "Format of the content to retrieve"
       }
     },
     required: ["documentId", "pageIds"]
@@ -195,8 +193,7 @@ export const createDocumentPageTool = {
       },
       content: {
         type: "string",
-        description: "Content of the page",
-        optional: true
+        description: "Content of the page"
       },
       name: {
         type: "string",
@@ -204,13 +201,11 @@ export const createDocumentPageTool = {
       },
       sub_title: {
         type: "string",
-        description: "Subtitle of the page",
-        optional: true
+        description: "Subtitle of the page"
       },
       parent_page_id: {
         type: "string",
-        description: "ID of the parent page (if this is a sub-page)",
-        optional: true
+        description: "ID of the parent page (if this is a sub-page)"
       }
     },
     required: ["documentId", "name"]
@@ -236,30 +231,25 @@ export const updateDocumentPageTool = {
       },
       name: {
         type: "string",
-        description: "New name for the page",
-        optional: true
+        description: "New name for the page"
       },
       sub_title: {
         type: "string",
-        description: "New subtitle for the page",
-        optional: true
+        description: "New subtitle for the page"
       },
       content: {
         type: "string",
-        description: "New content for the page",
-        optional: true
+        description: "New content for the page"
       },
       content_edit_mode: {
         type: "string",
         enum: ["replace", "append", "prepend"],
-        description: "How to update the content. Defaults to replace",
-        optional: true
+        description: "How to update the content. Defaults to replace"
       },
       content_format: {
         type: "string",
         enum: ["text/md", "text/plain"],
-        description: "Format of the content. Defaults to text/md",
-        optional: true
+        description: "Format of the content. Defaults to text/md"
       },
     },
     required: ["documentId", "pageId"]
