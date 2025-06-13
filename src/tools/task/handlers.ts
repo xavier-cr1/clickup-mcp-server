@@ -24,6 +24,7 @@ import {
 } from './utilities.js';
 import { TaskService } from '../../services/clickup/task/task-service.js';
 import { ExtendedTaskFilters } from '../../services/clickup/types.js';
+import { handleResolveAssignees } from '../member.js';
 import { findListIDByName } from '../list.js';
 import { workspaceService } from '../../services/shared.js';
 import { isNameMatch } from '../../utils/resolver-utils.js';
@@ -109,9 +110,56 @@ function parseTimeEstimate(timeEstimate: string | number): number {
 }
 
 /**
+ * Resolve assignees from mixed input (user IDs, emails, usernames) to user IDs
+ */
+async function resolveAssignees(assignees: (number | string)[]): Promise<number[]> {
+  if (!assignees || !Array.isArray(assignees) || assignees.length === 0) {
+    return [];
+  }
+
+  const resolved: number[] = [];
+  const toResolve: string[] = [];
+
+  // Separate numeric IDs from strings that need resolution
+  for (const assignee of assignees) {
+    if (typeof assignee === 'number') {
+      resolved.push(assignee);
+    } else if (typeof assignee === 'string') {
+      // Check if it's a numeric string
+      const numericId = parseInt(assignee, 10);
+      if (!isNaN(numericId) && numericId.toString() === assignee) {
+        resolved.push(numericId);
+      } else {
+        // It's an email or username that needs resolution
+        toResolve.push(assignee);
+      }
+    }
+  }
+
+  // Resolve emails/usernames to user IDs if any
+  if (toResolve.length > 0) {
+    try {
+      const result = await handleResolveAssignees({ assignees: toResolve });
+      if (result.userIds && Array.isArray(result.userIds)) {
+        for (const userId of result.userIds) {
+          if (userId !== null && typeof userId === 'number') {
+            resolved.push(userId);
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to resolve some assignees:', error.message);
+      // Continue with the IDs we could resolve
+    }
+  }
+
+  return resolved;
+}
+
+/**
  * Build task update data from parameters
  */
-function buildUpdateData(params: any): UpdateTaskData {
+async function buildUpdateData(params: any): Promise<UpdateTaskData> {
   const updateData: UpdateTaskData = {};
 
   if (params.name !== undefined) updateData.name = params.name;
@@ -147,6 +195,11 @@ function buildUpdateData(params: any): UpdateTaskData {
   // Handle custom fields if provided
   if (params.custom_fields !== undefined) {
     updateData.custom_fields = params.custom_fields;
+  }
+
+  // Handle assignees if provided - resolve emails/usernames to user IDs
+  if (params.assignees !== undefined) {
+    updateData.assignees = await resolveAssignees(params.assignees);
   }
 
   return updateData;
@@ -483,6 +536,9 @@ export async function createTaskHandler(params) {
 
   const listId = await getListId(params.listId, params.listName);
 
+  // Resolve assignees if provided
+  const resolvedAssignees = assignees ? await resolveAssignees(assignees) : undefined;
+
   const taskData: CreateTaskData = {
     name,
     description,
@@ -493,7 +549,7 @@ export async function createTaskHandler(params) {
     tags,
     custom_fields,
     check_required_custom_fields,
-    assignees
+    assignees: resolvedAssignees
   };
 
   // Add due date if specified
@@ -533,8 +589,8 @@ export async function updateTaskHandler(
     throw new Error(validationResult.errorMessage);
   }
 
-  // Build properly formatted update data from raw parameters
-  const updateData = buildUpdateData(rawUpdateData);
+  // Build properly formatted update data from raw parameters (now async)
+  const updateData = await buildUpdateData(rawUpdateData);
 
   // Validate update data
   validateTaskUpdateData(updateData);
@@ -765,8 +821,11 @@ export async function createBulkTasksHandler(params: any) {
   // Validate and resolve list ID
   const targetListId = await resolveListIdWithValidation(listId, listName);
 
-  // Format tasks for creation
-  const formattedTasks: CreateTaskData[] = tasks.map(task => {
+  // Format tasks for creation - resolve assignees for each task
+  const formattedTasks: CreateTaskData[] = await Promise.all(tasks.map(async task => {
+    // Resolve assignees if provided
+    const resolvedAssignees = task.assignees ? await resolveAssignees(task.assignees) : undefined;
+
     const taskData: CreateTaskData = {
       name: task.name,
       description: task.description,
@@ -775,7 +834,7 @@ export async function createBulkTasksHandler(params: any) {
       priority: toTaskPriority(task.priority),
       tags: task.tags,
       custom_fields: task.custom_fields,
-      assignees: task.assignees
+      assignees: resolvedAssignees
     };
 
     // Add due date if specified
@@ -791,7 +850,7 @@ export async function createBulkTasksHandler(params: any) {
     }
 
     return taskData;
-  });
+  }));
 
   // Parse bulk options
   const bulkOptions = parseBulkOptions(options);
