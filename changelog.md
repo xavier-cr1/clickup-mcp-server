@@ -4,7 +4,18 @@
 
 ### 🛠️ Bug Fixes
 
-- **Fixed subtask visibility in workspace tasks**:
+- **Fixed task due date updates not working (Issue #49)**:
+  - Fixed critical bug where `update_task` returned success but didn't actually update due dates
+  - Root cause: `updateTaskHandler` was not calling `buildUpdateData()` to parse date strings into timestamps
+  - Enhanced natural language date parsing to support complex formats:
+    - Added support for day names: "Monday", "Friday", "Saturday", etc.
+    - Added time parsing: "Monday at 3pm EST", "Friday at 2:30pm", etc.
+    - Added "next" prefix handling: "next Friday", "next Monday", etc.
+    - Improved fallback parsing with multiple strategies and validation
+  - **Impact**: Due date updates now work correctly for all supported date formats
+  - **Supported formats**: "tomorrow", "Monday at 3pm EST", "next Friday", Unix timestamps, "MM/DD/YYYY", relative times like "2 hours from now"
+
+- **Fixed subtask visibility in workspace tasks (Issue #56)**:
   - Added missing `subtasks` parameter to `get_workspace_tasks` tool
   - Added missing `include_subtasks`, `include_compact_time_entries`, and `custom_fields` parameters for completeness
   - Updated tool description to clarify how subtasks parameter works with filtering
@@ -14,6 +25,7 @@
 
 ### 🔗 References
 
+- #49: [update_task not updating due dates](https://github.com/taazkareem/clickup-mcp-server/issues/49)
 - #56: [Can't see sub-tasks](https://github.com/taazkareem/clickup-mcp-server/issues/56)
 
 ## v0.8.1 (2025-06-12)
