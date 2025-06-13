@@ -101,6 +101,32 @@ const logger = new Logger('Server');
 // Use existing services from shared module instead of creating new ones
 const { workspace } = clickUpServices;
 
+/**
+ * Determines if a tool should be enabled based on ENABLED_TOOLS and DISABLED_TOOLS configuration.
+ *
+ * Logic:
+ * 1. If ENABLED_TOOLS is specified, only tools in that list are enabled (ENABLED_TOOLS takes precedence)
+ * 2. If ENABLED_TOOLS is not specified but DISABLED_TOOLS is, all tools except those in DISABLED_TOOLS are enabled
+ * 3. If neither is specified, all tools are enabled
+ *
+ * @param toolName - The name of the tool to check
+ * @returns true if the tool should be enabled, false otherwise
+ */
+const isToolEnabled = (toolName: string): boolean => {
+  // If ENABLED_TOOLS is specified, it takes precedence
+  if (config.enabledTools.length > 0) {
+    return config.enabledTools.includes(toolName);
+  }
+
+  // If only DISABLED_TOOLS is specified, enable all tools except those disabled
+  if (config.disabledTools.length > 0) {
+    return !config.disabledTools.includes(toolName);
+  }
+
+  // If neither is specified, enable all tools
+  return true;
+};
+
 export const server = new Server(
   {
     name: "clickup-mcp-server",
@@ -179,7 +205,7 @@ export function configureServer() {
         findMemberByNameTool,
         resolveAssigneesTool,
         ...documentModule()
-      ].filter(tool => !config.disabledTools.includes(tool.name))
+      ].filter(tool => isToolEnabled(tool.name))
     };
   });
 
@@ -203,12 +229,15 @@ export function configureServer() {
       params
     });
 
-    // Check if the tool is disabled
-    if (config.disabledTools.includes(name)) {
-      logger.warn(`Tool execution blocked: Tool '${name}' is disabled.`);
+    // Check if the tool is enabled
+    if (!isToolEnabled(name)) {
+      const reason = config.enabledTools.length > 0
+        ? `Tool '${name}' is not in the enabled tools list.`
+        : `Tool '${name}' is disabled.`;
+      logger.warn(`Tool execution blocked: ${reason}`);
       throw {
         code: -32601,
-        message: `Tool '${name}' is disabled.`
+        message: reason
       };
     }
 

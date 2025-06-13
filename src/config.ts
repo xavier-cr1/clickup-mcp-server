@@ -12,6 +12,10 @@
  * The default value is 'false' (string), which means document support will be disabled if
  * no parameter is passed. Pass it as 'true' (string) to enable it.
  * 
+ * Tool filtering options:
+ * - ENABLED_TOOLS: Comma-separated list of tools to enable (takes precedence over DISABLED_TOOLS)
+ * - DISABLED_TOOLS: Comma-separated list of tools to disable (ignored if ENABLED_TOOLS is specified)
+ *
  * Server transport options:
  * - ENABLE_SSE: Enable Server-Sent Events transport (default: false)
  * - SSE_PORT: Port for SSE server (default: 3000)
@@ -27,11 +31,9 @@ for (let i = 0; i < args.length; i++) {
     if (key === 'CLICKUP_API_KEY') envArgs.clickupApiKey = value;
     if (key === 'CLICKUP_TEAM_ID') envArgs.clickupTeamId = value;
     if (key === 'DOCUMENT_SUPPORT') envArgs.documentSupport = value;
-    if (key === 'DOCUMENT_MODEL') envArgs.documentSupport = value; // Backward compatibility
-    if (key === 'DOCUMENT_MODULE') envArgs.documentSupport = value; // Backward compatibility
     if (key === 'LOG_LEVEL') envArgs.logLevel = value;
     if (key === 'DISABLED_TOOLS') envArgs.disabledTools = value;
-    if (key === 'DISABLED_COMMANDS') envArgs.disabledTools = value; // Backward compatibility
+    if (key === 'ENABLED_TOOLS') envArgs.enabledTools = value;
     if (key === 'ENABLE_SSE') envArgs.enableSSE = value;
     if (key === 'SSE_PORT') envArgs.ssePort = value;
     if (key === 'ENABLE_STDIO') envArgs.enableStdio = value;
@@ -73,6 +75,7 @@ interface Config {
   documentSupport: string;
   logLevel: LogLevel;
   disabledTools: string[];
+  enabledTools: string[];
   enableSSE: boolean;
   ssePort: number;
   enableStdio: boolean;
@@ -101,6 +104,9 @@ const configuration: Config = {
   logLevel: parseLogLevel(envArgs.logLevel || process.env.LOG_LEVEL),
   disabledTools: (
     (envArgs.disabledTools || process.env.DISABLED_TOOLS || process.env.DISABLED_COMMANDS)?.split(',').map(cmd => cmd.trim()).filter(cmd => cmd !== '') || []
+  ),
+  enabledTools: (
+    (envArgs.enabledTools || process.env.ENABLED_TOOLS)?.split(',').map(cmd => cmd.trim()).filter(cmd => cmd !== '') || []
   ),
   enableSSE: parseBoolean(envArgs.enableSSE || process.env.ENABLE_SSE, false),
   ssePort: parseInteger(envArgs.ssePort || process.env.SSE_PORT, 3000),

@@ -2,7 +2,29 @@
 
 ## Unreleased
 
-### 🛠️ Bug Fixes
+### 🚀 New Features & Improvements
+
+- **Added ENABLED_TOOLS configuration option (Issue #50)**:
+  - Added `ENABLED_TOOLS` environment variable and command line argument support
+  - Allows specifying exactly which tools should be available via comma-separated list
+  - Provides complementary functionality to existing `DISABLED_TOOLS` option
+  - **Precedence logic**: `ENABLED_TOOLS` takes precedence over `DISABLED_TOOLS` when both are specified
+  - **Configuration options**:
+    - `ENABLED_TOOLS=tool1,tool2` - Only enable specified tools
+    - `DISABLED_TOOLS=tool1,tool2` - Disable specified tools (legacy approach)
+    - If neither specified, all tools are available (default behavior)
+  - **Enhanced tool filtering**:
+    - Updated `ListToolsRequestSchema` handler to use new filtering logic
+    - Updated `CallToolRequestSchema` handler with improved error messages
+    - Clear distinction between "disabled" vs "not in enabled tools list" errors
+  - **Impact**: Users can now precisely control tool availability for security, context limitations, or workflow optimization
+  - **Backward compatibility**: Existing `DISABLED_TOOLS` functionality unchanged
+
+## v0.8.2 (2025-06-12)
+
+### 🚀 New Features & Improvements
+
+### �🛠️ Bug Fixes
 
 - **Fixed task assignment feature not working (Issue #48)**:
   - Fixed critical bug where task assignees were not being properly assigned despite successful API responses
