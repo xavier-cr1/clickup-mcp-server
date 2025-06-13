@@ -1,3 +1,112 @@
+# v0.8.2 Release Notes
+
+## 🎯 Critical Bug Fixes & Enhanced Functionality
+
+**v0.8.2** is a significant patch release that fixes critical task assignment functionality and enhances workspace task visibility. This release resolves major issues that were preventing users from properly assigning tasks and accessing subtasks.
+
+## 🛠️ Major Bug Fixes
+
+### **Fixed Task Assignment Feature Not Working (Issue #48)**
+- **Issue**: Task assignees were not being properly assigned despite successful API responses
+- **Root Cause**: Missing assignee resolution logic in task creation and update handlers
+- **Solution**: Added comprehensive assignee resolution supporting multiple input formats:
+  - **Numeric user IDs** (e.g., `96055451`)
+  - **Email addresses** (e.g., `"user@example.com"`)
+  - **Usernames** (e.g., `"John Doe"`)
+  - **Mixed format arrays** (e.g., `[96055451, "user@example.com"]`)
+
+### **Enhanced Task Handlers with Automatic Assignee Resolution**
+- **`create_task`** - Now resolves assignees before task creation
+- **`update_task`** - Now resolves assignees during task updates
+- **`create_bulk_tasks`** - Now resolves assignees for each task in bulk operations
+- **Smart deduplication** for duplicate assignees in mixed format requests
+- **Graceful error handling** for unresolvable assignees (continues with resolved ones)
+
+### **Fixed Task Due Date Updates Not Working (Issue #49)**
+- **Issue**: `update_task` returned success but didn't actually update due dates
+- **Root Cause**: `updateTaskHandler` was not calling `buildUpdateData()` to parse date strings into timestamps
+- **Enhanced natural language date parsing** to support complex formats:
+  - Day names: "Monday", "Friday", "Saturday", etc.
+  - Time parsing: "Monday at 3pm EST", "Friday at 2:30pm", etc.
+  - "Next" prefix handling: "next Friday", "next Monday", etc.
+  - Improved fallback parsing with multiple strategies and validation
+
+### **Fixed Subtask Visibility in Workspace Tasks (Issue #56)**
+- **Issue**: Users couldn't see subtasks through workspace-wide queries
+- **Solution**: Added missing `subtasks` parameter to `get_workspace_tasks` tool
+- **Enhanced parameters**: Added `include_subtasks`, `include_compact_time_entries`, and `custom_fields` for completeness
+- **Clarified behavior**: Subtasks must still match other filter criteria (tags, lists, etc.) to appear in results
+- **Alternative**: Use `get_task` tool with `subtasks=true` to see all subtasks regardless of filters
+
+## 🎯 Impact & Benefits
+
+### **Task Assignment Now Fully Functional**
+- ✅ **All documented assignee formats work correctly**: User IDs, emails, usernames, and mixed arrays
+- ✅ **Seamless integration**: Works across create, update, and bulk operations
+- ✅ **Smart resolution**: Automatically converts emails/usernames to user IDs
+- ✅ **Error resilience**: Continues with resolved assignees even if some fail
+
+### **Enhanced Date Handling**
+- ✅ **Natural language support**: "tomorrow", "Monday at 3pm EST", "next Friday"
+- ✅ **Multiple formats**: Unix timestamps, "MM/DD/YYYY", relative times like "2 hours from now"
+- ✅ **Reliable updates**: Due date changes now persist correctly
+
+### **Improved Workspace Visibility**
+- ✅ **Subtask access**: View subtasks through workspace-wide queries when they match criteria
+- ✅ **Enhanced filtering**: More comprehensive parameter support for workspace tasks
+- ✅ **Clear documentation**: Better understanding of how subtask filtering works
+
+## 🧪 Testing & Validation
+
+This release underwent comprehensive testing with real ClickUp API integration:
+- ✅ **Task assignment with user IDs** - Direct numeric user ID assignment
+- ✅ **Task assignment with emails** - Email address resolved to user ID
+- ✅ **Task assignment with usernames** - Username resolved to user ID
+- ✅ **Task updates with assignees** - Existing task updated with assignee via email
+- ✅ **Bulk task creation** - Multiple tasks created with different assignee formats
+- ✅ **Mixed format assignment** - User ID and email in same request (properly deduplicated)
+
+## 🔗 Issues Resolved
+
+- **#48**: [Task Assignment Feature Not Working through ClickUp MCP Integration API](https://github.com/taazkareem/clickup-mcp-server/issues/48)
+- **#49**: [update_task not updating due dates](https://github.com/taazkareem/clickup-mcp-server/issues/49)
+- **#56**: [Can't see sub-tasks](https://github.com/taazkareem/clickup-mcp-server/issues/56)
+
+## 🚀 Quick Start
+
+No configuration changes required - all fixes are automatically available:
+
+```bash
+# STDIO Transport (Default)
+npx @taazkareem/clickup-mcp-server \
+  --env CLICKUP_API_KEY=your-key \
+  --env CLICKUP_TEAM_ID=your-team-id
+
+# HTTP Streamable Transport
+ENABLE_SSE=true PORT=3231 npx @taazkareem/clickup-mcp-server \
+  --env CLICKUP_API_KEY=your-key \
+  --env CLICKUP_TEAM_ID=your-team-id
+```
+
+## 🔄 Migration Notes
+
+**✅ Zero Breaking Changes**
+- All existing integrations continue to work unchanged
+- Enhanced functionality is automatically available
+- No configuration changes required
+- All existing tools preserved and enhanced
+
+## 🙏 Thank You
+
+Special thanks to our community for reporting these critical issues:
+- Issue reporters who identified the task assignment and due date problems
+- Users who provided detailed reproduction steps
+- Contributors who helped validate the fixes
+
+Your feedback continues to drive improvements and make ClickUp MCP Server better for everyone!
+
+---
+
 # v0.8.1 Release Notes
 
 ## 🛠️ Critical Schema Fix
@@ -163,8 +272,6 @@ Your feedback and contributions continue to drive this project forward!
 
 ## 🙏 Thank You
 
-Special thanks to our contributors who reported and helped fix this issue:
-
-- [@m-roberts](https://github.com/m-roberts) - Reporting and suggesting fix for the time estimate update issue
+Special thanks to our contributors who reported and helped fix this issue
 
 Your feedback helps make ClickUp MCP Server better for everyone!
