@@ -99,6 +99,7 @@ export class TaskServiceCore extends BaseClickUpService {
     // Add all filters to the query parameters
     if (filters.include_closed) params.append('include_closed', String(filters.include_closed));
     if (filters.subtasks) params.append('subtasks', String(filters.subtasks));
+    if (filters.include_subtasks) params.append('include_subtasks', String(filters.include_subtasks));
     if (filters.page) params.append('page', String(filters.page));
     if (filters.order_by) params.append('order_by', filters.order_by);
     if (filters.reverse) params.append('reverse', String(filters.reverse));

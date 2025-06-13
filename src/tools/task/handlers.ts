@@ -716,7 +716,11 @@ export async function getWorkspaceTasksHandler(
       date_updated_lt: params.date_updated_lt,
       assignees: params.assignees,
       page: params.page,
-      detail_level: params.detail_level || 'detailed'
+      detail_level: params.detail_level || 'detailed',
+      subtasks: params.subtasks,
+      include_subtasks: params.include_subtasks,
+      include_compact_time_entries: params.include_compact_time_entries,
+      custom_fields: params.custom_fields
     };
 
     // Get tasks with adaptive response format support

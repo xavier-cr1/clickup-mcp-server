@@ -2,7 +2,19 @@
 
 ## Unreleased
 
-*No unreleased changes*
+### 🛠️ Bug Fixes
+
+- **Fixed subtask visibility in workspace tasks**:
+  - Added missing `subtasks` parameter to `get_workspace_tasks` tool
+  - Added missing `include_subtasks`, `include_compact_time_entries`, and `custom_fields` parameters for completeness
+  - Updated tool description to clarify how subtasks parameter works with filtering
+  - **Impact**: Users can now access subtasks through workspace-wide queries when subtasks match filter criteria
+  - **Note**: Subtasks must still match other filter criteria (tags, lists, etc.) to appear in results
+  - **Alternative**: Use `get_task` tool with `subtasks=true` to see all subtasks of a specific task regardless of filters
+
+### 🔗 References
+
+- #56: [Can't see sub-tasks](https://github.com/taazkareem/clickup-mcp-server/issues/56)
 
 ## v0.8.1 (2025-06-12)
 

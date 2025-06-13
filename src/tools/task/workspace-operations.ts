@@ -20,6 +20,7 @@ export const getWorkspaceTasksTool = {
 Valid Usage:
 1. Apply any combination of filters (tags, lists, folders, spaces, statuses, etc.)
 2. Use pagination to manage large result sets
+3. Include subtasks by setting subtasks=true
 
 Requirements:
 - At least one filter parameter is REQUIRED (tags, list_ids, folder_ids, space_ids, statuses, assignees, or date filters)
@@ -31,6 +32,8 @@ Notes:
 - Tag filtering is especially useful for cross-list organization (e.g., "project-x", "blocker", "needs-review")
 - Combine multiple filters to narrow down your search scope
 - Use pagination for large result sets
+- Set subtasks=true to include subtask details in the response
+  IMPORTANT: subtasks=true enables subtasks to appear in results, but subtasks must still match your other filter criteria (tags, lists, etc.) to be returned. To see all subtasks of a specific task regardless of filters, use the get_task tool with subtasks=true instead.
 - Use the detail_level parameter to control the amount of data returned:
   - "summary": Returns lightweight task data (name, status, list, tags)
   - "detailed": Returns complete task data with all fields (DEFAULT if not specified)
@@ -126,6 +129,22 @@ Notes:
         type: 'string',
         enum: ['summary', 'detailed'],
         description: 'Level of detail to return. Use summary for lightweight responses or detailed for full task data. If not specified, defaults to "detailed".'
+      },
+      subtasks: {
+        type: 'boolean',
+        description: 'Include subtasks in the response. Set to true to retrieve subtask details for all returned tasks. Note: subtasks must still match your other filter criteria to appear in results.'
+      },
+      include_subtasks: {
+        type: 'boolean',
+        description: 'Alternative parameter for including subtasks (legacy support).'
+      },
+      include_compact_time_entries: {
+        type: 'boolean',
+        description: 'Include compact time entry data in the response.'
+      },
+      custom_fields: {
+        type: 'object',
+        description: 'Filter by custom field values. Provide as key-value pairs where keys are custom field IDs.'
       }
     }
   },
@@ -219,7 +238,23 @@ Notes:
         type: 'string',
         enum: ['summary', 'detailed'],
         description: 'Level of detail to return. Use summary for lightweight responses or detailed for full task data. If not specified, defaults to "detailed".'
+      },
+      subtasks: {
+        type: 'boolean',
+        description: 'Include subtasks in the response. Set to true to retrieve subtask details for all returned tasks. Note: subtasks must still match your other filter criteria to appear in results.'
+      },
+      include_subtasks: {
+        type: 'boolean',
+        description: 'Alternative parameter for including subtasks (legacy support).'
+      },
+      include_compact_time_entries: {
+        type: 'boolean',
+        description: 'Include compact time entry data in the response.'
+      },
+      custom_fields: {
+        type: 'object',
+        description: 'Filter by custom field values. Provide as key-value pairs where keys are custom field IDs.'
       }
     }
   }
-}; 
+};
