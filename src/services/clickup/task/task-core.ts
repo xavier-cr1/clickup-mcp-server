@@ -372,11 +372,13 @@ export class TaskServiceCore extends BaseClickUpService {
    */
   async updateTask(taskId: string, updateData: UpdateTaskData): Promise<ClickUpTask> {
     this.logOperation('updateTask', { taskId, ...updateData });
-    
+
     try {
       // Extract custom fields from updateData
       const { custom_fields, ...standardFields } = updateData;
-      
+
+
+
       // First update the standard fields
       const updatedTask = await this.makeRequest(async () => {
         const response = await this.client.put<ClickUpTask | string>(

@@ -71,29 +71,38 @@ export function getCurrentTimestamp(): number {
  */
 export function parseDueDate(dateString: string): number | undefined {
   if (!dateString) return undefined;
-  
+
   try {
+    // First, try to parse as a direct timestamp
+    const numericValue = Number(dateString);
+    if (!isNaN(numericValue) && numericValue > 0) {
+      // If it's a reasonable timestamp (after year 2000), use it
+      if (numericValue > 946684800000) { // Jan 1, 2000
+        return numericValue;
+      }
+    }
+
     // Handle natural language dates
     const lowerDate = dateString.toLowerCase().trim();
-    
+
     // Handle "now" specifically
     if (lowerDate === 'now') {
       return getCurrentTimestamp();
     }
-    
+
     // Handle "today" with different options
     if (lowerDate === 'today') {
       return getEndOfDay();
     }
-    
+
     if (lowerDate === 'today start' || lowerDate === 'start of today') {
       return getStartOfDay();
     }
-    
+
     if (lowerDate === 'today end' || lowerDate === 'end of today') {
       return getEndOfDay();
     }
-    
+
     // Handle "yesterday" and "tomorrow"
     if (lowerDate === 'yesterday') {
       const yesterday = new Date();
@@ -101,12 +110,55 @@ export function parseDueDate(dateString: string): number | undefined {
       yesterday.setHours(23, 59, 59, 999);
       return yesterday.getTime();
     }
-    
+
     if (lowerDate === 'tomorrow') {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       tomorrow.setHours(23, 59, 59, 999);
       return tomorrow.getTime();
+    }
+
+    // Handle day names (Monday, Tuesday, etc.) - find next occurrence
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayMatch = lowerDate.match(/\b(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/);
+    if (dayMatch) {
+      const targetDayName = dayMatch[1];
+      const targetDayIndex = dayNames.indexOf(targetDayName);
+      const today = new Date();
+      const currentDayIndex = today.getDay();
+
+      // Calculate days until target day
+      let daysUntilTarget = targetDayIndex - currentDayIndex;
+      if (daysUntilTarget <= 0) {
+        daysUntilTarget += 7; // Next week
+      }
+
+      // Handle "next" prefix explicitly
+      if (lowerDate.includes('next ')) {
+        daysUntilTarget += 7;
+      }
+
+      const targetDate = new Date(today);
+      targetDate.setDate(today.getDate() + daysUntilTarget);
+
+      // Extract time if specified (e.g., "Friday at 3pm", "Saturday 2:30pm")
+      const timeMatch = lowerDate.match(/(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+      if (timeMatch) {
+        let hours = parseInt(timeMatch[1]);
+        const minutes = timeMatch[2] ? parseInt(timeMatch[2]) : 0;
+        const meridian = timeMatch[3]?.toLowerCase();
+
+        // Convert to 24-hour format
+        if (meridian === 'pm' && hours < 12) hours += 12;
+        if (meridian === 'am' && hours === 12) hours = 0;
+
+        targetDate.setHours(hours, minutes, 0, 0);
+      } else {
+        // Default to end of day if no time specified
+        targetDate.setHours(23, 59, 59, 999);
+      }
+
+      return targetDate.getTime();
     }
     
     // Handle relative dates with specific times
@@ -206,12 +258,48 @@ export function parseDueDate(dateString: string): number | undefined {
       return date.getTime();
     }
     
-    // Try to parse as a date string
-    const date = new Date(dateString);
-    if (!isNaN(date.getTime())) {
-      return date.getTime();
+    // Enhanced fallback: Try JavaScript's native Date constructor with various formats
+    // This handles many natural language formats like "Saturday at 3pm EST", "next Friday", etc.
+    const nativeDate = new Date(dateString);
+    if (!isNaN(nativeDate.getTime())) {
+      // Check if the parsed date is reasonable (not too far in the past or future)
+      const now = Date.now();
+      const oneYearAgo = now - (365 * 24 * 60 * 60 * 1000);
+      const tenYearsFromNow = now + (10 * 365 * 24 * 60 * 60 * 1000);
+
+      if (nativeDate.getTime() > oneYearAgo && nativeDate.getTime() < tenYearsFromNow) {
+        return nativeDate.getTime();
+      }
     }
-    
+
+    // Try some common variations and transformations
+    const variations = [
+      dateString.replace(/\s+at\s+/i, ' '), // "Saturday at 3pm" -> "Saturday 3pm"
+      dateString.replace(/\s+EST|EDT|PST|PDT|CST|CDT|MST|MDT/i, ''), // Remove timezone
+      dateString.replace(/next\s+/i, ''), // "next Friday" -> "Friday"
+      dateString.replace(/this\s+/i, ''), // "this Friday" -> "Friday"
+    ];
+
+    for (const variation of variations) {
+      const varDate = new Date(variation);
+      if (!isNaN(varDate.getTime())) {
+        const now = Date.now();
+        const oneYearAgo = now - (365 * 24 * 60 * 60 * 1000);
+        const tenYearsFromNow = now + (10 * 365 * 24 * 60 * 60 * 1000);
+
+        if (varDate.getTime() > oneYearAgo && varDate.getTime() < tenYearsFromNow) {
+          // If the parsed date is in the past, assume they meant next occurrence
+          if (varDate.getTime() < now) {
+            // Add 7 days if it's a day of the week
+            if (dateString.match(/monday|tuesday|wednesday|thursday|friday|saturday|sunday/i)) {
+              varDate.setDate(varDate.getDate() + 7);
+            }
+          }
+          return varDate.getTime();
+        }
+      }
+    }
+
     // If all parsing fails, return undefined
     return undefined;
   } catch (error) {

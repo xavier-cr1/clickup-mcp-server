@@ -525,13 +525,16 @@ export async function updateTaskHandler(
   taskService: TaskService,
   params: UpdateTaskParams
 ): Promise<ClickUpTask> {
-  const { taskId, taskName, listName, customTaskId, ...updateData } = params;
+  const { taskId, taskName, listName, customTaskId, ...rawUpdateData } = params;
 
   // Validate task identification with global lookup enabled
   const validationResult = validateTaskIdentification(params, { useGlobalLookup: true });
   if (!validationResult.isValid) {
     throw new Error(validationResult.errorMessage);
   }
+
+  // Build properly formatted update data from raw parameters
+  const updateData = buildUpdateData(rawUpdateData);
 
   // Validate update data
   validateTaskUpdateData(updateData);
