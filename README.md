@@ -6,7 +6,7 @@
 
 A Model Context Protocol (MCP) server for integrating ClickUp tasks with AI applications. This server allows AI agents to interact with ClickUp tasks, spaces, lists, and folders through a standardized protocol.
 
-> 🚀 **Status Update:** v0.8.0 is now available with HTTP Streamable transport support, Legacy SSE Support, Member Management tools, and more.
+> 🚀 **Status Update:** v0.8.1 is now available with HTTP Streamable transport support, Legacy SSE Support, Member Management tools, and more.
 
 ## Setup
 
