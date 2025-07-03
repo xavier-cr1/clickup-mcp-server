@@ -20,6 +20,16 @@
   - **Impact**: Users can now precisely control tool availability for security, context limitations, or workflow optimization
   - **Backward compatibility**: Existing `DISABLED_TOOLS` functionality unchanged
 
+### 🛠️ Bug Fixes
+
+- **Fixed automatic priority assignment in task creation**:
+  - Fixed issue where `create_task` and `create_bulk_tasks` tools were automatically setting priorities even when users didn't specify one
+  - **Root cause**: Priority field was unconditionally included in API requests as `undefined`, which ClickUp interpreted as a request to set a default priority
+  - **Solution**: Priority field is now only included in API requests when explicitly provided by the user
+  - **Impact**: Tasks created without specifying a priority will now have `priority: null` instead of an automatically assigned priority
+  - **Affected tools**: `create_task_ClickUp__Local_` and `create_bulk_tasks_ClickUp__Local_`
+  - **Backward compatibility**: Tasks created with explicit priority values continue to work unchanged
+
 ## v0.8.2 (2025-06-12)
 
 ### 🚀 New Features & Improvements
