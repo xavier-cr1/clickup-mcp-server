@@ -544,13 +544,17 @@ export async function createTaskHandler(params) {
     description,
     markdown_description,
     status,
-    priority,
     parent,
     tags,
     custom_fields,
     check_required_custom_fields,
     assignees: resolvedAssignees
   };
+
+  // Only include priority if explicitly provided by the user
+  if (priority !== undefined) {
+    taskData.priority = priority;
+  }
 
   // Add due date if specified
   if (dueDate) {
@@ -831,11 +835,16 @@ export async function createBulkTasksHandler(params: any) {
       description: task.description,
       markdown_description: task.markdown_description,
       status: task.status,
-      priority: toTaskPriority(task.priority),
       tags: task.tags,
       custom_fields: task.custom_fields,
       assignees: resolvedAssignees
     };
+
+    // Only include priority if explicitly provided by the user
+    const priority = toTaskPriority(task.priority);
+    if (priority !== undefined) {
+      taskData.priority = priority;
+    }
 
     // Add due date if specified
     if (task.dueDate) {
