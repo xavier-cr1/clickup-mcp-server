@@ -523,12 +523,3 @@ export async function handleUpdateDocumentPage(parameters: any) {
   }
 }
 
-export const documentTools = [
-  createDocumentTool,
-  getDocumentTool,
-  listDocumentsTool,
-  listDocumentPagesTool,
-  getDocumentPagesTool,
-  createDocumentPageTool,
-  updateDocumentPageTool
-];

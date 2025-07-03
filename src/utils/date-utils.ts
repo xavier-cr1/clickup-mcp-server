@@ -38,7 +38,7 @@ export function getRelativeTimestamp(minutes = 0, hours = 0, days = 0, weeks = 0
  * Get the start of today (midnight) in Unix milliseconds
  * @returns Timestamp in milliseconds for start of current day
  */
-export function getStartOfDay(): number {
+function getStartOfDay(): number {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
   return now.getTime();
@@ -48,7 +48,7 @@ export function getStartOfDay(): number {
  * Get the end of today (23:59:59.999) in Unix milliseconds
  * @returns Timestamp in milliseconds for end of current day
  */
-export function getEndOfDay(): number {
+function getEndOfDay(): number {
   const now = new Date();
   now.setHours(23, 59, 59, 999);
   return now.getTime();
@@ -58,7 +58,7 @@ export function getEndOfDay(): number {
  * Get the current time in Unix milliseconds
  * @returns Current timestamp in milliseconds
  */
-export function getCurrentTimestamp(): number {
+function getCurrentTimestamp(): number {
   return new Date().getTime();
 }
 
@@ -337,32 +337,7 @@ export function formatDueDate(timestamp: number | null | undefined): string | un
   }
 }
 
-/**
- * Checks if a timestamp is for today
- * 
- * @param timestamp Unix timestamp in milliseconds
- * @returns Boolean indicating if the timestamp is for today
- */
-export function isToday(timestamp: number): boolean {
-  const date = new Date(timestamp);
-  const today = new Date();
-  
-  return date.getDate() === today.getDate() &&
-         date.getMonth() === today.getMonth() &&
-         date.getFullYear() === today.getFullYear();
-}
 
-/**
- * Get timestamp range for today (start to end)
- * 
- * @returns Object with start and end timestamps for today
- */
-export function getTodayRange(): { start: number, end: number } {
-  return {
-    start: getStartOfDay(),
-    end: getEndOfDay()
-  };
-}
 
 /**
  * Format a date for display in errors and messages

@@ -52,7 +52,7 @@ export enum LogLevel {
 }
 
 // Parse LOG_LEVEL string to LogLevel enum
-export const parseLogLevel = (levelStr: string | undefined): LogLevel => {
+const parseLogLevel = (levelStr: string | undefined): LogLevel => {
   if (!levelStr) return LogLevel.ERROR; // Default to ERROR if not specified
   
   switch (levelStr.toUpperCase()) {

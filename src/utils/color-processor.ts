@@ -92,7 +92,7 @@ const COLOR_VARIATIONS: Record<string, Record<string, string>> = {
  * @param text - Natural language text that contains a color reference
  * @returns The extracted color name or null if no color is found
  */
-export function extractColorFromText(text: string): string | null {
+function extractColorFromText(text: string): string | null {
   if (!text) return null;
   
   // Convert to lowercase for case-insensitive matching
@@ -125,7 +125,7 @@ export function extractColorFromText(text: string): string | null {
  * @param colorName - Name of the color to convert (e.g., "blue", "dark red")
  * @returns HEX color code or null if color name is not recognized
  */
-export function colorNameToHex(colorName: string): string | null {
+function colorNameToHex(colorName: string): string | null {
   if (!colorName) return null;
   
   const lowercaseColor = colorName.toLowerCase();
@@ -172,7 +172,7 @@ function calculateLuminance(hex: string): number {
  * @param backgroundColor - HEX code of the background color
  * @returns HEX code of the foreground color (either black or white)
  */
-export function generateContrastingForeground(backgroundColor: string): string {
+function generateContrastingForeground(backgroundColor: string): string {
   const luminance = calculateLuminance(backgroundColor);
   
   // Use white text on dark backgrounds and black text on light backgrounds

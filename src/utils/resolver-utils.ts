@@ -13,7 +13,7 @@ import { findListIDByName } from '../tools/list.js';
 /**
  * Result of a name match operation including the quality of the match
  */
-export interface NameMatchResult {
+interface NameMatchResult {
   isMatch: boolean;
   score: number; // 0-100, higher is better
   exactMatch: boolean; // Whether this is an exact match

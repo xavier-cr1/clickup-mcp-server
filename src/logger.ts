@@ -36,7 +36,7 @@ export { LogLevel };
  * @param level The log level to check
  * @returns True if the level should be logged
  */
-export function isLevelEnabled(level: LogLevel): boolean {
+function isLevelEnabled(level: LogLevel): boolean {
   return level >= configuredLevel;
 }
 
@@ -46,7 +46,7 @@ export function isLevelEnabled(level: LogLevel): boolean {
  * @param message Message to log
  * @param data Optional data to include in log
  */
-export function log(level: 'trace' | 'debug' | 'info' | 'warn' | 'error', message: string, data?: any) {
+function log(level: 'trace' | 'debug' | 'info' | 'warn' | 'error', message: string, data?: any) {
   const levelEnum = level === 'trace' ? LogLevel.TRACE 
     : level === 'debug' ? LogLevel.DEBUG
     : level === 'info' ? LogLevel.INFO
@@ -93,39 +93,12 @@ export function log(level: 'trace' | 'debug' | 'info' | 'warn' | 'error', messag
 }
 
 /**
- * Shorthand for trace level logs
- * @param message Message to log
- * @param data Optional data to include in log
- */
-export function trace(message: string, data?: any) {
-  log('trace', message, data);
-}
-
-/**
- * Shorthand for debug level logs
- * @param message Message to log
- * @param data Optional data to include in log
- */
-export function debug(message: string, data?: any) {
-  log('debug', message, data);
-}
-
-/**
  * Shorthand for info level logs
  * @param message Message to log
  * @param data Optional data to include in log
  */
 export function info(message: string, data?: any) {
   log('info', message, data);
-}
-
-/**
- * Shorthand for warn level logs
- * @param message Message to log
- * @param data Optional data to include in log
- */
-export function warn(message: string, data?: any) {
-  log('warn', message, data);
 }
 
 /**

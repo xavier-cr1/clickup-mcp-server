@@ -55,9 +55,45 @@ Or use this npx command:
 
 **Obs: if you don't pass "DOCUMENT_SUPPORT": "true", the default is false and document support will not be active.**
 
-Additionally, you can use the `DISABLED_TOOLS` environment variable or `--env DISABLED_TOOLS` argument to disable specific tools. Provide a comma-separated list of tool names to disable (e.g., `create_task,delete_task`).
+### Tool Filtering
 
-Please disable tools you don't need if you are having issues with the number of tools or any context limitations
+You can control which tools are available using two complementary environment variables:
+
+#### ENABLED_TOOLS (Recommended)
+Use `ENABLED_TOOLS` to specify exactly which tools should be available:
+```bash
+# Environment variable
+export ENABLED_TOOLS="create_task,get_task,update_task,get_workspace_hierarchy"
+
+# Command line argument
+--env ENABLED_TOOLS=create_task,get_task,update_task,get_workspace_hierarchy
+```
+
+#### DISABLED_TOOLS (Legacy)
+Use `DISABLED_TOOLS` to disable specific tools while keeping all others enabled:
+```bash
+# Environment variable
+export DISABLED_TOOLS="delete_task,delete_bulk_tasks"
+
+# Command line argument
+--env DISABLED_TOOLS=delete_task,delete_bulk_tasks
+```
+
+#### Precedence Rules
+- If `ENABLED_TOOLS` is specified, only those tools will be available (takes precedence over `DISABLED_TOOLS`)
+- If only `DISABLED_TOOLS` is specified, all tools except those listed will be available
+- If neither is specified, all tools are available (default behavior)
+
+**Example:**
+```bash
+# Only enable task creation and reading tools
+npx -y @taazkareem/clickup-mcp-server@latest \
+  --env CLICKUP_API_KEY=your-api-key \
+  --env CLICKUP_TEAM_ID=your-team-id \
+  --env ENABLED_TOOLS=create_task,get_task,get_workspace_hierarchy
+```
+
+Please filter tools you don't need if you are having issues with the number of tools or any context limitations.
 
 ## Running with HTTP Transport Support
 
@@ -97,6 +133,8 @@ Available configuration options:
 
 | Option | Description | Default |
 | ------ | ----------- | ------- |
+| `ENABLED_TOOLS` | Comma-separated list of tools to enable (takes precedence) | All tools |
+| `DISABLED_TOOLS` | Comma-separated list of tools to disable | None |
 | `ENABLE_SSE` | Enable the HTTP/SSE transport | `false` |
 | `PORT` | Port for the HTTP server | `3231` |
 | `ENABLE_STDIO` | Enable the STDIO transport | `true` |

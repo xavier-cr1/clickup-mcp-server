@@ -567,19 +567,19 @@ export async function createTaskHandler(params) {
   return await taskService.createTask(listId, taskData);
 }
 
-export interface UpdateTaskParams extends UpdateTaskData {
-  taskId?: string;
-  taskName?: string;
-  listName?: string;
-  customTaskId?: string;
-}
+
 
 /**
  * Handler for updating a task
  */
 export async function updateTaskHandler(
   taskService: TaskService,
-  params: UpdateTaskParams
+  params: UpdateTaskData & {
+    taskId?: string;
+    taskName?: string;
+    listName?: string;
+    customTaskId?: string;
+  }
 ): Promise<ClickUpTask> {
   const { taskId, taskName, listName, customTaskId, ...rawUpdateData } = params;
 
