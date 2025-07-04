@@ -66,7 +66,7 @@ For detailed SSE setup instructions, see [SSE Transport Documentation](sse-trans
 | move_task | Move task to another list | Either `taskId` or `taskName`, and either `listId` or `listName` | `sourceListName` |
 | move_bulk_tasks | Move multiple tasks | `tasks[]` with task identifiers, and target list | None |
 | duplicate_task | Copy task to another list | Either `taskId` or `taskName`, and either `listId` or `listName` | `sourceListName` |
-| get_workspace_tasks | Retrieve tasks across the workspace with filtering | At least one filter parameter (tags, list_ids, folder_ids, space_ids, statuses, assignees, or date filters) | page, order_by, reverse |
+| get_workspace_tasks | Retrieve tasks across the workspace with enhanced filtering | At least one filter parameter (tags, list_ids, folder_ids, space_ids, statuses, assignees, or date filters) | page, order_by, reverse, detail_level, subtasks |
 
 ### Task Parameters
 
@@ -507,6 +507,22 @@ Example using detailed format:
 }
 ```
 
+#### New Parameters for Enhanced Workspace Tasks
+
+| Parameter | Type | Description | Default |
+|-----------|------|-------------|---------|
+| `detail_level` | string | Response format: `"summary"` or `"detailed"` | `"detailed"` |
+| `subtasks` | boolean | Include subtasks in results (must match filter criteria) | `false` |
+| `list_ids` | array | **Enhanced**: Uses Views API for comprehensive task coverage | - |
+
+**Important Notes**:
+- **`detail_level`**: Controls response format and size
+  - `"summary"`: Lightweight response with essential fields
+  - `"detailed"`: Complete task data with all fields
+  - Automatically switches to summary if response exceeds 50,000 tokens
+- **`subtasks`**: Subtasks must still match your other filter criteria to appear
+- **`list_ids`**: Now provides enhanced coverage using Views API
+
 ##### Best Practices for Workspace Tasks
 
 1. **Use Filters**: At least one filter parameter is required to prevent overly broad queries:
@@ -537,6 +553,44 @@ Example using detailed format:
    1. Fetch summaries first for list views
    2. Load details on-demand when viewing specific tasks
    3. Use pagination to load more items as needed
+
+#### Enhanced List Filtering with Views API (Multi-List Tasks)
+
+**NEW FEATURE**: When using `list_ids` parameter, `get_workspace_tasks` now uses ClickUp's Views API for comprehensive task coverage, including tasks in multiple lists.
+
+**Key Benefits**:
+- ✅ Retrieves tasks *associated with* specified lists (not just created in them)
+- ✅ Includes tasks created elsewhere and added to multiple lists
+- ✅ Supports ClickUp's "tasks in multiple lists" feature
+- ✅ Two-tier filtering strategy for optimal performance
+- ✅ Concurrent API calls for multiple lists
+
+**How It Works**:
+1. **Views API Integration**: Calls `/list/{listId}/view` and `/view/{viewId}/task` endpoints
+2. **Server-side Filtering**: Supported filters applied at ClickUp API level
+3. **Client-side Filtering**: Additional filters (tags, folders, spaces) applied after retrieval
+4. **Task Deduplication**: Prevents duplicate results when tasks appear in multiple lists
+
+**Example - Enhanced List Filtering**:
+```json
+{
+  "list_ids": ["901407112060", "901407112061"],
+  "tags": ["cursor agent"],
+  "detail_level": "summary"
+}
+```
+
+**Response includes**:
+- Tasks originally created in the specified lists
+- Tasks created elsewhere but added to the specified lists
+- Tasks appearing through multi-list associations
+- Proper deduplication for tasks in multiple specified lists
+
+**Performance Features**:
+- Concurrent processing of multiple lists
+- Automatic summary format for large responses (>50,000 tokens)
+- Safety limits to prevent infinite pagination
+- Comprehensive error handling with graceful degradation
 
 #### Bulk Updating Tasks
 **User Prompt:**
