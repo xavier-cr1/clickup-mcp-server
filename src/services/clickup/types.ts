@@ -568,6 +568,54 @@ export interface WorkspaceTasksResponse {
 }
 
 /**
+ * ClickUp View object as returned by the Views API
+ */
+export interface ClickUpView {
+  id: string;
+  name: string;
+  type: string;
+  parent: {
+    id: string;
+    type: number;
+  };
+  grouping: any;
+  sorting: any;
+  filters: any;
+  columns: any;
+  team_sidebar: any;
+  settings: any;
+  date_created: string;
+  creator: number;
+  visibility: string;
+  protected: boolean;
+  protected_note: string | null;
+  protected_by: any | null;
+  date_protected: string | null;
+  orderindex: number;
+}
+
+/**
+ * Response from the List Views API endpoint
+ */
+export interface ClickUpListViewsResponse {
+  views: ClickUpView[];
+  required_views: {
+    list: ClickUpView | null;
+    [key: string]: ClickUpView | null;
+  };
+  default_view: ClickUpView | null;
+}
+
+/**
+ * Response from the View Tasks API endpoint
+ */
+export interface ClickUpViewTasksResponse {
+  tasks: ClickUpTask[];
+  has_more?: boolean;
+  next_page?: number;
+}
+
+/**
  * Extended task filters with detail level option
  */
 export interface ExtendedTaskFilters extends TaskFilters {

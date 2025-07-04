@@ -38,6 +38,7 @@ Notes:
   - "summary": Returns lightweight task data (name, status, list, tags)
   - "detailed": Returns complete task data with all fields (DEFAULT if not specified)
 - Responses exceeding 50,000 tokens automatically switch to summary format to avoid hitting LLM token limits
+- **Enhanced List Filtering**: When list_ids are provided, the tool leverages ClickUp's Views API to include tasks that are *associated with* the specified lists, including tasks that have been added to multiple lists. This provides comprehensive coverage of all tasks related to your specified lists, not just tasks that were originally created in those lists.
 `,
   parameters: {
     type: 'object',

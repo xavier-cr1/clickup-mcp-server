@@ -8,7 +8,7 @@
  * and bulk operations. These handlers are used by the tool definitions.
  */
 
-import { ClickUpComment, ClickUpTask, TaskPriority, UpdateTaskData, TaskFilters, toTaskPriority, CreateTaskData } from '../../services/clickup/types.js';
+import { ClickUpComment, ClickUpTask, TaskPriority, UpdateTaskData, TaskFilters, toTaskPriority, CreateTaskData, TaskSummary } from '../../services/clickup/types.js';
 import { clickUpServices } from '../../services/shared.js';
 import { BulkService } from '../../services/clickup/bulk.js';
 import { BatchResult } from '../../utils/concurrency-utils.js';
@@ -757,8 +757,164 @@ export async function getWorkspaceTasksHandler(
       throw new Error('At least one filter parameter is required (tags, list_ids, folder_ids, space_ids, statuses, assignees, or date filters)');
     }
 
-    // For workspace tasks, we'll continue to use the direct getWorkspaceTasks method
-    // since it supports specific workspace-wide filters that aren't part of the unified findTasks
+    // Check if list_ids are provided for enhanced filtering via Views API
+    if (params.list_ids && params.list_ids.length > 0) {
+      logger.info('Using Views API for enhanced list filtering', {
+        listIds: params.list_ids,
+        listCount: params.list_ids.length
+      });
+
+      // Warning for broad queries
+      const hasOnlyListIds = Object.keys(params).filter(key =>
+        params[key] !== undefined && key !== 'list_ids' && key !== 'detail_level'
+      ).length === 0;
+
+      if (hasOnlyListIds && params.list_ids.length > 5) {
+        logger.warn('Broad query detected: many lists with no additional filters', {
+          listCount: params.list_ids.length,
+          recommendation: 'Consider adding additional filters (tags, statuses, assignees, etc.) for better performance'
+        });
+      }
+
+      // Use Views API for enhanced list filtering
+      let allTasks: ClickUpTask[] = [];
+      const processedTaskIds = new Set<string>();
+
+      // Create promises for concurrent fetching
+      const fetchPromises = params.list_ids.map(async (listId: string) => {
+        try {
+          // Get the default list view ID
+          const viewId = await taskService.getListViews(listId);
+
+          if (!viewId) {
+            logger.warn(`No default view found for list ${listId}, skipping`);
+            return [];
+          }
+
+          // Extract filters supported by the Views API
+          const supportedFilters: ExtendedTaskFilters = {
+            subtasks: params.subtasks,
+            include_closed: params.include_closed,
+            archived: params.archived,
+            order_by: params.order_by,
+            reverse: params.reverse,
+            page: params.page,
+            statuses: params.statuses,
+            assignees: params.assignees,
+            date_created_gt: params.date_created_gt,
+            date_created_lt: params.date_created_lt,
+            date_updated_gt: params.date_updated_gt,
+            date_updated_lt: params.date_updated_lt,
+            due_date_gt: params.due_date_gt,
+            due_date_lt: params.due_date_lt,
+            custom_fields: params.custom_fields
+          };
+
+          // Get tasks from the view
+          const tasksFromView = await taskService.getTasksFromView(viewId, supportedFilters);
+          return tasksFromView;
+
+        } catch (error) {
+          logger.error(`Failed to get tasks from list ${listId}`, { error: error.message });
+          return []; // Continue with other lists even if one fails
+        }
+      });
+
+      // Execute all fetches concurrently
+      const taskArrays = await Promise.all(fetchPromises);
+
+      // Aggregate tasks and remove duplicates
+      for (const tasks of taskArrays) {
+        for (const task of tasks) {
+          if (!processedTaskIds.has(task.id)) {
+            allTasks.push(task);
+            processedTaskIds.add(task.id);
+          }
+        }
+      }
+
+      logger.info('Aggregated tasks from Views API', {
+        totalTasks: allTasks.length,
+        uniqueTasks: processedTaskIds.size
+      });
+
+      // Apply client-side filtering for unsupported filters
+      if (params.tags && params.tags.length > 0) {
+        allTasks = allTasks.filter(task =>
+          params.tags.every((tag: string) =>
+            task.tags.some(t => t.name === tag)
+          )
+        );
+        logger.debug('Applied client-side tag filtering', {
+          tags: params.tags,
+          remainingTasks: allTasks.length
+        });
+      }
+
+      if (params.folder_ids && params.folder_ids.length > 0) {
+        allTasks = allTasks.filter(task =>
+          task.folder && params.folder_ids.includes(task.folder.id)
+        );
+        logger.debug('Applied client-side folder filtering', {
+          folderIds: params.folder_ids,
+          remainingTasks: allTasks.length
+        });
+      }
+
+      if (params.space_ids && params.space_ids.length > 0) {
+        allTasks = allTasks.filter(task =>
+          params.space_ids.includes(task.space.id)
+        );
+        logger.debug('Applied client-side space filtering', {
+          spaceIds: params.space_ids,
+          remainingTasks: allTasks.length
+        });
+      }
+
+      // Check token limit and format response
+      const shouldUseSummary = params.detail_level === 'summary' || wouldExceedTokenLimit({ tasks: allTasks });
+
+      if (shouldUseSummary) {
+        logger.info('Using summary format for Views API response', {
+          totalTasks: allTasks.length,
+          reason: params.detail_level === 'summary' ? 'requested' : 'token_limit'
+        });
+
+        return {
+          summaries: allTasks.map(task => ({
+            id: task.id,
+            name: task.name,
+            status: task.status.status,
+            list: {
+              id: task.list.id,
+              name: task.list.name
+            },
+            due_date: task.due_date,
+            url: task.url,
+            priority: task.priority?.priority || null,
+            tags: task.tags.map(tag => ({
+              name: tag.name,
+              tag_bg: tag.tag_bg,
+              tag_fg: tag.tag_fg
+            }))
+          })),
+          total_count: allTasks.length,
+          has_more: false,
+          next_page: 0
+        };
+      }
+
+      return {
+        tasks: allTasks,
+        total_count: allTasks.length,
+        has_more: false,
+        next_page: 0
+      };
+    }
+
+    // Fallback to existing workspace-wide task retrieval when list_ids are not provided
+    logger.info('Using standard workspace task retrieval');
+
     const filters: ExtendedTaskFilters = {
       tags: params.tags,
       list_ids: params.list_ids,

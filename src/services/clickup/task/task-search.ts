@@ -11,15 +11,17 @@
  */
 
 import { TaskServiceCore } from './task-core.js';
-import { 
-  ClickUpTask, 
-  TaskFilters, 
+import {
+  ClickUpTask,
+  TaskFilters,
   TaskSummary,
   WorkspaceTasksResponse,
   DetailedTaskResponse,
   TeamTasksResponse,
   ExtendedTaskFilters,
-  UpdateTaskData
+  UpdateTaskData,
+  ClickUpListViewsResponse,
+  ClickUpViewTasksResponse
 } from '../types.js';
 import { isNameMatch } from '../../../utils/resolver-utils.js';
 import { findListIDByName } from '../../../tools/list.js';
@@ -231,6 +233,183 @@ export class TaskServiceSearch extends TaskServiceCore {
    */
   async getTaskSummaries(filters: TaskFilters = {}): Promise<WorkspaceTasksResponse> {
     return this.getWorkspaceTasks({ ...filters, detail_level: 'summary' }) as Promise<WorkspaceTasksResponse>;
+  }
+
+  /**
+   * Get all views for a given list and identify the default "List" view ID
+   * @param listId The ID of the list to get views for
+   * @returns The ID of the default list view, or null if not found
+   */
+  async getListViews(listId: string): Promise<string | null> {
+    try {
+      this.logOperation('getListViews', { listId });
+
+      const response = await this.makeRequest(async () => {
+        return await this.client.get<ClickUpListViewsResponse>(`/list/${listId}/view`);
+      });
+
+      // First try to get the default list view from required_views.list
+      if (response.data.required_views?.list?.id) {
+        this.logOperation('getListViews', {
+          listId,
+          foundDefaultView: response.data.required_views.list.id,
+          source: 'required_views.list'
+        });
+        return response.data.required_views.list.id;
+      }
+
+      // Fallback: look for a view with type "list" in the views array
+      const listView = response.data.views?.find(view =>
+        view.type?.toLowerCase() === 'list' ||
+        view.name?.toLowerCase().includes('list')
+      );
+
+      if (listView?.id) {
+        this.logOperation('getListViews', {
+          listId,
+          foundDefaultView: listView.id,
+          source: 'views_array_fallback',
+          viewName: listView.name
+        });
+        return listView.id;
+      }
+
+      // If no specific list view found, use the first available view
+      if (response.data.views?.length > 0) {
+        const firstView = response.data.views[0];
+        this.logOperation('getListViews', {
+          listId,
+          foundDefaultView: firstView.id,
+          source: 'first_available_view',
+          viewName: firstView.name,
+          warning: 'No specific list view found, using first available view'
+        });
+        return firstView.id;
+      }
+
+      this.logOperation('getListViews', {
+        listId,
+        error: 'No views found for list',
+        responseData: response.data
+      });
+      return null;
+
+    } catch (error) {
+      this.logOperation('getListViews', {
+        listId,
+        error: error.message,
+        status: error.response?.status
+      });
+      throw this.handleError(error, `Failed to get views for list ${listId}`);
+    }
+  }
+
+  /**
+   * Retrieve tasks from a specific view, applying supported filters
+   * @param viewId The ID of the view to get tasks from
+   * @param filters Task filters to apply (only supported filters will be used)
+   * @returns Array of ClickUpTask objects from the view
+   */
+  async getTasksFromView(viewId: string, filters: ExtendedTaskFilters = {}): Promise<ClickUpTask[]> {
+    try {
+      this.logOperation('getTasksFromView', { viewId, filters });
+
+      // Build query parameters for supported filters
+      const params: Record<string, any> = {};
+
+      // Map supported filters to query parameters
+      if (filters.subtasks !== undefined) params.subtasks = filters.subtasks;
+      if (filters.include_closed !== undefined) params.include_closed = filters.include_closed;
+      if (filters.archived !== undefined) params.archived = filters.archived;
+      if (filters.page !== undefined) params.page = filters.page;
+      if (filters.order_by) params.order_by = filters.order_by;
+      if (filters.reverse !== undefined) params.reverse = filters.reverse;
+
+      // Status filtering
+      if (filters.statuses && filters.statuses.length > 0) {
+        params.statuses = filters.statuses;
+      }
+
+      // Assignee filtering
+      if (filters.assignees && filters.assignees.length > 0) {
+        params.assignees = filters.assignees;
+      }
+
+      // Date filters
+      if (filters.date_created_gt) params.date_created_gt = filters.date_created_gt;
+      if (filters.date_created_lt) params.date_created_lt = filters.date_created_lt;
+      if (filters.date_updated_gt) params.date_updated_gt = filters.date_updated_gt;
+      if (filters.date_updated_lt) params.date_updated_lt = filters.date_updated_lt;
+      if (filters.due_date_gt) params.due_date_gt = filters.due_date_gt;
+      if (filters.due_date_lt) params.due_date_lt = filters.due_date_lt;
+
+      // Custom fields
+      if (filters.custom_fields) {
+        params.custom_fields = filters.custom_fields;
+      }
+
+      let allTasks: ClickUpTask[] = [];
+      let currentPage = filters.page || 0;
+      let hasMore = true;
+      const maxPages = 50; // Safety limit to prevent infinite loops
+      let pageCount = 0;
+
+      while (hasMore && pageCount < maxPages) {
+        const pageParams = { ...params, page: currentPage };
+
+        const response = await this.makeRequest(async () => {
+          return await this.client.get<ClickUpViewTasksResponse>(`/view/${viewId}/task`, {
+            params: pageParams
+          });
+        });
+
+        const tasks = response.data.tasks || [];
+        allTasks = allTasks.concat(tasks);
+
+        // Check if there are more pages
+        hasMore = response.data.has_more === true && tasks.length > 0;
+        currentPage++;
+        pageCount++;
+
+        this.logOperation('getTasksFromView', {
+          viewId,
+          page: currentPage - 1,
+          tasksInPage: tasks.length,
+          totalTasksSoFar: allTasks.length,
+          hasMore
+        });
+
+        // If we're not paginating (original request had no page specified),
+        // only get the first page
+        if (filters.page === undefined && currentPage === 1) {
+          break;
+        }
+      }
+
+      if (pageCount >= maxPages) {
+        this.logOperation('getTasksFromView', {
+          viewId,
+          warning: `Reached maximum page limit (${maxPages}) while fetching tasks`,
+          totalTasks: allTasks.length
+        });
+      }
+
+      this.logOperation('getTasksFromView', {
+        viewId,
+        totalTasks: allTasks.length,
+        totalPages: pageCount
+      });
+
+      return allTasks;
+
+    } catch (error) {
+      this.logOperation('getTasksFromView', {
+        viewId,
+        error: error.message,
+        status: error.response?.status
+      });
+      throw this.handleError(error, `Failed to get tasks from view ${viewId}`);
+    }
   }
 
   /**
