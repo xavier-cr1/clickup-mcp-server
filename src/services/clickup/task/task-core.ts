@@ -293,13 +293,13 @@ export class TaskServiceCore extends BaseClickUpService {
    */
   async getSubtasks(taskId: string): Promise<ClickUpTask[]> {
     this.logOperation('getSubtasks', { taskId });
-    
+
     try {
       return await this.makeRequest(async () => {
         const response = await this.client.get<ClickUpTask>(
-          `/task/${taskId}`
+          `/task/${taskId}?subtasks=true&include_subtasks=true`
         );
-        
+
         // Return subtasks if present, otherwise empty array
         return response.data.subtasks || [];
       });

@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### 🐛 Bug Fixes
+
+- **Fixed subtasks not being retrieved (Issue #69)**:
+  - Fixed `getSubtasks` method in `task-core.ts` to include required query parameters
+  - Added `subtasks=true&include_subtasks=true` parameters to ClickUp API call
+  - Subtasks are now properly retrieved and displayed when using `get_task` tool with `subtasks=true`
+  - Resolves issue where subtasks arrays were always empty despite subtasks existing in ClickUp
+
+## v0.8.3 (2025-07-03)
+
 ### 🚀 New Features & Improvements
 
 - **Enhanced workspace tasks filtering with Views API support (Issue #43)**:
