@@ -76,20 +76,6 @@ To integrate with n8n, follow these steps:
    - Server URL: `http://localhost:3000` (or your server address)
    - Tools: Select the ClickUp tools you want to use
 
-## Example Client
-
-An example SSE client is provided in the `examples` directory to demonstrate how to connect to the server using the SSE transport. To run it:
-
-```bash
-# Start the server with SSE enabled
-ENABLE_SSE=true SSE_PORT=3000 npx -y @taazkareem/clickup-mcp-server@latest --env CLICKUP_API_KEY=your-api-key --env CLICKUP_TEAM_ID=your-team-id
-
-# In another terminal, run the example client
-cd examples
-npm install
-npm run sse-client
-```
-
 ## Technical Implementation
 
 The SSE transport implements the ServerTransport interface and provides the following capabilities:
