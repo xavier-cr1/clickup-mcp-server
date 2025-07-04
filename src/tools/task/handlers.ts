@@ -167,8 +167,10 @@ async function buildUpdateData(params: any): Promise<UpdateTaskData> {
   if (params.markdown_description !== undefined) updateData.markdown_description = params.markdown_description;
   if (params.status !== undefined) updateData.status = params.status;
 
-  // Skip toTaskPriority conversion since we're handling priority in the main handler
-  if (params.priority !== undefined) updateData.priority = params.priority;
+  // Use toTaskPriority to properly handle null values and validation
+  if (params.priority !== undefined) {
+    updateData.priority = toTaskPriority(params.priority);
+  }
 
   if (params.dueDate !== undefined) {
     updateData.due_date = parseDueDate(params.dueDate);

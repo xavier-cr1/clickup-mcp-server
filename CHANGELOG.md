@@ -4,6 +4,12 @@
 
 ### 🐛 Bug Fixes
 
+- **Fixed priority null handling in task updates (Issue #23)**:
+  - Fixed `update_task` tool failing when setting priority to `null` to clear/remove priority
+  - Modified `buildUpdateData` function to use `toTaskPriority` helper for proper null value conversion
+  - Priority updates now work correctly for both setting valid values (1-4) and clearing priority (null)
+  - Bulk task updates (`update_bulk_tasks`) already worked correctly and continue to function properly
+
 - **Fixed subtasks not being retrieved (Issue #69)**:
   - Fixed `getSubtasks` method in `task-core.ts` to include required query parameters
   - Added `subtasks=true&include_subtasks=true` parameters to ClickUp API call
