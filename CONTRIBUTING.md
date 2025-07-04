@@ -22,8 +22,7 @@ By participating in this project, you agree to abide by our Code of Conduct. Ple
 ## Pull Request Process
 
 1. Update the README.md with details of changes if applicable
-2. Update the version number following [Semantic Versioning](https://semver.org/)
-3. Ensure all tests pass and code meets quality standards
+2. Ensure all tests pass and code meets quality standards
 4. Your PR will be reviewed by maintainers
 5. Once approved, your PR will be merged
 
