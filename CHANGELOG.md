@@ -2,6 +2,41 @@
 
 ## Unreleased
 
+### 🔒 Security Features
+
+- **Comprehensive MCP Streamable HTTPS Transport Security Implementation**:
+  - **HTTPS/TLS Support**: Added optional HTTPS server alongside HTTP for encrypted communication
+    - Environment variables: `ENABLE_HTTPS`, `SSL_KEY_PATH`, `SSL_CERT_PATH`, `SSL_CA_PATH`, `HTTPS_PORT`
+    - Dual protocol support: HTTP (3231) and HTTPS (3443) run simultaneously for backwards compatibility
+    - Self-signed certificate generation script: `./scripts/generate-ssl-cert.sh`
+    - Production-ready with CA-issued certificates
+  - **Origin Header Validation**: Prevents cross-site attacks by validating Origin header against whitelist
+    - Environment variable: `ENABLE_ORIGIN_VALIDATION=true`
+    - Default allowed origins: `127.0.0.1:3231`, `localhost:3231`, plus HTTPS variants
+    - Smart handling: Allows non-browser clients (n8n, MCP Inspector) while blocking unauthorized origins
+  - **Rate Limiting Protection**: Protects against DoS attacks with configurable request limits
+    - Environment variable: `ENABLE_RATE_LIMIT=true`
+    - Default: 100 requests per minute per IP address
+    - Configurable via: `RATE_LIMIT_MAX`, `RATE_LIMIT_WINDOW_MS`
+  - **CORS Configuration**: Secure cross-origin resource sharing for web applications
+    - Environment variable: `ENABLE_CORS=true`
+    - Supports GET, POST, DELETE, OPTIONS methods
+    - Headers: Content-Type, mcp-session-id, Authorization
+  - **Security Headers**: Web security best practices when `ENABLE_SECURITY_FEATURES=true`
+    - X-Content-Type-Options, X-Frame-Options, X-XSS-Protection
+    - Referrer-Policy, Strict-Transport-Security (HTTPS only)
+  - **Request Size Limits**: Prevents memory exhaustion attacks
+    - Configurable limit: `MAX_REQUEST_SIZE=10mb` (default)
+    - Hard limit: 50MB maximum
+  - **Security Monitoring**: Comprehensive logging and health endpoint
+    - Health endpoint: `/health` shows security status
+    - Security event logging: origin validation, rate limits, violations
+    - Log levels: DEBUG, INFO, WARN, ERROR for security events
+  - **Zero Breaking Changes**: All security features are opt-in and disabled by default
+    - Existing clients (Claude Desktop, n8n, MCP Inspector) work unchanged
+    - No configuration changes required for current users
+    - Backwards compatibility thoroughly tested and verified
+
 ### 🐛 Bug Fixes
 
 - **Fixed priority null handling in task updates (Issue #23)**:

@@ -42,3 +42,11 @@ checklist.md
 # Temporary files
 .tmp/
 .temp/
+
+# SSL certificates (machine-specific, should not be committed)
+ssl/
+*.key
+*.crt
+*.pem
+*.p12
+*.pfx

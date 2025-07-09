@@ -138,6 +138,36 @@ Available configuration options:
 | `ENABLE_SSE` | Enable the HTTP/SSE transport | `false` |
 | `PORT` | Port for the HTTP server | `3231` |
 | `ENABLE_STDIO` | Enable the STDIO transport | `true` |
+| `ENABLE_SECURITY_FEATURES` | Enable security headers and logging | `false` |
+| `ENABLE_HTTPS` | Enable HTTPS/TLS encryption | `false` |
+| `ENABLE_ORIGIN_VALIDATION` | Validate Origin header against whitelist | `false` |
+| `ENABLE_RATE_LIMIT` | Enable rate limiting protection | `false` |
+
+### 🔒 Security Features
+
+The server includes optional security enhancements for production deployments. All security features are **opt-in** and **disabled by default** to maintain backwards compatibility.
+
+**Quick security setup:**
+```bash
+# Generate SSL certificates for HTTPS
+./scripts/generate-ssl-cert.sh
+
+# Start with full security
+ENABLE_SECURITY_FEATURES=true \
+ENABLE_HTTPS=true \
+ENABLE_ORIGIN_VALIDATION=true \
+ENABLE_RATE_LIMIT=true \
+SSL_KEY_PATH=./ssl/server.key \
+SSL_CERT_PATH=./ssl/server.crt \
+npx @taazkareem/clickup-mcp-server@latest --env CLICKUP_API_KEY=your-key --env CLICKUP_TEAM_ID=your-team --env ENABLE_SSE=true
+```
+
+**HTTPS Endpoints:**
+- **Primary**: `https://127.0.0.1:3443/mcp` (Streamable HTTPS)
+- **Legacy**: `https://127.0.0.1:3443/sse` (SSE HTTPS for backwards compatibility)
+- **Health**: `https://127.0.0.1:3443/health` (Health check)
+
+For detailed security configuration, see [Security Features Documentation](docs/security-features.md).
 
 #### n8n Integration
 

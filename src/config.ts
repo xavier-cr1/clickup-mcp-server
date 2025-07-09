@@ -80,6 +80,21 @@ interface Config {
   ssePort: number;
   enableStdio: boolean;
   port?: string;
+  // Security configuration (opt-in for backwards compatibility)
+  enableSecurityFeatures: boolean;
+  enableOriginValidation: boolean;
+  enableRateLimit: boolean;
+  enableCors: boolean;
+  allowedOrigins: string[];
+  rateLimitMax: number;
+  rateLimitWindowMs: number;
+  maxRequestSize: string;
+  // HTTPS configuration
+  enableHttps: boolean;
+  httpsPort?: string;
+  sslKeyPath?: string;
+  sslCertPath?: string;
+  sslCaPath?: string;
 }
 
 // Parse boolean string
@@ -93,6 +108,12 @@ const parseInteger = (value: string | undefined, defaultValue: number): number =
   if (value === undefined) return defaultValue;
   const parsed = parseInt(value, 10);
   return isNaN(parsed) ? defaultValue : parsed;
+};
+
+// Parse comma-separated origins list
+const parseOrigins = (value: string | undefined, defaultValue: string[]): string[] => {
+  if (!value) return defaultValue;
+  return value.split(',').map(origin => origin.trim()).filter(origin => origin !== '');
 };
 
 // Load configuration from command line args or environment variables
@@ -112,6 +133,30 @@ const configuration: Config = {
   ssePort: parseInteger(envArgs.ssePort || process.env.SSE_PORT, 3000),
   enableStdio: parseBoolean(envArgs.enableStdio || process.env.ENABLE_STDIO, true),
   port: envArgs.port || process.env.PORT || '3231',
+  // Security configuration (opt-in for backwards compatibility)
+  enableSecurityFeatures: parseBoolean(process.env.ENABLE_SECURITY_FEATURES, false),
+  enableOriginValidation: parseBoolean(process.env.ENABLE_ORIGIN_VALIDATION, false),
+  enableRateLimit: parseBoolean(process.env.ENABLE_RATE_LIMIT, false),
+  enableCors: parseBoolean(process.env.ENABLE_CORS, false),
+  allowedOrigins: parseOrigins(process.env.ALLOWED_ORIGINS, [
+    'http://127.0.0.1:3231',
+    'http://localhost:3231',
+    'http://127.0.0.1:3000',
+    'http://localhost:3000',
+    'https://127.0.0.1:3443',
+    'https://localhost:3443',
+    'https://127.0.0.1:3231',
+    'https://localhost:3231'
+  ]),
+  rateLimitMax: parseInteger(process.env.RATE_LIMIT_MAX, 100),
+  rateLimitWindowMs: parseInteger(process.env.RATE_LIMIT_WINDOW_MS, 60000),
+  maxRequestSize: process.env.MAX_REQUEST_SIZE || '10mb',
+  // HTTPS configuration
+  enableHttps: parseBoolean(process.env.ENABLE_HTTPS, false),
+  httpsPort: process.env.HTTPS_PORT || '3443',
+  sslKeyPath: process.env.SSL_KEY_PATH,
+  sslCertPath: process.env.SSL_CERT_PATH,
+  sslCaPath: process.env.SSL_CA_PATH,
 };
 
 // Don't log to console as it interferes with JSON-RPC communication
