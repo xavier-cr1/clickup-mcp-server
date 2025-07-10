@@ -197,9 +197,9 @@ export const updateTaskTool = {
         description: "New status. Must be valid for the task's current list."
       },
       priority: {
-        type: "number",
+        type: "string",
         nullable: true,
-        enum: [1, 2, 3, 4, null],
+        enum: ["1", "2", "3", "4", null],
         description: "New priority: 1 (urgent) to 4 (low). Set null to clear priority."
       },
       dueDate: {
