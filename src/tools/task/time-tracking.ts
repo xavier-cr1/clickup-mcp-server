@@ -17,6 +17,7 @@ import { getTaskId } from "./utilities.js";
 import { Logger } from "../../logger.js";
 import { ErrorCode } from "../../services/clickup/base.js";
 import { formatDueDate, parseDueDate } from "../../utils/date-utils.js";
+import { sponsorService } from "../../utils/sponsor-service.js";
 
 // Logger instance
 const logger = new Logger('TimeTrackingTools');
@@ -202,76 +203,62 @@ export const getCurrentTimeEntryTool = {
  */
 export async function handleGetTaskTimeEntries(params: any) {
   logger.info("Handling request to get task time entries", params);
-  
+
   try {
     // Resolve task ID
     const taskId = await getTaskId(params.taskId, params.taskName, params.listName);
     if (!taskId) {
-      return {
-        success: false,
-        error: {
-          message: "Task not found. Please provide a valid taskId or taskName + listName combination."
-        }
-      };
+      return sponsorService.createErrorResponse("Task not found. Please provide a valid taskId or taskName + listName combination.");
     }
-    
+
     // Parse date filters
     let startDate: number | undefined;
     let endDate: number | undefined;
-    
+
     if (params.startDate) {
       startDate = parseDueDate(params.startDate);
     }
-    
+
     if (params.endDate) {
       endDate = parseDueDate(params.endDate);
     }
-    
+
     // Get time entries
     const result = await timeTrackingService.getTimeEntries(taskId, startDate, endDate);
-    
+
     if (!result.success) {
-      return {
-        success: false,
-        error: {
-          message: result.error?.message || "Failed to get time entries"
-        }
-      };
+      return sponsorService.createErrorResponse(result.error?.message || "Failed to get time entries");
     }
-    
+
     const timeEntries = result.data || [];
-    
+
     // Format the response
-    return {
+    return sponsorService.createResponse({
       success: true,
+      count: timeEntries.length,
       time_entries: timeEntries.map(entry => ({
         id: entry.id,
-        description: entry.description,
+        description: entry.description || "",
         start: entry.start,
         end: entry.end,
-        duration: formatDuration(entry.duration),
-        duration_ms: entry.duration,
-        billable: entry.billable,
-        tags: entry.tags,
-        user: {
+        duration: formatDuration(entry.duration || 0),
+        duration_ms: entry.duration || 0,
+        billable: entry.billable || false,
+        tags: entry.tags || [],
+        user: entry.user ? {
           id: entry.user.id,
           username: entry.user.username
-        },
-        task: {
+        } : null,
+        task: entry.task ? {
           id: entry.task.id,
           name: entry.task.name,
-          status: entry.task.status.status
-        }
+          status: entry.task.status?.status || "Unknown"
+        } : null
       }))
-    };
+    }, true);
   } catch (error) {
     logger.error("Error getting task time entries", error);
-    return {
-      success: false,
-      error: {
-        message: (error as Error).message || "An unknown error occurred"
-      }
-    };
+    return sponsorService.createErrorResponse((error as Error).message || "An unknown error occurred");
   }
 }
 
@@ -280,39 +267,30 @@ export async function handleGetTaskTimeEntries(params: any) {
  */
 export async function handleStartTimeTracking(params: any) {
   logger.info("Handling request to start time tracking", params);
-  
+
   try {
     // Resolve task ID
     const taskId = await getTaskId(params.taskId, params.taskName, params.listName);
     if (!taskId) {
-      return {
-        success: false,
-        error: {
-          message: "Task not found. Please provide a valid taskId or taskName + listName combination."
-        }
-      };
+      return sponsorService.createErrorResponse("Task not found. Please provide a valid taskId or taskName + listName combination.");
     }
-    
+
     // Check for currently running timer
     const currentTimerResult = await timeTrackingService.getCurrentTimeEntry();
     if (currentTimerResult.success && currentTimerResult.data) {
-      return {
-        success: false,
-        error: {
-          message: "A timer is already running. Please stop the current timer before starting a new one.",
-          timer: {
-            id: currentTimerResult.data.id,
-            task: {
-              id: currentTimerResult.data.task.id,
-              name: currentTimerResult.data.task.name
-            },
-            start: currentTimerResult.data.start,
-            description: currentTimerResult.data.description
-          }
+      return sponsorService.createErrorResponse("A timer is already running. Please stop the current timer before starting a new one.", {
+        timer: {
+          id: currentTimerResult.data.id,
+          task: {
+            id: currentTimerResult.data.task.id,
+            name: currentTimerResult.data.task.name
+          },
+          start: currentTimerResult.data.start,
+          description: currentTimerResult.data.description
         }
-      };
+      });
     }
-    
+
     // Prepare request data
     const requestData = {
       tid: taskId,
@@ -320,32 +298,23 @@ export async function handleStartTimeTracking(params: any) {
       billable: params.billable,
       tags: params.tags
     };
-    
+
     // Start time tracking
     const result = await timeTrackingService.startTimeTracking(requestData);
-    
+
     if (!result.success) {
-      return {
-        success: false,
-        error: {
-          message: result.error?.message || "Failed to start time tracking"
-        }
-      };
+      return sponsorService.createErrorResponse(result.error?.message || "Failed to start time tracking");
     }
-    
+
     const timeEntry = result.data;
     if (!timeEntry) {
-      return {
-        success: false,
-        error: {
-          message: "No time entry data returned from API"
-        }
-      };
+      return sponsorService.createErrorResponse("No time entry data returned from API");
     }
-    
+
     // Format the response
-    return {
+    return sponsorService.createResponse({
       success: true,
+      message: "Time tracking started successfully",
       time_entry: {
         id: timeEntry.id,
         description: timeEntry.description,
@@ -358,15 +327,10 @@ export async function handleStartTimeTracking(params: any) {
         billable: timeEntry.billable,
         tags: timeEntry.tags
       }
-    };
+    }, true);
   } catch (error) {
     logger.error("Error starting time tracking", error);
-    return {
-      success: false,
-      error: {
-        message: (error as Error).message || "An unknown error occurred"
-      }
-    };
+    return sponsorService.createErrorResponse((error as Error).message || "An unknown error occurred");
   }
 }
 
@@ -375,50 +339,36 @@ export async function handleStartTimeTracking(params: any) {
  */
 export async function handleStopTimeTracking(params: any) {
   logger.info("Handling request to stop time tracking", params);
-  
+
   try {
     // Check for currently running timer
     const currentTimerResult = await timeTrackingService.getCurrentTimeEntry();
     if (currentTimerResult.success && !currentTimerResult.data) {
-      return {
-        success: false,
-        error: {
-          message: "No timer is currently running. Start a timer before trying to stop it."
-        }
-      };
+      return sponsorService.createErrorResponse("No timer is currently running. Start a timer before trying to stop it.");
     }
-    
+
     // Prepare request data
     const requestData = {
       description: params.description,
       tags: params.tags
     };
-    
+
     // Stop time tracking
     const result = await timeTrackingService.stopTimeTracking(requestData);
-    
+
     if (!result.success) {
-      return {
-        success: false,
-        error: {
-          message: result.error?.message || "Failed to stop time tracking"
-        }
-      };
+      return sponsorService.createErrorResponse(result.error?.message || "Failed to stop time tracking");
     }
-    
+
     const timeEntry = result.data;
     if (!timeEntry) {
-      return {
-        success: false,
-        error: {
-          message: "No time entry data returned from API"
-        }
-      };
+      return sponsorService.createErrorResponse("No time entry data returned from API");
     }
-    
+
     // Format the response
-    return {
+    return sponsorService.createResponse({
       success: true,
+      message: "Time tracking stopped successfully",
       time_entry: {
         id: timeEntry.id,
         description: timeEntry.description,
@@ -433,15 +383,10 @@ export async function handleStopTimeTracking(params: any) {
         billable: timeEntry.billable,
         tags: timeEntry.tags
       }
-    };
+    }, true);
   } catch (error) {
     logger.error("Error stopping time tracking", error);
-    return {
-      success: false,
-      error: {
-        message: (error as Error).message || "An unknown error occurred"
-      }
-    };
+    return sponsorService.createErrorResponse((error as Error).message || "An unknown error occurred");
   }
 }
 
@@ -450,41 +395,26 @@ export async function handleStopTimeTracking(params: any) {
  */
 export async function handleAddTimeEntry(params: any) {
   logger.info("Handling request to add time entry", params);
-  
+
   try {
     // Resolve task ID
     const taskId = await getTaskId(params.taskId, params.taskName, params.listName);
     if (!taskId) {
-      return {
-        success: false,
-        error: {
-          message: "Task not found. Please provide a valid taskId or taskName + listName combination."
-        }
-      };
+      return sponsorService.createErrorResponse("Task not found. Please provide a valid taskId or taskName + listName combination.");
     }
-    
+
     // Parse start time
     const startTime = parseDueDate(params.start);
     if (!startTime) {
-      return {
-        success: false,
-        error: {
-          message: "Invalid start time format. Use a Unix timestamp (in milliseconds) or a natural language date string."
-        }
-      };
+      return sponsorService.createErrorResponse("Invalid start time format. Use a Unix timestamp (in milliseconds) or a natural language date string.");
     }
-    
+
     // Parse duration
     const durationMs = parseDuration(params.duration);
     if (durationMs === 0) {
-      return {
-        success: false,
-        error: {
-          message: "Invalid duration format. Use 'Xh Ym' format (e.g., '1h 30m') or just minutes (e.g., '90m')."
-        }
-      };
+      return sponsorService.createErrorResponse("Invalid duration format. Use 'Xh Ym' format (e.g., '1h 30m') or just minutes (e.g., '90m').");
     }
-    
+
     // Prepare request data
     const requestData = {
       tid: taskId,
@@ -494,32 +424,23 @@ export async function handleAddTimeEntry(params: any) {
       billable: params.billable,
       tags: params.tags
     };
-    
+
     // Add time entry
     const result = await timeTrackingService.addTimeEntry(requestData);
-    
+
     if (!result.success) {
-      return {
-        success: false,
-        error: {
-          message: result.error?.message || "Failed to add time entry"
-        }
-      };
+      return sponsorService.createErrorResponse(result.error?.message || "Failed to add time entry");
     }
-    
+
     const timeEntry = result.data;
     if (!timeEntry) {
-      return {
-        success: false,
-        error: {
-          message: "No time entry data returned from API"
-        }
-      };
+      return sponsorService.createErrorResponse("No time entry data returned from API");
     }
-    
+
     // Format the response
-    return {
+    return sponsorService.createResponse({
       success: true,
+      message: "Time entry added successfully",
       time_entry: {
         id: timeEntry.id,
         description: timeEntry.description,
@@ -534,15 +455,10 @@ export async function handleAddTimeEntry(params: any) {
         billable: timeEntry.billable,
         tags: timeEntry.tags
       }
-    };
+    }, true);
   } catch (error) {
     logger.error("Error adding time entry", error);
-    return {
-      success: false,
-      error: {
-        message: (error as Error).message || "An unknown error occurred"
-      }
-    };
+    return sponsorService.createErrorResponse((error as Error).message || "An unknown error occurred");
   }
 }
 
@@ -551,81 +467,61 @@ export async function handleAddTimeEntry(params: any) {
  */
 export async function handleDeleteTimeEntry(params: any) {
   logger.info("Handling request to delete time entry", params);
-  
+
   try {
     const { timeEntryId } = params;
-    
+
     if (!timeEntryId) {
-      return {
-        success: false,
-        error: {
-          message: "Time entry ID is required."
-        }
-      };
+      return sponsorService.createErrorResponse("Time entry ID is required.");
     }
-    
+
     // Delete time entry
     const result = await timeTrackingService.deleteTimeEntry(timeEntryId);
-    
+
     if (!result.success) {
-      return {
-        success: false,
-        error: {
-          message: result.error?.message || "Failed to delete time entry"
-        }
-      };
+      return sponsorService.createErrorResponse(result.error?.message || "Failed to delete time entry");
     }
-    
+
     // Format the response
-    return {
+    return sponsorService.createResponse({
       success: true,
       message: "Time entry deleted successfully."
-    };
+    }, true);
   } catch (error) {
     logger.error("Error deleting time entry", error);
-    return {
-      success: false,
-      error: {
-        message: (error as Error).message || "An unknown error occurred"
-      }
-    };
+    return sponsorService.createErrorResponse((error as Error).message || "An unknown error occurred");
   }
 }
 
 /**
  * Handle get current time entry tool
  */
-export async function handleGetCurrentTimeEntry(params: any) {
+export async function handleGetCurrentTimeEntry(params?: any) {
   logger.info("Handling request to get current time entry");
-  
+
   try {
     // Get current time entry
     const result = await timeTrackingService.getCurrentTimeEntry();
-    
+
     if (!result.success) {
-      return {
-        success: false,
-        error: {
-          message: result.error?.message || "Failed to get current time entry"
-        }
-      };
+      return sponsorService.createErrorResponse(result.error?.message || "Failed to get current time entry");
     }
-    
+
     const timeEntry = result.data;
-    
+
     // If no timer is running
     if (!timeEntry) {
-      return {
+      return sponsorService.createResponse({
         success: true,
         timer_running: false,
         message: "No timer is currently running."
-      };
+      }, true);
     }
-    
+
     // Format the response
     const elapsedTime = calculateElapsedTime(timeEntry.start);
-    
-    return {
+
+    return sponsorService.createResponse({
       success: true,
       timer_running: true,
       time_entry: {
@@ -641,15 +537,10 @@ export async function handleGetCurrentTimeEntry(params: any) {
         billable: timeEntry.billable,
         tags: timeEntry.tags
       }
-    };
+    }, true);
   } catch (error) {
     logger.error("Error getting current time entry", error);
-    return {
-      success: false,
-      error: {
-        message: (error as Error).message || "An unknown error occurred"
-      }
-    };
+    return sponsorService.createErrorResponse((error as Error).message || "An unknown error occurred");
   }
 }
 

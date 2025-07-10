@@ -1,5 +1,19 @@
 # Changelog
 
+## [Unreleased]
+
+### 🐛 Bug Fixes
+
+- **Fixed Track Time tool response formatting issue**:
+  - Fixed issue where Track Time tools (start/stop time tracking, get time entries, etc.) were executing successfully but returning no output to users
+  - **Root cause**: Time tracking handlers were returning raw JavaScript objects instead of using proper MCP server response formatting
+  - **Solution**: Updated all 6 time tracking handlers to use `sponsorService.createResponse()` method for consistent response formatting
+  - **Handlers fixed**: `handleStartTimeTracking`, `handleStopTimeTracking`, `handleGetTaskTimeEntries`, `handleAddTimeEntry`, `handleDeleteTimeEntry`, `handleGetCurrentTimeEntry`
+  - **Enhanced error handling**: All error responses now use `sponsorService.createErrorResponse()` for consistent error formatting
+  - **Added null safety**: Fixed potential undefined property access in time entries data with proper null checks
+  - **Improved user experience**: Added helpful success messages and proper data structure formatting
+  - **Impact**: Track Time tools now provide clear, formatted JSON responses instead of appearing to run silently
+
 ## v0.8.4 (2025-07-09)
 
 ### 🔒 Security Features
