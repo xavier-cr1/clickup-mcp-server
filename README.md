@@ -6,7 +6,7 @@
 
 A Model Context Protocol (MCP) server for integrating ClickUp tasks with AI applications. This server allows AI agents to interact with ClickUp tasks, spaces, lists, and folders through a standardized protocol.
 
-> 🚀 **Status Update:** v0.8.3 is released with major enhancements! Enhanced workspace tasks filtering with Views API support for multi-list tasks (Issue #43), added ENABLED_TOOLS configuration option (Issue #50), and fixed automatic priority assignment in task creation. See [Release Notes](release-notes.md) for full details.
+> 🚀 **Status Update:** v0.8.4 is released with security features and compatibility improvements! Added comprehensive opt-in enhanced security features, fixed Gemini compatibility (Issue #79), and resolved priority handling and subtask retrieval issues. See [Release Notes](release-notes.md) for full details.
 
 ## Setup
 

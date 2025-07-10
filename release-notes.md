@@ -1,51 +1,65 @@
-# v0.8.3 Release Notes
+# v0.8.4 Release Notes
 
-### 🚀 New Features & Improvements
+### � Security Features
 
-- **Enhanced workspace tasks filtering with Views API support (Issue #43)**:
-  - **Enhanced list filtering**: When `list_ids` are provided, `get_workspace_tasks` now uses ClickUp's Views API for comprehensive task coverage
-  - **Multi-list task support**: Now retrieves tasks that are *associated with* specified lists, including tasks created elsewhere and added to multiple lists
-  - **Two-tier filtering strategy**:
-    - **Server-side filtering**: Supported filters applied at ClickUp API level for efficiency (statuses, assignees, dates, etc.)
-    - **Client-side filtering**: Additional filters applied after data retrieval (tags, folder_ids, space_ids)
-  - **API endpoints used**:
-    - `GET /list/{listId}/view` - Retrieves list views and identifies default list view
-    - `GET /view/{viewId}/task` - Retrieves all tasks associated with the view/list
-  - **Performance optimizations**:
-    - Concurrent API calls for multiple lists using `Promise.all()`
-    - Task deduplication to prevent duplicate results
-    - Automatic summary format switching for large result sets
-    - Safety limits to prevent infinite pagination loops
-  - **Robust error handling**: Graceful degradation when some lists fail, comprehensive logging
-  - **Backward compatibility**: Existing functionality unchanged when `list_ids` not provided
-  - **Impact**: Addresses ClickUp's "tasks in multiple lists" feature, providing complete task coverage for list-based queries
+- **Comprehensive MCP Streamable HTTPS Transport Security Implementation**:
+  - **HTTPS/TLS Support**: Added optional HTTPS server alongside HTTP for encrypted communication
+    - Environment variables: `ENABLE_HTTPS`, `SSL_KEY_PATH`, `SSL_CERT_PATH`, `SSL_CA_PATH`, `HTTPS_PORT`
+    - Dual protocol support: HTTP (3231) and HTTPS (3443) run simultaneously for backwards compatibility
+    - Self-signed certificate generation script: `./scripts/generate-ssl-cert.sh`
+    - Production-ready with CA-issued certificates
+  - **Origin Header Validation**: Prevents cross-site attacks by validating Origin header against whitelist
+    - Environment variable: `ENABLE_ORIGIN_VALIDATION=true`
+    - Default allowed origins: `127.0.0.1:3231`, `localhost:3231`, plus HTTPS variants
+    - Smart handling: Allows non-browser clients (n8n, MCP Inspector) while blocking unauthorized origins
+  - **Rate Limiting Protection**: Protects against DoS attacks with configurable request limits
+    - Environment variable: `ENABLE_RATE_LIMIT=true`
+    - Default: 100 requests per minute per IP address
+    - Configurable via: `RATE_LIMIT_MAX`, `RATE_LIMIT_WINDOW_MS`
+  - **CORS Configuration**: Secure cross-origin resource sharing for web applications
+    - Environment variable: `ENABLE_CORS=true`
+    - Supports GET, POST, DELETE, OPTIONS methods
+    - Headers: Content-Type, mcp-session-id, Authorization
+  - **Security Headers**: Web security best practices when `ENABLE_SECURITY_FEATURES=true`
+    - X-Content-Type-Options, X-Frame-Options, X-XSS-Protection
+    - Referrer-Policy, Strict-Transport-Security (HTTPS only)
+  - **Request Size Limits**: Prevents memory exhaustion attacks
+    - Configurable limit: `MAX_REQUEST_SIZE=10mb` (default)
+    - Hard limit: 50MB maximum
+  - **Security Monitoring**: Comprehensive logging and health endpoint
+    - Health endpoint: `/health` shows security status
+    - Security event logging: origin validation, rate limits, violations
+    - Log levels: DEBUG, INFO, WARN, ERROR for security events
+  - **Zero Breaking Changes**: All security features are opt-in and disabled by default
+    - Existing clients (Claude Desktop, n8n, MCP Inspector) work unchanged
+    - No configuration changes required for current users
+    - Backwards compatibility thoroughly tested and verified
 
-    Thanks @dantearaujo for the help!
+### 🐛 Bug Fixes
 
-- **Added ENABLED_TOOLS configuration option (PR #39 & Issue #50)**:
-  - Added `ENABLED_TOOLS` environment variable and command line argument support
-  - Allows specifying exactly which tools should be available via comma-separated list
-  - Provides complementary functionality to existing `DISABLED_TOOLS` option
-  - **Precedence logic**: `ENABLED_TOOLS` takes precedence over `DISABLED_TOOLS` when both are specified
-  - **Configuration options**:
-    - `ENABLED_TOOLS=tool1,tool2` - Only enable specified tools
-    - `DISABLED_TOOLS=tool1,tool2` - Disable specified tools (legacy approach)
-    - If neither specified, all tools are available (default behavior)
-  - **Enhanced tool filtering**:
-    - Updated `ListToolsRequestSchema` handler to use new filtering logic
-    - Updated `CallToolRequestSchema` handler with improved error messages
-    - Clear distinction between "disabled" vs "not in enabled tools list" errors
-  - **Impact**: Users can now precisely control tool availability for security, context limitations, or workflow optimization
-  - **Backward compatibility**: Existing `DISABLED_TOOLS` functionality unchanged
+- **Fixed Gemini compatibility (Issue #79)**:
+  - **Root cause**: Priority enum values were defined as numbers `[1, 2, 3, 4, null]` but Gemini API expects strings
+  - **Solution**: Updated priority enum to use string values `["1", "2", "3", "4", null]` in `update_task` and `update_bulk_tasks` tools
+  - **Schema changes**: Changed type from `"number"` to `"string"` for priority field in affected tools
+  - **Backward compatibility**: Maintained via existing `toTaskPriority()` function that handles string-to-number conversion
+  - **Impact**: Resolves schema validation errors in Cursor IDE and other Gemini-based MCP clients
+  - **Affected tools**: `update_task_ClickUp__Local_` and `update_bulk_tasks_ClickUp__Local_`
+  - **Testing**: Verified priority setting and removal functionality works correctly
 
-  Thanks @somework & @colinmollenhour for the help!
+- **Fixed priority null handling in task updates (Issue #23)**:
+  - Fixed `update_task` tool failing when setting priority to `null` to clear/remove priority
+  - Modified `buildUpdateData` function to use `toTaskPriority` helper for proper null value conversion
+  - Priority updates now work correctly for both setting valid values (1-4) and clearing priority (null)
+  - Bulk task updates (`update_bulk_tasks`) already worked correctly and continue to function properly
 
-### 🛠️ Bug Fixes
+- **Fixed subtasks not being retrieved (Issue #69)**:
+  - Fixed `getSubtasks` method in `task-core.ts` to include required query parameters
+  - Added `subtasks=true` and `include_subtasks=true` parameters to ClickUp API call
+  - Subtasks are now properly retrieved and displayed when using `get_task` tool with `subtasks=true`
+  - Resolves issue where subtasks arrays were always empty despite subtasks existing in ClickUp
 
-- **Fixed automatic priority assignment in task creation**:
-  - Fixed issue where `create_task` and `create_bulk_tasks` tools were automatically setting priorities even when users didn't specify one
-  - **Root cause**: Priority field was unconditionally included in API requests as `undefined`, which ClickUp interpreted as a request to set a default priority
-  - **Solution**: Priority field is now only included in API requests when explicitly provided by the user
-  - **Impact**: Tasks created without specifying a priority will now have `priority: null` instead of an automatically assigned priority
-  - **Affected tools**: `create_task_ClickUp__Local_` and `create_bulk_tasks_ClickUp__Local_`
-  - **Backward compatibility**: Tasks created with explicit priority values continue to work unchanged
+### 🔧 Compatibility Improvements
+
+- **Enhanced MCP Client Support**: Improved compatibility with Cursor IDE and Gemini-based MCP clients
+- **Schema Standardization**: Aligned tool schemas with MCP protocol best practices for broader client support
+- **Testing Coverage**: Verified functionality across multiple MCP client implementations

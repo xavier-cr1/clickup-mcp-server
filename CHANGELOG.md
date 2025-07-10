@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.8.4 (2025-07-09)
 
 ### 🔒 Security Features
 
