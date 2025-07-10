@@ -8,7 +8,7 @@
  * data formatting, validation, and resolution of IDs from names.
  */
 
-import { 
+import {
   ClickUpTask
 } from '../../services/clickup/types.js';
 import { BatchProcessingOptions } from '../../utils/concurrency-utils.js';
@@ -74,6 +74,73 @@ export function formatTaskData(task: ClickUpTask, additional: any = {}) {
     },
     ...additional
   };
+}
+
+//=============================================================================
+// TASK ID DETECTION UTILITIES
+//=============================================================================
+
+/**
+ * Detects if a task ID is a custom task ID based on common patterns
+ * Custom task IDs typically:
+ * - Contain hyphens (e.g., "DEV-1234", "PROJ-456")
+ * - Have uppercase prefixes followed by numbers
+ * - Are not 9-character alphanumeric strings (regular ClickUp task IDs)
+ *
+ * @param taskId The task ID to check
+ * @returns true if the ID appears to be a custom task ID
+ */
+export function isCustomTaskId(taskId: string): boolean {
+  if (!taskId || typeof taskId !== 'string') {
+    return false;
+  }
+
+  // Trim whitespace
+  taskId = taskId.trim();
+
+  // Regular ClickUp task IDs are typically 9 characters, alphanumeric
+  // Custom task IDs usually have different patterns
+
+  // Check if it's a standard 9-character ClickUp ID (letters and numbers only)
+  const standardIdPattern = /^[a-zA-Z0-9]{9}$/;
+  if (standardIdPattern.test(taskId)) {
+    return false;
+  }
+
+  // Check for common custom task ID patterns:
+  // 1. Contains hyphens (most common pattern: PREFIX-NUMBER)
+  if (taskId.includes('-')) {
+    // Additional validation: should have letters before hyphen and numbers after
+    const hyphenPattern = /^[A-Za-z]+[-][0-9]+$/;
+    return hyphenPattern.test(taskId);
+  }
+
+  // 2. Contains underscores (another common pattern: PREFIX_NUMBER)
+  if (taskId.includes('_')) {
+    const underscorePattern = /^[A-Za-z]+[_][0-9]+$/;
+    return underscorePattern.test(taskId);
+  }
+
+  // 3. Contains uppercase letters followed by numbers (without separators)
+  const customIdPattern = /^[A-Z]+\d+$/;
+  if (customIdPattern.test(taskId)) {
+    return true;
+  }
+
+  // 4. Mixed case with numbers but not 9 characters (less common)
+  const mixedCasePattern = /^[A-Za-z]+\d+$/;
+  if (mixedCasePattern.test(taskId) && taskId.length !== 9) {
+    return true;
+  }
+
+  // 5. Contains dots (some organizations use PROJECT.TASK format)
+  if (taskId.includes('.')) {
+    const dotPattern = /^[A-Za-z]+[.][0-9]+$/;
+    return dotPattern.test(taskId);
+  }
+
+  // If none of the patterns match, assume it's a regular task ID
+  return false;
 }
 
 //=============================================================================
@@ -236,30 +303,7 @@ export function parseBulkOptions(rawOptions: any): BatchProcessingOptions | unde
   return rawOptions;
 }
 
-//=============================================================================
-// ID DETECTION UTILITIES
-//=============================================================================
 
-/**
- * Determines if an ID is a custom ID based on its format
- * Custom IDs typically have an uppercase prefix followed by a hyphen and number (e.g., DEV-1234)
- * Regular task IDs are always 9 characters long
- * 
- * @param id The task ID to check
- * @returns True if the ID appears to be a custom ID
- */
-export function isCustomTaskId(id: string): boolean {
-  if (!id) return false;
-  
-  // Regular task IDs are exactly 9 characters
-  if (id.length === 9) {
-    return false;
-  }
-  
-  // Custom IDs have an uppercase prefix followed by a hyphen and numbers
-  const customIdPattern = /^[A-Z]+-\d+$/;
-  return customIdPattern.test(id);
-}
 
 /**
  * Resolves a list ID from either direct ID or name

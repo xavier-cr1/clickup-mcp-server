@@ -225,16 +225,26 @@ export class TaskServiceCore extends BaseClickUpService {
 
   /**
    * Get a task by its ID
-   * @param taskId The ID of the task to retrieve
+   * Automatically detects custom task IDs and routes them appropriately
+   * @param taskId The ID of the task to retrieve (regular or custom)
    * @returns The task
    */
   async getTask(taskId: string): Promise<ClickUpTask> {
     this.logOperation('getTask', { taskId });
-    
+
+    // Import the detection function here to avoid circular dependencies
+    const { isCustomTaskId } = await import('../../../tools/task/utilities.js');
+
+    // Automatically detect custom task IDs and route to appropriate method
+    if (isCustomTaskId(taskId)) {
+      this.logger.debug('Detected custom task ID, routing to getTaskByCustomId', { taskId });
+      return this.getTaskByCustomId(taskId);
+    }
+
     try {
       return await this.makeRequest(async () => {
         const response = await this.client.get<ClickUpTask>(`/task/${taskId}`);
-        
+
         // Handle both JSON and text responses
         const data = response.data;
         if (typeof data === 'string') {
@@ -244,10 +254,22 @@ export class TaskServiceCore extends BaseClickUpService {
             data
           );
         }
-        
+
         return data;
       });
     } catch (error) {
+      // If this was detected as a regular task ID but failed, provide helpful error message
+      // suggesting it might be a custom ID that wasn't properly detected
+      if (error instanceof ClickUpServiceError && error.code === ErrorCode.NOT_FOUND) {
+        const { isCustomTaskId } = await import('../../../tools/task/utilities.js');
+        if (!isCustomTaskId(taskId) && (taskId.includes('-') || taskId.includes('_'))) {
+          throw new ClickUpServiceError(
+            `Task ${taskId} not found. If this is a custom task ID, ensure your workspace has custom task IDs enabled and you have access to the task.`,
+            ErrorCode.NOT_FOUND,
+            error.data
+          );
+        }
+      }
       throw this.handleError(error, `Failed to get task ${taskId}`);
     }
   }

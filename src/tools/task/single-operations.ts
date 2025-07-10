@@ -170,7 +170,7 @@ export const updateTaskTool = {
     properties: {
       taskId: {
         type: "string",
-        description: "ID of task to update (preferred). Works with both regular task IDs (9 characters) and custom IDs with uppercase prefixes (like 'DEV-1234')."
+        description: "ID of task to update (preferred). Automatically detects and handles both regular task IDs (9 characters) and custom IDs (like 'DEV-1234', 'PROJ-456')."
       },
       taskName: {
         type: "string",
@@ -256,7 +256,7 @@ export const moveTaskTool = {
     properties: {
       taskId: {
         type: "string",
-        description: "ID of the task to move (preferred). Works with both regular task IDs (9 characters) and custom IDs with uppercase prefixes (like 'DEV-1234')."
+        description: "ID of the task to move (preferred). Automatically detects and handles both regular task IDs (9 characters) and custom IDs (like 'DEV-1234', 'PROJ-456')."
       },
       taskName: {
         type: "string",
@@ -290,7 +290,7 @@ export const duplicateTaskTool = {
     properties: {
       taskId: {
         type: "string",
-        description: "ID of task to duplicate (preferred). Works with both regular task IDs (9 characters) and custom IDs with uppercase prefixes (like 'DEV-1234')."
+        description: "ID of task to duplicate (preferred). Automatically detects and handles both regular task IDs (9 characters) and custom IDs (like 'DEV-1234', 'PROJ-456')."
       },
       taskName: {
         type: "string",
@@ -318,13 +318,13 @@ export const duplicateTaskTool = {
  */
 export const getTaskTool = {
   name: "get_task",
-  description: `Gets task details by taskId (works with regular/custom IDs) or taskName. For taskName search, provide listName for faster lookup. Set subtasks=true to include all subtask details.`,
+  description: `Gets task details by taskId (automatically handles both regular and custom IDs) or taskName. For taskName search, provide listName for faster lookup. Set subtasks=true to include all subtask details.`,
   inputSchema: {
     type: "object",
     properties: {
       taskId: {
         type: "string",
-        description: "ID of task to retrieve (preferred). Works with both regular task IDs (9 characters) and custom IDs with uppercase prefixes (like 'DEV-1234'). The system automatically detects the ID format."
+        description: "ID of task to retrieve (preferred). Automatically detects and handles both regular task IDs (9 characters) and custom IDs (like 'DEV-1234', 'PROJ-456'). Simply provide any task ID format here."
       },
       taskName: {
         type: "string",
@@ -336,7 +336,7 @@ export const getTaskTool = {
       },
       customTaskId: {
         type: "string",
-        description: "Custom task ID (e.g., 'DEV-1234'). Only use this if you want to explicitly force custom ID lookup. In most cases, you can just use taskId which auto-detects ID format."
+        description: "Custom task ID (e.g., 'DEV-1234'). This parameter is now optional since taskId automatically handles custom IDs. Use only for explicit custom ID lookup or backward compatibility."
       },
       subtasks: {
         type: "boolean",
@@ -416,7 +416,7 @@ export const getTaskCommentsTool = {
     properties: {
       taskId: {
         type: "string",
-        description: "ID of task to retrieve comments for (preferred). Works with both regular task IDs (9 characters) and custom IDs with uppercase prefixes (like 'DEV-1234')."
+        description: "ID of task to retrieve comments for (preferred). Automatically detects and handles both regular task IDs (9 characters) and custom IDs (like 'DEV-1234', 'PROJ-456')."
       },
       taskName: {
         type: "string",
@@ -449,7 +449,7 @@ export const createTaskCommentTool = {
     properties: {
       taskId: {
         type: "string",
-        description: "ID of task to comment on (preferred). Works with both regular task IDs (9 characters) and custom IDs with uppercase prefixes (like 'DEV-1234')."
+        description: "ID of task to comment on (preferred). Automatically detects and handles both regular task IDs (9 characters) and custom IDs (like 'DEV-1234', 'PROJ-456')."
       },
       taskName: {
         type: "string",
@@ -487,7 +487,7 @@ export const deleteTaskTool = {
     properties: {
       taskId: {
         type: "string",
-        description: "ID of task to delete (preferred). Works with both regular task IDs (9 characters) and custom IDs with uppercase prefixes (like 'DEV-1234')."
+        description: "ID of task to delete (preferred). Automatically detects and handles both regular task IDs (9 characters) and custom IDs (like 'DEV-1234', 'PROJ-456')."
       },
       taskName: {
         type: "string",

@@ -91,6 +91,36 @@ For detailed SSE setup instructions, see [SSE Transport Documentation](sse-trans
   - Prioritizes most recently updated task when multiple matches exist
   - Backward compatible with list-specific lookups
 
+### Custom Task ID Support
+
+The MCP server automatically detects and handles custom task IDs. You can use either regular ClickUp task IDs or custom task IDs interchangeably in the `taskId` parameter.
+
+**Supported Custom ID Formats:**
+- Hyphenated format: `DEV-1234`, `PROJ-456`, `BUG-789`
+- Underscore format: `DEV_1234`, `PROJ_456`
+- Uppercase prefix: `DEV1234`, `PROJ456`
+- Dot notation: `PROJECT.123`, `TEAM.456`
+
+**Examples:**
+```json
+{
+  "taskId": "DEV-1234"  // Custom ID - automatically detected
+}
+```
+
+```json
+{
+  "taskId": "86b4bnnny"  // Regular ClickUp ID - 9 characters
+}
+```
+
+**Requirements:**
+- Your ClickUp workspace must have custom task IDs enabled
+- You must have access to the task
+- Custom IDs must follow your workspace's configured format
+
+**Note:** The `customTaskId` parameter is still available for backward compatibility, but it's no longer required since `taskId` automatically handles both formats.
+
 ### Examples
 
 #### Creating a Task
@@ -1328,14 +1358,6 @@ Edit page 8cdu22c-36293 adding, in the end, another information...
   }
 }
 ```
-
-## Prompts
-
-| Prompt | Purpose | Features |
-|--------|---------|----------|
-| summarize_tasks | Generate task overview | Status summary, relationships, current states |
-| analyze_priorities | Review task priorities | Priority review, adjustments, sequencing |
-| generate_description | Create task descriptions | Structure, objectives, dependencies |
 
 ## Common Parameters
 

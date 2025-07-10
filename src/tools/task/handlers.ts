@@ -232,7 +232,7 @@ async function findTask(params: {
   }
 
   try {
-    // Direct path for taskId - most efficient
+    // Direct path for taskId - most efficient (now includes automatic custom ID detection)
     if (taskId) {
       const task = await taskService.getTask(taskId);
 
@@ -245,7 +245,8 @@ async function findTask(params: {
       return { task };
     }
 
-    // Direct path for customTaskId - also efficient
+    // Direct path for customTaskId - for explicit custom ID requests
+    // Note: This is now mainly for backward compatibility since getTask() handles custom IDs automatically
     if (customTaskId) {
       const task = await taskService.getTaskByCustomId(customTaskId);
 

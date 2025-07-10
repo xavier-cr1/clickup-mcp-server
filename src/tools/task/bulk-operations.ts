@@ -67,10 +67,10 @@ const bulkOptionsSchema = {
 const taskIdentifierSchema = {
   taskId: {
     type: "string",
-    description: "Task ID (preferred). Works with both regular task IDs (9 characters) and custom IDs with uppercase prefixes (like 'DEV-1234')."
+    description: "Task ID (preferred). Automatically detects and handles both regular task IDs (9 characters) and custom IDs (like 'DEV-1234', 'PROJ-456')."
   },
   taskName: {
-    type: "string", 
+    type: "string",
     description: "Task name. Requires listName when used."
   },
   listName: {
@@ -79,7 +79,7 @@ const taskIdentifierSchema = {
   },
   customTaskId: {
     type: "string",
-    description: "Custom task ID (e.g., 'DEV-1234'). Only use if you want to explicitly force custom ID lookup. In most cases, use taskId which auto-detects ID format."
+    description: "Custom task ID (e.g., 'DEV-1234'). This parameter is now optional since taskId automatically handles custom IDs. Use only for explicit custom ID lookup or backward compatibility."
   }
 };
 
@@ -195,7 +195,7 @@ export const updateBulkTasksTool = {
           properties: {
             taskId: {
               type: "string",
-              description: "Task ID (preferred). Works with both regular task IDs (9 characters) and custom IDs with uppercase prefixes (like 'DEV-1234')."
+              description: "Task ID (preferred). Automatically detects and handles both regular task IDs (9 characters) and custom IDs (like 'DEV-1234', 'PROJ-456')."
             },
             taskName: {
               type: "string",
@@ -288,7 +288,7 @@ export const moveBulkTasksTool = {
           properties: {
             taskId: {
               type: "string",
-              description: "Task ID (preferred). Works with both regular task IDs (9 characters) and custom IDs with uppercase prefixes (like 'DEV-1234')."
+              description: "Task ID (preferred). Automatically detects and handles both regular task IDs (9 characters) and custom IDs (like 'DEV-1234', 'PROJ-456')."
             },
             taskName: {
               type: "string",
@@ -336,7 +336,7 @@ export const deleteBulkTasksTool = {
           properties: {
             taskId: {
               type: "string",
-              description: "Task ID (preferred). Works with both regular task IDs (9 characters) and custom IDs with uppercase prefixes (like 'DEV-1234')."
+              description: "Task ID (preferred). Automatically detects and handles both regular task IDs (9 characters) and custom IDs (like 'DEV-1234', 'PROJ-456')."
             },
             taskName: {
               type: "string",
