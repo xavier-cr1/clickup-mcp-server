@@ -1,8 +1,8 @@
 # Changelog
 
-## [Unreleased]
+## Unreleased
 
-### 🚀 New Features & Improvements
+### 🚀 New Improvements
 
 - **Major Enhancement: Advanced Date Parsing System (Option A Implementation)**:
   - **Smart Preprocessing Layer**: Automatically corrects typos and normalizes natural language expressions
