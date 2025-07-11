@@ -173,13 +173,27 @@ async function buildUpdateData(params: any): Promise<UpdateTaskData> {
   }
 
   if (params.dueDate !== undefined) {
-    updateData.due_date = parseDueDate(params.dueDate);
-    updateData.due_date_time = true;
+    const parsedDueDate = parseDueDate(params.dueDate);
+    if (parsedDueDate !== undefined) {
+      updateData.due_date = parsedDueDate;
+      updateData.due_date_time = true;
+    } else {
+      // Clear the due date by setting it to null
+      updateData.due_date = null;
+      updateData.due_date_time = false;
+    }
   }
 
   if (params.startDate !== undefined) {
-    updateData.start_date = parseDueDate(params.startDate);
-    updateData.start_date_time = true;
+    const parsedStartDate = parseDueDate(params.startDate);
+    if (parsedStartDate !== undefined) {
+      updateData.start_date = parsedStartDate;
+      updateData.start_date_time = true;
+    } else {
+      // Clear the start date by setting it to null
+      updateData.start_date = null;
+      updateData.start_date_time = false;
+    }
   }
 
   // Handle time estimate if provided - convert from string to minutes

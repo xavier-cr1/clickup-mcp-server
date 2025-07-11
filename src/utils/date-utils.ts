@@ -63,9 +63,158 @@ function getCurrentTimestamp(): number {
 }
 
 /**
+ * Smart preprocessing layer for date strings
+ * Normalizes input, handles common variations, and prepares for regex patterns
+ *
+ * @param input Raw date string input
+ * @returns Preprocessed and normalized date string
+ */
+function preprocessDateString(input: string): string {
+  if (!input) return input;
+
+  let processed = input.toLowerCase().trim();
+
+  // Normalize common variations and typos
+  const normalizations: Array<[RegExp, string]> = [
+    // Handle common typos and variations
+    [/\btommorow\b/g, 'tomorrow'],
+    [/\byesterady\b/g, 'yesterday'],
+    [/\btomorrow\s*mornin[g]?\b/g, 'tomorrow 9am'],
+    [/\byesterday\s*mornin[g]?\b/g, 'yesterday 9am'],
+    [/\btomorrow\s*evenin[g]?\b/g, 'tomorrow 6pm'],
+    [/\byesterday\s*evenin[g]?\b/g, 'yesterday 6pm'],
+    [/\btomorrow\s*night\b/g, 'tomorrow 9pm'],
+    [/\byesterday\s*night\b/g, 'yesterday 9pm'],
+
+    // Normalize time expressions
+    [/\b(\d{1,2})\s*:\s*(\d{2})\s*(a\.?m\.?|p\.?m\.?)\b/g, '$1:$2$3'],
+    [/\b(\d{1,2})\s*(a\.?m\.?|p\.?m\.?)\b/g, '$1$2'],
+    [/\ba\.?m\.?\b/g, 'am'],
+    [/\bp\.?m\.?\b/g, 'pm'],
+
+    // Normalize "at" usage
+    [/\s+at\s+/g, ' '],
+    [/\s+@\s+/g, ' '],
+
+    // Handle "day after tomorrow" and "day before yesterday"
+    [/\bday\s+after\s+tomorrow\b/g, '+2 days'],
+    [/\bday\s+before\s+yesterday\b/g, '-2 days'],
+
+    // Normalize relative expressions
+    [/\bin\s+(\d+)\s+days?\b/g, '+$1 days'],
+    [/\b(\d+)\s+days?\s+ago\b/g, '-$1 days'],
+    [/\bin\s+(\d+)\s+weeks?\b/g, '+$1 weeks'],
+    [/\b(\d+)\s+weeks?\s+ago\b/g, '-$1 weeks'],
+    [/\b(\d+)\s+weeks?\s+from\s+now\b/g, '+$1 weeks'],
+    [/\b(\d+)\s+days?\s+from\s+now\b/g, '+$1 days'],
+
+    // Handle "this" and "next" prefixes more consistently
+    [/\bthis\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/g, '$1'],
+    [/\bnext\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/g, 'next $1'],
+
+    // Normalize timezone abbreviations (remove them for now)
+    [/\s+(est|edt|pst|pdt|cst|cdt|mst|mdt)\b/g, ''],
+
+    // Clean up extra whitespace
+    [/\s+/g, ' '],
+  ];
+
+  // Apply all normalizations
+  for (const [pattern, replacement] of normalizations) {
+    processed = processed.replace(pattern, replacement);
+  }
+
+  return processed.trim();
+}
+
+/**
+ * Helper function to parse time components and convert to 24-hour format
+ * Reduces code duplication across different date parsing patterns
+ */
+function parseTimeComponents(hours: string, minutes?: string, meridian?: string): { hours: number; minutes: number } {
+  let parsedHours = parseInt(hours);
+  const parsedMinutes = minutes ? parseInt(minutes) : 0;
+
+  // Convert to 24-hour format if meridian is specified
+  if (meridian?.toLowerCase() === 'pm' && parsedHours < 12) parsedHours += 12;
+  if (meridian?.toLowerCase() === 'am' && parsedHours === 12) parsedHours = 0;
+
+  return { hours: parsedHours, minutes: parsedMinutes };
+}
+
+/**
+ * Helper function to set time on a date object with default fallback
+ */
+function setTimeOnDate(date: Date, hours?: string, minutes?: string, meridian?: string): void {
+  if (hours) {
+    const { hours: parsedHours, minutes: parsedMinutes } = parseTimeComponents(hours, minutes, meridian);
+    date.setHours(parsedHours, parsedMinutes, 0, 0);
+  } else {
+    // Default to end of day if no time specified
+    date.setHours(23, 59, 59, 999);
+  }
+}
+
+/**
+ * Enhanced pattern matching with consolidated regex patterns
+ * Uses more flexible patterns to reduce redundancy
+ */
+interface DatePattern {
+  name: string;
+  pattern: RegExp;
+  handler: (match: RegExpMatchArray) => Date | null;
+}
+
+/**
+ * Consolidated date patterns with enhanced flexibility
+ */
+function getDatePatterns(): DatePattern[] {
+  return [
+    // Relative day expressions with optional time
+    {
+      name: 'relative_days',
+      pattern: /^([+-]?\d+)\s+days?(?:\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?)?$/,
+      handler: (match) => {
+        const days = parseInt(match[1]);
+        const date = new Date();
+        date.setDate(date.getDate() + days);
+        setTimeOnDate(date, match[2], match[3], match[4]);
+        return date;
+      }
+    },
+
+    // Relative week expressions with optional time
+    {
+      name: 'relative_weeks',
+      pattern: /^([+-]?\d+)\s+weeks?(?:\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?)?$/,
+      handler: (match) => {
+        const weeks = parseInt(match[1]);
+        const date = new Date();
+        date.setDate(date.getDate() + (weeks * 7));
+        setTimeOnDate(date, match[2], match[3], match[4]);
+        return date;
+      }
+    },
+
+    // Yesterday/Tomorrow with enhanced time support
+    {
+      name: 'yesterday_tomorrow',
+      pattern: /^(yesterday|tomorrow)(?:\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?)?$/,
+      handler: (match) => {
+        const isYesterday = match[1] === 'yesterday';
+        const date = new Date();
+        date.setDate(date.getDate() + (isYesterday ? -1 : 1));
+        setTimeOnDate(date, match[2], match[3], match[4]);
+        return date;
+      }
+    }
+  ];
+}
+
+/**
  * Parse a due date string into a timestamp
- * Supports ISO 8601 format or natural language like "tomorrow"
- * 
+ * Enhanced with smart preprocessing and consolidated patterns
+ *
  * @param dateString Date string to parse
  * @returns Timestamp in milliseconds or undefined if parsing fails
  */
@@ -77,13 +226,30 @@ export function parseDueDate(dateString: string): number | undefined {
     const numericValue = Number(dateString);
     if (!isNaN(numericValue) && numericValue > 0) {
       // If it's a reasonable timestamp (after year 2000), use it
-      if (numericValue > 946684800000) { // Jan 1, 2000
+      if (numericValue >= 946684800000) { // Jan 1, 2000 (inclusive)
         return numericValue;
       }
     }
 
-    // Handle natural language dates
-    const lowerDate = dateString.toLowerCase().trim();
+    // Apply smart preprocessing
+    const preprocessed = preprocessDateString(dateString);
+    logger.debug(`Preprocessed date: "${dateString}" -> "${preprocessed}"`);
+
+    // Handle natural language dates with preprocessed input
+    const lowerDate = preprocessed;
+
+    // Try enhanced pattern matching first
+    const patterns = getDatePatterns();
+    for (const pattern of patterns) {
+      const match = lowerDate.match(pattern.pattern);
+      if (match) {
+        const result = pattern.handler(match);
+        if (result && !isNaN(result.getTime())) {
+          logger.debug(`Matched pattern "${pattern.name}" for: ${lowerDate}`);
+          return result.getTime();
+        }
+      }
+    }
 
     // Handle "now" specifically
     if (lowerDate === 'now') {
@@ -103,20 +269,7 @@ export function parseDueDate(dateString: string): number | undefined {
       return getEndOfDay();
     }
 
-    // Handle "yesterday" and "tomorrow"
-    if (lowerDate === 'yesterday') {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      yesterday.setHours(23, 59, 59, 999);
-      return yesterday.getTime();
-    }
-
-    if (lowerDate === 'tomorrow') {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      tomorrow.setHours(23, 59, 59, 999);
-      return tomorrow.getTime();
-    }
+    // Note: Yesterday/tomorrow patterns are now handled by enhanced patterns above
 
     // Handle day names (Monday, Tuesday, etc.) - find next occurrence
     const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -143,84 +296,22 @@ export function parseDueDate(dateString: string): number | undefined {
 
       // Extract time if specified (e.g., "Friday at 3pm", "Saturday 2:30pm")
       const timeMatch = lowerDate.match(/(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
-      if (timeMatch) {
-        let hours = parseInt(timeMatch[1]);
-        const minutes = timeMatch[2] ? parseInt(timeMatch[2]) : 0;
-        const meridian = timeMatch[3]?.toLowerCase();
-
-        // Convert to 24-hour format
-        if (meridian === 'pm' && hours < 12) hours += 12;
-        if (meridian === 'am' && hours === 12) hours = 0;
-
-        targetDate.setHours(hours, minutes, 0, 0);
-      } else {
-        // Default to end of day if no time specified
-        targetDate.setHours(23, 59, 59, 999);
-      }
+      setTimeOnDate(targetDate, timeMatch?.[1], timeMatch?.[2], timeMatch?.[3]);
 
       return targetDate.getTime();
     }
     
-    // Handle relative dates with specific times
-    const relativeTimeRegex = /(?:(\d+)\s*(minutes?|hours?|days?|weeks?|months?)\s*from\s*now|tomorrow|next\s+(?:week|month|year))\s*(?:at\s+(\d+)(?::(\d+))?\s*(am|pm)?)?/i;
-    const match = lowerDate.match(relativeTimeRegex);
-    
-    if (match) {
-      const date = new Date();
-      const [_, amount, unit, hours, minutes, meridian] = match;
-      
-      // Calculate the future date
-      if (amount && unit) {
-        const value = parseInt(amount);
-        if (unit.startsWith('minute')) {
-          date.setMinutes(date.getMinutes() + value);
-        } else if (unit.startsWith('hour')) {
-          date.setHours(date.getHours() + value);
-        } else if (unit.startsWith('day')) {
-          date.setDate(date.getDate() + value);
-        } else if (unit.startsWith('week')) {
-          date.setDate(date.getDate() + (value * 7));
-        } else if (unit.startsWith('month')) {
-          date.setMonth(date.getMonth() + value);
-        }
-      } else if (lowerDate.startsWith('tomorrow')) {
-        date.setDate(date.getDate() + 1);
-      } else if (lowerDate.includes('next week')) {
-        date.setDate(date.getDate() + 7);
-      } else if (lowerDate.includes('next month')) {
-        date.setMonth(date.getMonth() + 1);
-      } else if (lowerDate.includes('next year')) {
-        date.setFullYear(date.getFullYear() + 1);
-      }
-
-      // Set the time if specified
-      if (hours) {
-        let parsedHours = parseInt(hours);
-        const parsedMinutes = minutes ? parseInt(minutes) : 0;
-        
-        // Convert to 24-hour format if meridian is specified
-        if (meridian?.toLowerCase() === 'pm' && parsedHours < 12) parsedHours += 12;
-        if (meridian?.toLowerCase() === 'am' && parsedHours === 12) parsedHours = 0;
-        
-        date.setHours(parsedHours, parsedMinutes, 0, 0);
-      } else {
-        // Default to end of day if no time specified
-        date.setHours(23, 59, 59, 999);
-      }
-      
-      return date.getTime();
-    }
-    
-    // Handle various relative formats
-    const relativeFormats = [
+    // Note: Relative date patterns are now handled by enhanced patterns above
+    // Legacy support for "X from now" patterns
+    const legacyRelativeFormats = [
       { regex: /(\d+)\s*minutes?\s*from\s*now/i, handler: (m: number) => getRelativeTimestamp(m) },
       { regex: /(\d+)\s*hours?\s*from\s*now/i, handler: (h: number) => getRelativeTimestamp(0, h) },
       { regex: /(\d+)\s*days?\s*from\s*now/i, handler: (d: number) => getRelativeTimestamp(0, 0, d) },
       { regex: /(\d+)\s*weeks?\s*from\s*now/i, handler: (w: number) => getRelativeTimestamp(0, 0, 0, w) },
       { regex: /(\d+)\s*months?\s*from\s*now/i, handler: (m: number) => getRelativeTimestamp(0, 0, 0, 0, m) }
     ];
-    
-    for (const format of relativeFormats) {
+
+    for (const format of legacyRelativeFormats) {
       if (format.regex.test(lowerDate)) {
         const value = parseInt(lowerDate.match(format.regex)![1]);
         return format.handler(value);
@@ -228,8 +319,8 @@ export function parseDueDate(dateString: string): number | undefined {
     }
     
     // Handle specific date formats
-    // Format: MM/DD/YYYY
-    const usDateRegex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2})(?::(\d{1,2}))?(?:\s+(am|pm))?)?$/i;
+    // Format: MM/DD/YYYY with enhanced time support (handles both "5pm" and "5 pm")
+    const usDateRegex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2})(?::(\d{1,2}))?\s*(am|pm)?)?$/i;
     const usDateMatch = lowerDate.match(usDateRegex);
     
     if (usDateMatch) {
@@ -241,71 +332,162 @@ export function parseDueDate(dateString: string): number | undefined {
       );
       
       // Add time if specified
-      if (hours) {
-        let parsedHours = parseInt(hours);
-        const parsedMinutes = minutes ? parseInt(minutes) : 0;
-        
-        // Convert to 24-hour format if meridian is specified
-        if (meridian?.toLowerCase() === 'pm' && parsedHours < 12) parsedHours += 12;
-        if (meridian?.toLowerCase() === 'am' && parsedHours === 12) parsedHours = 0;
-        
-        date.setHours(parsedHours, parsedMinutes, 0, 0);
-      } else {
-        // Default to end of day if no time specified
-        date.setHours(23, 59, 59, 999);
-      }
+      setTimeOnDate(date, hours, minutes, meridian);
       
       return date.getTime();
     }
-    
-    // Enhanced fallback: Try JavaScript's native Date constructor with various formats
-    // This handles many natural language formats like "Saturday at 3pm EST", "next Friday", etc.
-    const nativeDate = new Date(dateString);
-    if (!isNaN(nativeDate.getTime())) {
-      // Check if the parsed date is reasonable (not too far in the past or future)
-      const now = Date.now();
-      const oneYearAgo = now - (365 * 24 * 60 * 60 * 1000);
-      const tenYearsFromNow = now + (10 * 365 * 24 * 60 * 60 * 1000);
 
-      if (nativeDate.getTime() > oneYearAgo && nativeDate.getTime() < tenYearsFromNow) {
-        return nativeDate.getTime();
+    // Handle MM/DD format without year (assume current year)
+    const usDateNoYearRegex = /^(\d{1,2})\/(\d{1,2})(?:\s+(\d{1,2})(?::(\d{1,2}))?\s*(am|pm)?)?$/i;
+    const usDateNoYearMatch = lowerDate.match(usDateNoYearRegex);
+
+    if (usDateNoYearMatch) {
+      const [_, month, day, hours, minutes, meridian] = usDateNoYearMatch;
+      const currentYear = new Date().getFullYear();
+      const date = new Date(
+        currentYear,
+        parseInt(month) - 1, // JS months are 0-indexed
+        parseInt(day)
+      );
+
+      // Add time if specified
+      setTimeOnDate(date, hours, minutes, meridian);
+
+      return date.getTime();
+    }
+
+    // Handle text month formats (e.g., "march 10 2025 6:30pm")
+    const textMonthRegex = /^(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})\s+(\d{4})(?:\s+(\d{1,2})(?::(\d{1,2}))?\s*(am|pm)?)?$/i;
+    const textMonthMatch = lowerDate.match(textMonthRegex);
+
+    if (textMonthMatch) {
+      const [_, monthName, day, year, hours, minutes, meridian] = textMonthMatch;
+      const monthNames = ['january', 'february', 'march', 'april', 'may', 'june',
+                         'july', 'august', 'september', 'october', 'november', 'december'];
+      const monthIndex = monthNames.indexOf(monthName.toLowerCase());
+
+      if (monthIndex !== -1) {
+        const date = new Date(
+          parseInt(year),
+          monthIndex,
+          parseInt(day)
+        );
+
+        // Add time if specified
+        setTimeOnDate(date, hours, minutes, meridian);
+
+        return date.getTime();
       }
     }
 
-    // Try some common variations and transformations
-    const variations = [
-      dateString.replace(/\s+at\s+/i, ' '), // "Saturday at 3pm" -> "Saturday 3pm"
-      dateString.replace(/\s+EST|EDT|PST|PDT|CST|CDT|MST|MDT/i, ''), // Remove timezone
-      dateString.replace(/next\s+/i, ''), // "next Friday" -> "Friday"
-      dateString.replace(/this\s+/i, ''), // "this Friday" -> "Friday"
-    ];
-
-    for (const variation of variations) {
-      const varDate = new Date(variation);
-      if (!isNaN(varDate.getTime())) {
-        const now = Date.now();
-        const oneYearAgo = now - (365 * 24 * 60 * 60 * 1000);
-        const tenYearsFromNow = now + (10 * 365 * 24 * 60 * 60 * 1000);
-
-        if (varDate.getTime() > oneYearAgo && varDate.getTime() < tenYearsFromNow) {
-          // If the parsed date is in the past, assume they meant next occurrence
-          if (varDate.getTime() < now) {
-            // Add 7 days if it's a day of the week
-            if (dateString.match(/monday|tuesday|wednesday|thursday|friday|saturday|sunday/i)) {
-              varDate.setDate(varDate.getDate() + 7);
-            }
-          }
-          return varDate.getTime();
-        }
-      }
-    }
-
-    // If all parsing fails, return undefined
-    return undefined;
+    // Enhanced fallback chain with better validation and error handling
+    return enhancedFallbackParsing(dateString, preprocessed);
   } catch (error) {
     logger.warn(`Failed to parse due date: ${dateString}`, error);
     throw new Error(`Invalid date format: ${dateString}`);
   }
+}
+
+/**
+ * Enhanced fallback parsing with multiple strategies
+ *
+ * @param originalInput Original date string
+ * @param preprocessedInput Preprocessed date string
+ * @returns Timestamp in milliseconds or undefined
+ */
+function enhancedFallbackParsing(originalInput: string, preprocessedInput: string): number | undefined {
+  const now = Date.now();
+  const oneYearAgo = now - (365 * 24 * 60 * 60 * 1000);
+  const tenYearsFromNow = now + (10 * 365 * 24 * 60 * 60 * 1000);
+
+  /**
+   * Validate if a date is reasonable
+   */
+  function isReasonableDate(date: Date): boolean {
+    const time = date.getTime();
+    return !isNaN(time) && time > oneYearAgo && time < tenYearsFromNow;
+  }
+
+  /**
+   * Try parsing with automatic future adjustment for past dates
+   */
+  function tryParseWithFutureAdjustment(input: string): Date | null {
+    const date = new Date(input);
+    if (!isReasonableDate(date)) return null;
+
+    // If the parsed date is in the past and looks like a day of the week, assume next occurrence
+    if (date.getTime() < now && input.match(/monday|tuesday|wednesday|thursday|friday|saturday|sunday/i)) {
+      date.setDate(date.getDate() + 7);
+    }
+
+    return isReasonableDate(date) ? date : null;
+  }
+
+  // Strategy 1: Try preprocessed input with native Date constructor
+  let result = tryParseWithFutureAdjustment(preprocessedInput);
+  if (result) {
+    logger.debug(`Fallback strategy 1 succeeded for: ${preprocessedInput}`);
+    return result.getTime();
+  }
+
+  // Strategy 2: Try original input with native Date constructor
+  result = tryParseWithFutureAdjustment(originalInput);
+  if (result) {
+    logger.debug(`Fallback strategy 2 succeeded for: ${originalInput}`);
+    return result.getTime();
+  }
+
+  // Strategy 3: Try common variations and transformations
+  const variations = [
+    // Remove common words that might confuse the parser
+    originalInput.replace(/\s+at\s+/gi, ' '),
+    originalInput.replace(/\s+(est|edt|pst|pdt|cst|cdt|mst|mdt)\b/gi, ''),
+    originalInput.replace(/\bnext\s+/gi, ''),
+    originalInput.replace(/\bthis\s+/gi, ''),
+    originalInput.replace(/\bon\s+/gi, ''),
+
+    // Try with different separators
+    originalInput.replace(/[-\/]/g, '/'),
+    originalInput.replace(/[-\/]/g, '-'),
+
+    // Try adding current year if it looks like a date without year
+    (() => {
+      const currentYear = new Date().getFullYear();
+      if (originalInput.match(/^\d{1,2}[\/\-]\d{1,2}$/)) {
+        return `${originalInput}/${currentYear}`;
+      }
+      return originalInput;
+    })(),
+  ];
+
+  for (const variation of variations) {
+    if (variation === originalInput) continue; // Skip if no change
+
+    result = tryParseWithFutureAdjustment(variation);
+    if (result) {
+      logger.debug(`Fallback strategy 3 succeeded with variation: ${variation}`);
+      return result.getTime();
+    }
+  }
+
+  // Strategy 4: Last resort - try ISO format variations
+  const isoVariations = [
+    originalInput.replace(/(\d{4})-(\d{1,2})-(\d{1,2})/, '$1-$2-$3T23:59:59'),
+    originalInput.replace(/(\d{1,2})\/(\d{1,2})\/(\d{4})/, '$3-$1-$2'),
+  ];
+
+  for (const isoVariation of isoVariations) {
+    if (isoVariation === originalInput) continue;
+
+    const date = new Date(isoVariation);
+    if (isReasonableDate(date)) {
+      logger.debug(`Fallback strategy 4 succeeded with ISO variation: ${isoVariation}`);
+      return date.getTime();
+    }
+  }
+
+  logger.debug(`All fallback strategies failed for: ${originalInput}`);
+  return undefined;
 }
 
 /**
