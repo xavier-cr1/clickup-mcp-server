@@ -1,11 +1,5 @@
 # Changelog
 
-## Unreleased
-
-### 🚀 New Features & Improvements
-
-### 🐛 Bug Fixes
-
 ## v0.8.5 (2025-07-11)
 
 ### 🚀 New Features & Improvements
