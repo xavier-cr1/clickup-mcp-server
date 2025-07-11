@@ -76,6 +76,16 @@ function preprocessDateString(input: string): string {
 
   // Normalize common variations and typos
   const normalizations: Array<[RegExp, string]> = [
+    // Handle "a" and "an" as "1" FIRST (before other patterns)
+    [/\ba\s+(day|week|month|year)\s+ago\b/g, '1 $1 ago'],
+    [/\ba\s+(day|week|month|year)\s+from\s+now\b/g, '1 $1 from now'],
+    [/\ba\s+(day|week|month|year)\s+later\b/g, '1 $1 later'],
+    [/\ban\s+(hour|day|week|month|year)\s+ago\b/g, '1 $1 ago'],
+    [/\ban\s+(hour|day|week|month|year)\s+from\s+now\b/g, '1 $1 from now'],
+    [/\ban\s+(hour|day|week|month|year)\s+later\b/g, '1 $1 later'],
+    [/\bin\s+a\s+(day|week|month|year)\b/g, 'in 1 $1'],
+    [/\bin\s+an\s+(hour|day|week|month|year)\b/g, 'in 1 $1'],
+
     // Handle common typos and variations
     [/\btommorow\b/g, 'tomorrow'],
     [/\byesterady\b/g, 'yesterday'],
@@ -92,21 +102,69 @@ function preprocessDateString(input: string): string {
     [/\ba\.?m\.?\b/g, 'am'],
     [/\bp\.?m\.?\b/g, 'pm'],
 
-    // Normalize "at" usage
+    // Normalize "at" usage and additional time connectors
     [/\s+at\s+/g, ' '],
     [/\s+@\s+/g, ' '],
+    [/\s+around\s+/g, ' '],
+    [/\s+by\s+/g, ' '],
+    [/\s+on\s+/g, ' '],
 
-    // Handle "day after tomorrow" and "day before yesterday"
+    // Handle "day after tomorrow" and "day before yesterday" + additional variations
     [/\bday\s+after\s+tomorrow\b/g, '+2 days'],
     [/\bday\s+before\s+yesterday\b/g, '-2 days'],
+    [/\bovermorrow\b/g, '+2 days'], // Formal term for "day after tomorrow"
+    [/\bereyesterday\b/g, '-2 days'], // Formal term for "day before yesterday"
 
-    // Normalize relative expressions
+    // Handle "next/last" with time units
+    [/\bnext\s+(\d+)\s+days?\b/g, '+$1 days'],
+    [/\bnext\s+(\d+)\s+weeks?\b/g, '+$1 weeks'],
+    [/\blast\s+(\d+)\s+days?\b/g, '-$1 days'],
+    [/\blast\s+(\d+)\s+weeks?\b/g, '-$1 weeks'],
+
+    // Normalize relative expressions - comprehensive natural language support
     [/\bin\s+(\d+)\s+days?\b/g, '+$1 days'],
     [/\b(\d+)\s+days?\s+ago\b/g, '-$1 days'],
     [/\bin\s+(\d+)\s+weeks?\b/g, '+$1 weeks'],
     [/\b(\d+)\s+weeks?\s+ago\b/g, '-$1 weeks'],
     [/\b(\d+)\s+weeks?\s+from\s+now\b/g, '+$1 weeks'],
     [/\b(\d+)\s+days?\s+from\s+now\b/g, '+$1 days'],
+
+    // Additional natural language variations
+    [/\b(\d+)\s+days?\s+later\b/g, '+$1 days'],
+    [/\b(\d+)\s+weeks?\s+later\b/g, '+$1 weeks'],
+    [/\bafter\s+(\d+)\s+days?\b/g, '+$1 days'],
+    [/\bafter\s+(\d+)\s+weeks?\b/g, '+$1 weeks'],
+    [/\b(\d+)\s+days?\s+ahead\b/g, '+$1 days'],
+    [/\b(\d+)\s+weeks?\s+ahead\b/g, '+$1 weeks'],
+    [/\b(\d+)\s+days?\s+forward\b/g, '+$1 days'],
+    [/\b(\d+)\s+weeks?\s+forward\b/g, '+$1 weeks'],
+
+    // Past variations
+    [/\b(\d+)\s+days?\s+back\b/g, '-$1 days'],
+    [/\b(\d+)\s+weeks?\s+back\b/g, '-$1 weeks'],
+    [/\b(\d+)\s+days?\s+before\b/g, '-$1 days'],
+    [/\b(\d+)\s+weeks?\s+before\b/g, '-$1 weeks'],
+    [/\b(\d+)\s+days?\s+earlier\b/g, '-$1 days'],
+    [/\b(\d+)\s+weeks?\s+earlier\b/g, '-$1 weeks'],
+
+    // Extended time units - months and years
+    [/\bin\s+(\d+)\s+months?\b/g, '+$1 months'],
+    [/\b(\d+)\s+months?\s+from\s+now\b/g, '+$1 months'],
+    [/\b(\d+)\s+months?\s+later\b/g, '+$1 months'],
+    [/\bafter\s+(\d+)\s+months?\b/g, '+$1 months'],
+    [/\b(\d+)\s+months?\s+ago\b/g, '-$1 months'],
+    [/\b(\d+)\s+months?\s+back\b/g, '-$1 months'],
+    [/\b(\d+)\s+months?\s+earlier\b/g, '-$1 months'],
+
+    [/\bin\s+(\d+)\s+years?\b/g, '+$1 years'],
+    [/\b(\d+)\s+years?\s+from\s+now\b/g, '+$1 years'],
+    [/\b(\d+)\s+years?\s+later\b/g, '+$1 years'],
+    [/\bafter\s+(\d+)\s+years?\b/g, '+$1 years'],
+    [/\b(\d+)\s+years?\s+ago\b/g, '-$1 years'],
+    [/\b(\d+)\s+years?\s+back\b/g, '-$1 years'],
+    [/\b(\d+)\s+years?\s+earlier\b/g, '-$1 years'],
+
+
 
     // Handle "this" and "next" prefixes more consistently
     [/\bthis\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/g, '$1'],
@@ -191,6 +249,32 @@ function getDatePatterns(): DatePattern[] {
         const weeks = parseInt(match[1]);
         const date = new Date();
         date.setDate(date.getDate() + (weeks * 7));
+        setTimeOnDate(date, match[2], match[3], match[4]);
+        return date;
+      }
+    },
+
+    // Relative month expressions with optional time
+    {
+      name: 'relative_months',
+      pattern: /^([+-]?\d+)\s+months?(?:\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?)?$/,
+      handler: (match) => {
+        const months = parseInt(match[1]);
+        const date = new Date();
+        date.setMonth(date.getMonth() + months);
+        setTimeOnDate(date, match[2], match[3], match[4]);
+        return date;
+      }
+    },
+
+    // Relative year expressions with optional time
+    {
+      name: 'relative_years',
+      pattern: /^([+-]?\d+)\s+years?(?:\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?)?$/,
+      handler: (match) => {
+        const years = parseInt(match[1]);
+        const date = new Date();
+        date.setFullYear(date.getFullYear() + years);
         setTimeOnDate(date, match[2], match[3], match[4]);
         return date;
       }
