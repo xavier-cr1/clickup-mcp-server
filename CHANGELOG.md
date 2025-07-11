@@ -2,7 +2,13 @@
 
 ## Unreleased
 
-### 🚀 New Improvements
+### 🚀 New Features & Improvements
+
+### 🐛 Bug Fixes
+
+## v0.8.5 (2025-07-11)
+
+### 🚀 New Features & Improvements
 
 - **Major Enhancement: Advanced Date Parsing System (Option A Implementation)**:
   - **Smart Preprocessing Layer**: Automatically corrects typos and normalizes natural language expressions
