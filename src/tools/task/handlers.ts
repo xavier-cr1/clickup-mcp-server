@@ -140,10 +140,15 @@ async function resolveAssignees(assignees: (number | string)[]): Promise<number[
   if (toResolve.length > 0) {
     try {
       const result = await handleResolveAssignees({ assignees: toResolve });
-      if (result.userIds && Array.isArray(result.userIds)) {
-        for (const userId of result.userIds) {
-          if (userId !== null && typeof userId === 'number') {
-            resolved.push(userId);
+      // The result is wrapped by sponsorService.createResponse, so we need to parse the JSON
+      if (result.content && Array.isArray(result.content) && result.content.length > 0) {
+        const dataText = result.content[0].text;
+        const parsedData = JSON.parse(dataText);
+        if (parsedData.userIds && Array.isArray(parsedData.userIds)) {
+          for (const userId of parsedData.userIds) {
+            if (userId !== null && typeof userId === 'number') {
+              resolved.push(userId);
+            }
           }
         }
       }
@@ -215,7 +220,22 @@ async function buildUpdateData(params: any): Promise<UpdateTaskData> {
 
   // Handle assignees if provided - resolve emails/usernames to user IDs
   if (params.assignees !== undefined) {
-    updateData.assignees = await resolveAssignees(params.assignees);
+    // Parse assignees if it's a string (from MCP serialization)
+    let assigneesArray = params.assignees;
+    if (typeof params.assignees === 'string') {
+      try {
+        assigneesArray = JSON.parse(params.assignees);
+      } catch (error) {
+        console.warn('Failed to parse assignees string:', params.assignees, error);
+        assigneesArray = [];
+      }
+    }
+
+    const resolvedAssignees = await resolveAssignees(assigneesArray);
+
+    // Store the resolved assignees for processing in the updateTask method
+    // The actual add/rem logic will be handled there based on current vs new assignees
+    updateData.assignees = resolvedAssignees;
   }
 
   return updateData;
@@ -554,7 +574,20 @@ export async function createTaskHandler(params) {
   const listId = await getListId(params.listId, params.listName);
 
   // Resolve assignees if provided
-  const resolvedAssignees = assignees ? await resolveAssignees(assignees) : undefined;
+  let resolvedAssignees = undefined;
+  if (assignees) {
+    // Parse assignees if it's a string (from MCP serialization)
+    let assigneesArray = assignees;
+    if (typeof assignees === 'string') {
+      try {
+        assigneesArray = JSON.parse(assignees);
+      } catch (error) {
+        console.warn('Failed to parse assignees string in createTask:', assignees, error);
+        assigneesArray = [];
+      }
+    }
+    resolvedAssignees = await resolveAssignees(assigneesArray);
+  }
 
   const taskData: CreateTaskData = {
     name,

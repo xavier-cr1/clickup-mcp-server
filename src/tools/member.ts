@@ -106,11 +106,9 @@ export async function handleResolveAssignees(parameters: any) {
             );
             return found ? found.id : null;
         });
-        // Return a plain object, not wrapped in sponsorService.createResponse
-        return { userIds: resolved };
+        return sponsorService.createResponse({ userIds: resolved }, true);
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        // Return a plain error object
-        return { error: `Failed to resolve assignees: ${errorMessage}` };
+        return sponsorService.createErrorResponse(`Failed to resolve assignees: ${errorMessage}`);
     }
 }

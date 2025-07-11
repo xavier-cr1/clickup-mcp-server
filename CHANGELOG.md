@@ -27,6 +27,17 @@
 
 ### 🐛 Bug Fixes
 
+- **Fixed Task Assignment Functionality**:
+  - **Root Cause**: ClickUp API uses different formats for assignees in task creation vs updates
+    - Creation: `"assignees": [user_id1, user_id2]` (simple array)
+    - Updates: `"assignees": { "add": [user_id1], "rem": [user_id2] }` (object with add/rem arrays)
+  - **Parameter Parsing**: Fixed MCP serialization issue where assignee arrays were received as strings
+  - **Smart Assignment Logic**: Implemented intelligent add/remove calculation by comparing current vs desired assignees
+  - **Complete Functionality**: Now supports adding, removing, and updating task assignees
+  - **Multiple Formats**: Supports user IDs, emails, and usernames for assignee resolution
+  - **TypeScript Types**: Updated interfaces to support both array and object assignee formats
+  - **Testing**: Verified full assignment cycle (add → remove → re-add) works correctly
+
 - **Fixed Track Time tool response formatting issue**:
   - Fixed issue where Track Time tools (start/stop time tracking, get time entries, etc.) were executing successfully but returning no output to users
   - **Root cause**: Time tracking handlers were returning raw JavaScript objects instead of using proper MCP server response formatting

@@ -235,11 +235,23 @@ export class TaskServiceCore extends BaseClickUpService {
     // Import the detection function here to avoid circular dependencies
     const { isCustomTaskId } = await import('../../../tools/task/utilities.js');
 
+    // Test the detection function
+    const isCustom = isCustomTaskId(taskId);
+    this.logger.debug('Custom task ID detection result', {
+      taskId,
+      isCustom,
+      taskIdLength: taskId.length,
+      containsHyphen: taskId.includes('-'),
+      containsUnderscore: taskId.includes('_')
+    });
+
     // Automatically detect custom task IDs and route to appropriate method
-    if (isCustomTaskId(taskId)) {
+    if (isCustom) {
       this.logger.debug('Detected custom task ID, routing to getTaskByCustomId', { taskId });
       return this.getTaskByCustomId(taskId);
     }
+
+    this.logger.debug('Detected regular task ID, using standard getTask flow', { taskId });
 
     try {
       return await this.makeRequest(async () => {
@@ -351,6 +363,15 @@ export class TaskServiceCore extends BaseClickUpService {
           team_id: this.teamId // team_id is required when custom_task_ids is true
         });
 
+        // Debug logging for troubleshooting
+        this.logger.debug('Making custom task ID API request', {
+          customTaskId,
+          url,
+          teamId: this.teamId,
+          params: params.toString(),
+          fullUrl: `${url}?${params.toString()}`
+        });
+
         // Note: The ClickUp API documentation for GET /task/{task_id} doesn't explicitly mention
         // filtering by list_id when custom_task_ids=true. This parameter might be ignored.
         if (listId) {
@@ -374,6 +395,14 @@ export class TaskServiceCore extends BaseClickUpService {
         return data;
       });
     } catch (error) {
+      // Enhanced error logging for debugging
+      this.logger.error('Custom task ID request failed', {
+        customTaskId,
+        teamId: this.teamId,
+        error: error instanceof Error ? error.message : String(error),
+        errorDetails: error
+      });
+
       // Provide more specific error context if possible
       if (error instanceof ClickUpServiceError && error.code === ErrorCode.NOT_FOUND) {
         throw new ClickUpServiceError(
@@ -396,16 +425,41 @@ export class TaskServiceCore extends BaseClickUpService {
     this.logOperation('updateTask', { taskId, ...updateData });
 
     try {
-      // Extract custom fields from updateData
-      const { custom_fields, ...standardFields } = updateData;
+      // Extract custom fields and assignees from updateData
+      const { custom_fields, assignees, ...standardFields } = updateData;
 
+      // Prepare the fields to send to API
+      let fieldsToSend: any = { ...standardFields };
 
+      // Handle assignees separately if provided
+      if (assignees !== undefined) {
+        // Get current task to compare assignees
+        const currentTask = await this.getTask(taskId);
+        const currentAssigneeIds = currentTask.assignees.map(a => a.id);
+
+        let assigneesToProcess: { add: number[]; rem: number[] };
+
+        if (Array.isArray(assignees)) {
+          // If assignees is an array, calculate add/rem based on current vs new
+          const newAssigneeIds = assignees as number[];
+          assigneesToProcess = {
+            add: newAssigneeIds.filter(id => !currentAssigneeIds.includes(id)),
+            rem: currentAssigneeIds.filter(id => !newAssigneeIds.includes(id))
+          };
+        } else {
+          // If assignees is already in add/rem format, use it directly
+          assigneesToProcess = assignees as { add: number[]; rem: number[] };
+        }
+
+        // Add assignees to the fields in the correct format
+        fieldsToSend.assignees = assigneesToProcess;
+      }
 
       // First update the standard fields
       const updatedTask = await this.makeRequest(async () => {
         const response = await this.client.put<ClickUpTask | string>(
           `/task/${taskId}`,
-          standardFields
+          fieldsToSend
         );
         
         // Handle both JSON and text responses

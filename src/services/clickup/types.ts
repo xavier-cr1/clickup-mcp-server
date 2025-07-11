@@ -271,8 +271,14 @@ export interface CreateFolderData {
 
 /**
  * Update task data (partial)
+ * Note: assignees field has a different format for updates vs creation
  */
-export interface UpdateTaskData extends Partial<CreateTaskData> {}
+export interface UpdateTaskData extends Partial<Omit<CreateTaskData, 'assignees'>> {
+  assignees?: (number | string)[] | {
+    add: number[];
+    rem: number[];
+  };
+}
 
 /**
  * Task filtering parameters
