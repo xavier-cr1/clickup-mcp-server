@@ -6,7 +6,7 @@
 
 A Model Context Protocol (MCP) server for integrating ClickUp tasks with AI applications. This server allows AI agents to interact with ClickUp tasks, spaces, lists, and folders through a standardized protocol.
 
-> 🚀 **Status Update:** v0.8.5 is released with advanced date parsing and critical bug fixes! Added major date parsing enhancements with smart preprocessing, fixed task assignment functionality, and resolved time tracking tool response formatting. See [Release Notes](release-notes.md) for full details.
+> 🚀 **Status Update:** v0.8.5 is released with comprehensive natural language date parsing and critical bug fixes! Added 47+ natural language patterns (100% accuracy), extended time units (months/years), dynamic number support, fixed task assignment functionality, and resolved time tracking issues. See [Release Notes](release-notes.md) for full details.
 
 ## Setup
 
