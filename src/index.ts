@@ -96,5 +96,3 @@ main().catch((err) => {
   error("Unhandled server error", { message: err.message, stack: err.stack });
   process.exit(1);
 });
-
-export { server } from './server.js';

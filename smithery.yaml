@@ -19,4 +19,4 @@ startCommand:
   commandFunction:
     # A function that produces the CLI command to start the MCP on stdio.
     |-
-    (config) => ({ command: 'node', args: ['build/index.js'], env: { CLICKUP_API_KEY: config.clickupApiKey, CLICKUP_TEAM_ID: config.clickupTeamId, ENABLE_SSE: 'true' } })
+    (config) => ({ command: 'node', args: ['build/mcp-export.js'], env: { CLICKUP_API_KEY: config.clickupApiKey, CLICKUP_TEAM_ID: config.clickupTeamId, ENABLE_SSE: 'true' } })
